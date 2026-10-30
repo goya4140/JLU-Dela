@@ -1,4 +1,4 @@
-import { safeStorage, type WebContents } from 'electron';
+import { net, safeStorage, type IncomingMessage, type WebContents } from 'electron';
 import { mkdirSync, rmSync, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
@@ -208,48 +208,72 @@ export async function importChaoxingFile(courseId: string, folderId: string, fil
   const file = getChaoxingFiles(courseId, folderId)?.items.find(
     (row) => row.id === id.parse(fileId),
   );
-  const route = privateRoutes()[`download:${courseId}:${folderId}:${fileId}`];
-  if (!file?.downloadable || !route) throw new Error('学校未提供该文件的下载入口');
+  const routes = privateRoutes();
+  const route = routes[`download:${courseId}:${folderId}:${fileId}`];
+  const courseRoute = routes['course:' + courseId];
+  if (!file?.downloadable || !route || !courseRoute) throw new Error('学校未提供该文件的下载入口');
   const campus = await chaoxingSession.get();
-  let target = route;
-  let response: Response | undefined;
-  for (let attempt = 0; attempt < 6; attempt++) {
-    if (!schoolUrl.safeParse(target).success)
-      throw new Error('该资料的下载地址暂不支持，请使用学习通下载');
-    response = await campus.fetch(target, {
-      credentials: 'include',
-      redirect: 'manual',
-      signal: AbortSignal.timeout(30000),
-    });
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get('location');
-      await response.body?.cancel();
-      if (!location) throw new Error('学习通下载跳转缺少地址');
-      target = new URL(location, target).href;
-      continue;
-    }
-    break;
-  }
-  if (
-    !response?.ok ||
-    !response.body ||
-    /text\/html|application\/json/.test(response.headers.get('content-type') || '')
-  ) {
-    await response?.body?.cancel();
-    throw new Error('文件未能下载，请刷新课程资料并重试');
-  }
-  const directory = join(getWorkspaceState().directory, '学习通资料', safeFileName(course.name));
+  const directory = join(
+    getWorkspaceState().directory,
+    'workspace',
+    '学习通资料',
+    safeFileName(course.name),
+  );
   mkdirSync(directory, { recursive: true });
   const path = availablePath(directory, safeFileName(file.name), false);
   let received = 0;
   let created = false;
-  const output = createWriteStream(path, { flags: 'wx' });
-  output.once('open', () => {
-    created = true;
+  const request = net.request({
+    url: route,
+    session: campus,
+    useSessionCookies: true,
+    redirect: 'manual',
   });
+  request.setHeader('Referer', new URL(courseRoute).origin + '/');
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort();
+    request.abort();
+  }, 45000);
   try {
+    const response = await new Promise<IncomingMessage>((resolve, reject) => {
+      let redirects = 0;
+      request.on('error', () => reject(new Error('学习通文件连接失败，请检查网络后重试')));
+      request.on('abort', () =>
+        reject(
+          new Error(
+            controller.signal.aborted ? '资料下载超时，请检查网络后重试' : '文件下载已取消',
+          ),
+        ),
+      );
+      request.on('redirect', (_status, _method, target) => {
+        const url = new URL(target);
+        const allowed =
+          schoolUrl.safeParse(target).success ||
+          (url.origin === 'https://d0.cldisk.com' && !url.username && !url.password);
+        if (++redirects > 5 || !allowed) {
+          reject(new Error('该资料的下载地址暂不支持，请使用学习通下载'));
+          request.abort();
+        } else request.followRedirect();
+      });
+      request.once('response', resolve);
+      request.end();
+    });
+    if (response.statusCode !== 200)
+      throw new Error(`学习通文件下载失败（${response.statusCode}），请刷新资料后重试`);
+    if (/text\/html|application\/json/.test(String(response.headers['content-type'] || '')))
+      throw new Error('文件未能下载，请刷新课程资料并重试');
+    const input = new Readable({ read() {} });
+    response.on('data', (chunk: Buffer) => input.push(chunk));
+    response.once('end', () => input.push(null));
+    response.once('error', (error: Error) => input.destroy(error));
+    response.once('aborted', () => input.destroy(new Error('学习通文件传输中断，请重试')));
+    const output = createWriteStream(path, { flags: 'wx' });
+    output.once('open', () => {
+      created = true;
+    });
     await pipeline(
-      Readable.fromWeb(response.body as never),
+      input,
       async function* (source: AsyncIterable<Buffer>) {
         for await (const chunk of source) {
           received += chunk.length;
@@ -258,10 +282,15 @@ export async function importChaoxingFile(courseId: string, folderId: string, fil
         }
       },
       output,
+      { signal: controller.signal },
     );
   } catch (error) {
     if (created) rmSync(path, { force: true });
+    if (controller.signal.aborted) throw new Error('资料下载超时，请检查网络后重试');
     throw error;
+  } finally {
+    clearTimeout(timer);
+    request.abort();
   }
   return { id: path };
 }

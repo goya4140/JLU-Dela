@@ -18,6 +18,7 @@ Object.assign(safeStorage, {
   decryptString: (value) => value.toString().slice('fixture-sealed:'.length),
 });
 let offline = false;
+let downloadRedirects = 0;
 const privateQuery = 'courseid=1&clazzid=2&cpi=3&enc=fixture-private';
 const pdfObjects = [
   '<< /Type /Catalog /Pages 2 0 R >>',
@@ -40,7 +41,7 @@ app.whenReady().then(() => {
   const cx = session.fromPartition('persist:chaoxing');
   cx.protocol.handle('https', (request) => {
     const url = new URL(request.url);
-    assert.ok(url.hostname.endsWith('.chaoxing.com'));
+    assert.ok(url.hostname.endsWith('.chaoxing.com') || url.hostname === 'd0.cldisk.com');
     if (offline) return new Response('fixture unavailable', { status: 503 });
     let html = '';
     if (url.pathname === '/base')
@@ -61,9 +62,13 @@ app.whenReady().then(() => {
         '<div class="bottomList"><li role="link" data="https://mooc1.chaoxing.com/mooc2/work/task?workId=w1&answerId=private"><div class="right-content"><p class="overHidden2">示例作业</p><p class="status">未交</p></div><div class="time">剩余2天</div></li></div>';
     else if (url.pathname === '/mooc2-ans/coursedata/stu-datalist')
       html = `<input id="downloadDomain" value="https://mooc1.chaoxing.com"><input id="courseId" value="1"><input id="classId" value="2"><input id="cpi" value="3"><input id="enc" value="fixture-private"><div class="dataBody">${url.searchParams.has('dataId') ? '<ul class="dataBody_td" id="d1" type="pdf" dataname="示例课件.pdf" isdown="1"><li class="dataBody_size_stu">5KB</li></ul>' : '<ul class="dataBody_td" id="f1" type="afolder" dataname="示例资料夹"></ul>'}</div>`;
-    else if (url.pathname === '/coursedata/downloadData')
+    else if (url.pathname === '/coursedata/downloadData') {
+      downloadRedirects++;
+      return Response.redirect('https://d0.cldisk.com/fixture.pdf');
+    } else if (url.pathname === '/fixture.pdf') {
+      assert.equal(request.headers.get('referer'), 'https://mooc2-ans.chaoxing.com/');
       return new Response(pdf, { headers: { 'content-type': 'application/pdf' } });
-    else throw new Error('Unexpected fixture request: ' + url.pathname);
+    } else throw new Error('Unexpected fixture request: ' + url.pathname);
     return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
   });
 });
@@ -116,6 +121,18 @@ async function run(window) {
   const imported = await js('window.dela.chaoxing.importFile("1:2","f1","d1")');
   assert.ok(imported.id.startsWith(profile));
   assert.equal(readFileSync(imported.id, 'utf8'), pdf);
+  const workspaceState = await js('window.dela.workspace.getState()');
+  const importedFolder = workspaceState.entries.find((entry) => entry.name === '学习通资料');
+  assert.ok(importedFolder);
+  const courseFolder = (
+    await js(`window.dela.workspace.listLocalDirectory(${JSON.stringify(importedFolder.id)})`)
+  ).find((entry) => entry.name === '示例课程');
+  assert.ok(courseFolder);
+  assert.ok(
+    (await js(`window.dela.workspace.listLocalDirectory(${JSON.stringify(courseFolder.id)})`)).some(
+      (entry) => entry.id === imported.id,
+    ),
+  );
   await js(
     `Array.from(document.querySelectorAll('#main-nav button')).find(b=>b.textContent.trim()==='学习通').click()`,
   );
@@ -192,7 +209,8 @@ async function run(window) {
     ),
   );
   assert.equal(BrowserWindow.getAllWindows().length, 1);
+  assert.ok(downloadRedirects >= 2);
   console.log(
-    'Chaoxing smoke passed: isolated session, course redirects, nested folders, assignment metadata, local PDF import, failure cache retention and four viewport widths. Synthetic data only; no school or model requests.',
+    'Chaoxing smoke passed: isolated session, course redirects, nested folders, assignment metadata, native download redirects, local PDF import, failure cache retention and four viewport widths. Synthetic data only; no school or model requests.',
   );
 }

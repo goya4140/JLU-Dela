@@ -1,11 +1,14 @@
 import Database from 'better-sqlite3';
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { EventEmitter } from 'node:events';
+import { Readable } from 'node:stream';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 let db: Database.Database, directory: string;
-const mocks = vi.hoisted(() => ({ fetch: vi.fn() }));
+const mocks = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock('electron', () => ({
+  net: { request: mocks.request },
   safeStorage: {
     isEncryptionAvailable: () => true,
     encryptString: (value: string) => Buffer.from('sealed:' + value),
@@ -26,7 +29,7 @@ vi.mock('../../jlu/api', () => ({
 vi.mock('../session', () => ({
   chaoxingSession: {
     partition: 'persist:chaoxing',
-    get: async () => ({ fetch: mocks.fetch }),
+    get: async () => ({}),
     flush: async () => {},
   },
   isChaoxingLoginUrl: () => false,
@@ -130,29 +133,56 @@ it('resolves the course landing page before reading metadata and retains assignm
   });
   expect(getChaoxingWorks('1:2')).toEqual(works);
 });
-it('imports an allowed file inside the workspace and refuses non-school redirect destinations', async () => {
+function downloadRequest(target = 'https://download.chaoxing.com/fixture.pdf', statusCode = 200) {
+  const request = Object.assign(new EventEmitter(), {
+    setHeader: vi.fn(),
+    end: () => queueMicrotask(() => request.emit('redirect', 302, 'GET', target)),
+    followRedirect: vi.fn(() => {
+      const response = Object.assign(Readable.from([Buffer.from('%PDF-fixture')]), {
+        statusCode,
+        headers: { 'content-type': 'application/pdf' },
+      });
+      request.emit('response', response);
+    }),
+    abort: () => request.emit('abort'),
+  });
+  mocks.request.mockReturnValueOnce(request);
+  return request;
+}
+it.each(['https://download.chaoxing.com/fixture.pdf', 'https://d0.cldisk.com/fixture.pdf'])(
+  'follows the allowed native download redirect %s and imports inside the workspace',
+  async (target) => {
+    await seedFile();
+    const request = downloadRequest(target);
+    const result = await importChaoxingFile('1:2', '', 'd1');
+    expect(request.followRedirect).toHaveBeenCalledOnce();
+    expect(request.setHeader).toHaveBeenCalledWith('Referer', 'https://mooc2-ans.chaoxing.com/');
+    expect(mocks.request).toHaveBeenCalledWith(
+      expect.objectContaining({ useSessionCookies: true, redirect: 'manual' }),
+    );
+    expect(result.id.startsWith(join(directory, 'workspace'))).toBe(true);
+    expect(readFileSync(result.id, 'utf8')).toBe('%PDF-fixture');
+  },
+);
+it('refuses non-school native redirect destinations', async () => {
   await seedFile();
-  mocks.fetch.mockResolvedValueOnce(
-    new Response('%PDF-fixture', { headers: { 'content-type': 'application/pdf' } }),
-  );
-  const result = await importChaoxingFile('1:2', '', 'd1');
-  expect(result.id.startsWith(directory)).toBe(true);
-  expect(readFileSync(result.id, 'utf8')).toBe('%PDF-fixture');
-  mocks.fetch.mockResolvedValueOnce(
-    new Response(null, { status: 302, headers: { location: 'https://example.com/private' } }),
-  );
-  await expect(importChaoxingFile('1:2', '', 'd1')).rejects.toThrow();
-  expect(mocks.fetch).toHaveBeenCalledTimes(2);
+  const request = downloadRequest('https://example.com/private');
+  await expect(importChaoxingFile('1:2', '', 'd1')).rejects.toThrow('下载地址暂不支持');
+  expect(request.followRedirect).not.toHaveBeenCalled();
+});
+it('reports a refused file download as a download failure and retains the directory cache', async () => {
+  const files = await seedFile();
+  downloadRequest('https://d0.cldisk.com/fixture.pdf', 403);
+  await expect(importChaoxingFile('1:2', '', 'd1')).rejects.toThrow('下载失败（403）');
+  expect(getChaoxingFiles('1:2')).toEqual(files);
 });
 it('does not replace or remove an existing note when file creation is refused', async () => {
   await seedFile();
-  const folder = join(directory, '学习通资料', '示例课程');
+  const folder = join(directory, 'workspace', '学习通资料', '示例课程');
   mkdirSync(folder, { recursive: true });
   const file = join(folder, '示例.pdf');
   writeFileSync(file, 'original');
-  mocks.fetch.mockResolvedValueOnce(
-    new Response('new', { headers: { 'content-type': 'application/pdf' } }),
-  );
+  downloadRequest();
   await expect(importChaoxingFile('1:2', '', 'd1')).rejects.toThrow();
   expect(readFileSync(file, 'utf8')).toBe('original');
 });
