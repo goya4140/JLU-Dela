@@ -2,6 +2,7 @@
 // 领域类型变化请直接改对应文件，不在此处添加逻辑。
 import type { BackupApi } from './backup';
 import type { JluPlatformsApi } from './jlu-platforms';
+import type { ChaoxingApi } from './chaoxing';
 import type { CacheApi } from './cache';
 import type { CapabilityApi } from './capabilities';
 import type { CanvasApi } from './canvas';
@@ -39,6 +40,7 @@ import type { WindowApi } from './window';
 import type { WorkspaceApi } from './workspace';
 
 export interface DelaApi {
+  readonly chaoxing: ChaoxingApi;
   readonly jluPlatforms: JluPlatformsApi;
   readonly platform: string;
   readonly vsjtu: VsjtuApi;

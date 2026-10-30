@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getLearning, getNotice, getNotices, getRecordings } from '../../jlu/api';
+import { getChaoxingCourses, getChaoxingFiles, getChaoxingWorks } from '../../chaoxing/api';
 import { tool } from './shared';
 function cachedResult<T extends { syncedAt: string }>(data: T | null, scope: string) {
   return {
@@ -17,6 +18,22 @@ function cachedResult<T extends { syncedAt: string }>(data: T | null, scope: str
   };
 }
 export const jluTools = {
+  query_chaoxing_courses: tool(
+    '读取学习通当前课程列表的本地缓存，不联网或弹登录窗口。',
+    z.object({}).strict(),
+    () => cachedResult(getChaoxingCourses(), 'chaoxing_courses'),
+  ),
+  query_chaoxing_files: tool(
+    '读取学习通已同步目录的资料元数据，不返回下载签名或读取未下载文件。',
+    z.object({ courseId: z.string(), folderId: z.string().default('') }).strict(),
+    ({ courseId, folderId }) =>
+      cachedResult(getChaoxingFiles(courseId, folderId), 'chaoxing_folder'),
+  ),
+  query_chaoxing_works: tool(
+    '读取学习通已同步作业的标题、状态和同步时的时间提示，不打开作答、考试或提交。相对时间不是实时截止时间。',
+    z.object({ courseId: z.string() }).strict(),
+    ({ courseId }) => cachedResult(getChaoxingWorks(courseId), 'chaoxing_works'),
+  ),
   query_school_notices: tool(
     '读取电子校务本地通知分页缓存，不联网、不触发学校登录。',
     z

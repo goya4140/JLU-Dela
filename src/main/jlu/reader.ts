@@ -1,4 +1,4 @@
-import { BrowserWindow, type WebContents } from 'electron';
+import { BrowserWindow, type Session, type WebContents } from 'electron';
 import { CAMPUS_PARTITION, CampusAuthError, flushCampusSession, getCampusSession } from '../campus';
 import { isJluLoginUrl } from '../timetable/jlu';
 
@@ -10,8 +10,16 @@ export async function readSchoolPage(options: {
   resumeFrom?: (url: URL) => boolean;
   script: string;
   sender?: WebContents;
+  sessionStore?: { partition: string; get: () => Promise<Session>; flush: () => Promise<void> };
+  isLoginUrl?: (url: string) => boolean;
+  loginScript?: string;
 }): Promise<unknown> {
-  await getCampusSession();
+  const store = options.sessionStore ?? {
+    partition: CAMPUS_PARTITION,
+    get: getCampusSession,
+    flush: flushCampusSession,
+  };
+  await store.get();
   const window = new BrowserWindow({
     show: false,
     title: options.title,
@@ -19,7 +27,7 @@ export async function readSchoolPage(options: {
       ? (BrowserWindow.fromWebContents(options.sender) ?? undefined)
       : undefined,
     webPreferences: {
-      partition: CAMPUS_PARTITION,
+      partition: store.partition,
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
@@ -45,9 +53,10 @@ export async function readSchoolPage(options: {
       checking = true;
       const current = window.webContents.getURL();
       try {
-        if (isJluLoginUrl(current)) {
+        if ((options.isLoginUrl ?? isJluLoginUrl)(current)) {
           const needsInput: boolean = await window.webContents.executeJavaScript(
-            `Boolean(document.querySelector('form#loginForm, input[type="password"], input[name="WxCode"]'))`,
+            options.loginScript ??
+              `Boolean(document.querySelector('form#loginForm, input[type="password"], input[name="WxCode"]'))`,
           );
           if (needsInput && window.webContents.getURL() === current) {
             if (!options.sender) finish(new CampusAuthError('请在应用中完成学校登录或验证'));
@@ -114,6 +123,6 @@ export async function readSchoolPage(options: {
         finish(new Error(`${options.title}连接失败，请检查网络或校园网/VPN`));
     });
   });
-  await flushCampusSession();
+  await store.flush();
   return data;
 }

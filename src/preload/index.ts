@@ -25,8 +25,10 @@ import { update } from './update';
 import { windowApi } from './window';
 import { workspace } from './workspace';
 import { vsjtu } from './vsjtu';
+import { chaoxing } from './chaoxing';
 
 contextBridge.exposeInMainWorld('dela', {
+  chaoxing,
   jluPlatforms,
   platform: process.platform,
   vsjtu,

@@ -65,6 +65,7 @@ async function run(window) {
     'https://iedu.jlu.edu.cn/jwapp/sys/emaphome/portal/index.do',
     'https://oa.jlu.edu.cn/defaultroot/login.jsp?access=oa',
     'https://ilearntec.jlu.edu.cn/studycenter-web/index#/',
+    'https://i.chaoxing.com/base',
   ]);
   assert.equal(
     await js(

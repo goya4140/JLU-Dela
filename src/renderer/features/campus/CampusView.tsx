@@ -21,7 +21,7 @@ export function CampusView({
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
           <p className="text-13 leading-relaxed text-ink-3">
-            读取课表、校内通知及学在吉大课程，已同步内容保存在本机。
+            读取课表、校内通知、学在吉大及学习通课程，已同步内容保存在本机。
           </p>
         </header>
         <div className="grid gap-4" data-setting-id="jlu-campus">
@@ -49,10 +49,20 @@ export function CampusView({
                     onClick={() =>
                       useNavigationStore
                         .getState()
-                        .navigate(service.id === 'notices' ? 'notifications' : 'classroom')
+                        .navigate(
+                          service.id === 'notices'
+                            ? 'notifications'
+                            : service.id === 'chaoxing'
+                              ? 'chaoxing'
+                              : 'classroom',
+                        )
                     }
                   >
-                    {service.id === 'notices' ? '打开通知' : '打开学在吉大'}
+                    {service.id === 'notices'
+                      ? '打开通知'
+                      : service.id === 'chaoxing'
+                        ? '打开学习通'
+                        : '打开学在吉大'}
                   </Button>
                 )}
                 <Button asChild size="sm" variant="outline">

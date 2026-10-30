@@ -20,6 +20,13 @@ export const jluServices = [
     url: 'https://ilearntec.jlu.edu.cn/studycenter-web/index#/',
     integration: 'preview',
   },
+  {
+    id: 'chaoxing',
+    name: '学习通',
+    description: '读取当前课程、资料目录和作业状态，按需导入已开放下载的资料。',
+    url: 'https://i.chaoxing.com/base',
+    integration: 'preview',
+  },
 ] as const;
 
 export type JluServiceId = (typeof jluServices)[number]['id'];

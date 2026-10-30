@@ -6,6 +6,7 @@ import type { Cookie } from 'electron';
 
 const state = vi.hoisted(() => ({
   directory: '',
+  partition: 'persist:jlu-campus',
   cookies: [] as Cookie[],
   changed: undefined as
     undefined | ((event: unknown, cookie: Cookie, cause: string, removed: boolean) => void),
@@ -22,7 +23,7 @@ vi.mock('electron', () => ({
   },
   session: {
     fromPartition: (partition: string) => {
-      expect(partition).toBe('persist:jlu-campus');
+      expect(partition).toBe(state.partition);
       return {
         cookies: {
           get: async () => state.cookies,
@@ -54,6 +55,29 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.directory = mkdtempSync(join(tmpdir(), 'jlu-campus-session-test-'));
   state.cookies = [];
+  state.partition = 'persist:jlu-campus';
+});
+it('keeps Chaoxing session cookies in their own encrypted store and excludes JLU and lookalikes', async () => {
+  state.partition = 'persist:chaoxing';
+  const { chaoxingSession } = await import('../chaoxing/session');
+  await chaoxingSession.get();
+  for (const domain of [
+    'passport2.chaoxing.com',
+    'mooc1.chaoxing.com',
+    'cas.jlu.edu.cn',
+    'chaoxing.com.evil.example',
+  ])
+    state.changed!({}, cookie(domain, domain), 'explicit', false);
+  await chaoxingSession.flush();
+  const saved = JSON.parse(
+    readFileSync(join(state.directory, 'chaoxing-session.bin'), 'utf8').slice(
+      'test-sealed:'.length,
+    ),
+  ) as Cookie[];
+  expect(saved.map((item) => item.domain)).toEqual([
+    'passport2.chaoxing.com',
+    'mooc1.chaoxing.com',
+  ]);
 });
 afterEach(() => rmSync(state.directory, { recursive: true, force: true }));
 
