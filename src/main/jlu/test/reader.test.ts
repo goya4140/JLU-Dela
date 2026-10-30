@@ -11,6 +11,7 @@ vi.mock('electron', async () => {
     destroyed = false;
     show = vi.fn();
     focus = vi.fn();
+    hide = vi.fn();
     webContents = Object.assign(new EventEmitter(), {
       getURL: () => mock.url,
       isLoadingMainFrame: () => false,
@@ -137,5 +138,20 @@ it('bounds unknown redirects without pretending they require a password', async 
   await vi.advanceTimersByTimeAsync(25000);
   expect(await result).not.toBeInstanceOf(CampusAuthError);
   expect(window().destroyed).toBe(true);
+  expect(vi.getTimerCount()).toBe(0);
+});
+it('returns to the resource page once when school SSO lands on the study portal', async () => {
+  mock.url = 'https://ilearntec.jlu.edu.cn/studycenter-web/index';
+  mock.load.mockResolvedValueOnce(undefined).mockImplementationOnce(async () => {
+    mock.url = options.url;
+  });
+  const result = readSchoolPage({
+    ...options,
+    resumeFrom: (url) => url.origin === 'https://ilearntec.jlu.edu.cn',
+  });
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(result).resolves.toEqual({ items: [] });
+  expect(mock.load).toHaveBeenCalledTimes(2);
+  expect(window().show).not.toHaveBeenCalled();
   expect(vi.getTimerCount()).toBe(0);
 });

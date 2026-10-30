@@ -49,7 +49,15 @@ export function learningScript(
       ? ['id', 'year', 'num', 'name', 'selected']
       : kind === 'courses'
         ? ['id', 'name', 'courseName', 'teacherName', 'statusName']
-        : ['id', 'liveRecordName', 'currentDate', 'timeRange', 'roomName', 'liveStatus'];
+        : [
+            'id',
+            'resourceId',
+            'liveRecordName',
+            'currentDate',
+            'timeRange',
+            'roomName',
+            'liveStatus',
+          ];
   return `(async () => {
     let response;
     try { response = await fetch(${JSON.stringify(path + '?' + new URLSearchParams(query))}, {
@@ -63,5 +71,28 @@ export function learningScript(
     if (!Array.isArray(rows)) throw new Error('Missing learning list');
     const fields = ${JSON.stringify(fields)};
     return { ready: true, data: rows.map(row => Object.fromEntries(fields.map(key => [key, row[key]]))) };
+  })()`;
+}
+
+export function studyMediaScript(resourceId: string): string {
+  return `(async () => {
+    const query = '?resourceId=' + encodeURIComponent(${JSON.stringify(resourceId)});
+    const infoResponse = await fetch('/resource-center/videoclass/videoClassInfo' + query, {credentials:'include'});
+    if (!infoResponse.ok) throw new Error('Video details unavailable');
+    const info = await infoResponse.json();
+    if (String(info.status) !== '1') return {ready:false};
+    if (!Array.isArray(info.data?.videoList)) throw new Error('Invalid video details');
+    let subtitles = [], subtitleError = null;
+    try {
+      const response = await fetch('/resource-center/videoclass/videoPointInfo' + query, {credentials:'include'});
+      if (!response.ok) throw new Error('Subtitle request failed');
+      const points = await response.json();
+      if (String(points.status) !== '1' || !Array.isArray(points.data?.textInfo)) throw new Error('Invalid subtitles');
+      subtitles = points.data.textInfo.map(row => ({startTime:row.startTime, endTime:row.endTime, text:row.text}));
+    } catch { subtitleError = '字幕暂时无法读取，可重试加载；视频仍可播放'; }
+    return {ready:true, data:{
+      videos:info.data.videoList.map(row => ({name:row.videoName, url:row.videoPath})),
+      subtitles, subtitleError
+    }};
   })()`;
 }

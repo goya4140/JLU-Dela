@@ -156,6 +156,7 @@ beforeEach(() => {
       cwd TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
       provider_id TEXT, model TEXT, effort TEXT);
     CREATE TABLE workspace_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE TABLE jlu_platform_cache (key TEXT PRIMARY KEY, data TEXT NOT NULL);
   `);
 });
 
@@ -479,6 +480,21 @@ describe('会话归属与 cwd', () => {
     expect(state.db!.prepare('SELECT cwd FROM sessions WHERE id=?').get(library.sessionId)).toEqual(
       { cwd: courses },
     );
+  });
+  it('学习录像的独立空会话不会被首页的新对话复用', () => {
+    const first = newSession(null, 'chat', false);
+    state
+      .db!.prepare('INSERT INTO jlu_platform_cache(key,data) VALUES (?,?)')
+      .run('study-workspace:c1:r1', JSON.stringify({ sessionId: first.sessionId }));
+    const second = newSession(null, 'chat', false);
+    state
+      .db!.prepare('INSERT INTO jlu_platform_cache(key,data) VALUES (?,?)')
+      .run('study-workspace:c1:r2', JSON.stringify({ sessionId: second.sessionId }));
+    const general = newSession(null, 'chat');
+    expect(first.sessionId).not.toBe(second.sessionId);
+    expect(general.sessionId).not.toBe(first.sessionId);
+    expect(general.sessionId).not.toBe(second.sessionId);
+    expect(newSession(null, 'chat').sessionId).toBe(general.sessionId);
   });
 
   it('资料页与随聊的空会话不互相复用，cwd 为 NULL 的通用会话两边都不用', () => {

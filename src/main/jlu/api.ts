@@ -87,6 +87,7 @@ export const recordingsSchema = z.object({
   items: z.array(
     z.object({
       id: identifier,
+      resourceId: text.optional(),
       name: z.string(),
       date: z.string(),
       time: z.string(),
@@ -246,6 +247,7 @@ export async function syncRecordings(courseId: string, sender?: WebContents) {
     .array(
       z.object({
         id: identifier,
+        resourceId: text,
         liveRecordName: text,
         currentDate: text,
         timeRange: text,
@@ -264,6 +266,7 @@ export async function syncRecordings(courseId: string, sender?: WebContents) {
     courseId,
     items: rows.data.map((row) => ({
       id: row.id,
+      resourceId: row.resourceId,
       name: row.liveRecordName,
       date: row.currentDate,
       time: row.timeRange,

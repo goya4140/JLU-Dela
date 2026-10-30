@@ -1,6 +1,8 @@
 import { ipcMain } from 'electron';
 import { z } from 'zod';
 import { checkWorkspaceSender } from '../ipc';
+import { studyMedia } from './study';
+import { studyWorkspace } from './study-workspace';
 import {
   getLearning,
   getNotice,
@@ -18,6 +20,14 @@ import {
 } from './api';
 
 export function registerJluPlatformsIpc(): void {
+  ipcMain.handle('jlu:study:workspace', (event, courseId: string, recordingId: string) => {
+    checkWorkspaceSender(event);
+    return studyWorkspace(courseId, recordingId);
+  });
+  ipcMain.handle('jlu:study:media', (event, courseId: string, recordingId: string) => {
+    checkWorkspaceSender(event);
+    return platformResult(() => studyMedia(courseId, recordingId, event.sender));
+  });
   ipcMain.handle('jlu:notices:get', (event, channel: string, page: number) => {
     checkWorkspaceSender(event);
     return getNotices(channel, page);

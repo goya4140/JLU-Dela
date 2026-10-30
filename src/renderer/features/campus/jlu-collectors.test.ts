@@ -4,6 +4,7 @@ import {
   learningScript,
   noticeDetailScript,
   noticeListScript,
+  studyMediaScript,
 } from '../../../shared/jlu-collectors';
 
 function page(
@@ -40,6 +41,42 @@ it('extracts notice rows and pagination without inventing missing lists', () => 
   });
   dom.window.document.body.innerHTML = '<h1>服务维护</h1>';
   expect(() => dom.window.eval(noticeListScript)).toThrow();
+  dom.close();
+});
+it('reads official video and subtitle fields without forwarding unrelated metadata', async () => {
+  const dom = page('', 'https://ilearnres.jlu.edu.cn/iplat-resc/index.html');
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        status: '1',
+        data: {
+          videoList: [
+            {
+              videoName: '教师',
+              videoPath: 'https://ilearnres.jlu.edu.cn/test.mp4',
+              token: 'private',
+            },
+          ],
+          studentId: 'private',
+        },
+      }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        status: '1',
+        data: { textInfo: [{ startTime: 0, endTime: 4000, text: '课堂内容', userId: 'private' }] },
+      }),
+    });
+  Object.assign(dom.window, { fetch });
+  const result = await dom.window.eval(studyMediaScript('res1'));
+  expect(result).toMatchObject({
+    ready: true,
+    data: { videos: [{ name: '教师' }], subtitles: [{ text: '课堂内容' }], subtitleError: null },
+  });
+  expect(JSON.stringify(result)).not.toContain('private');
   dom.close();
 });
 it('keeps body text and both standard links and official scripted attachment entries', () => {

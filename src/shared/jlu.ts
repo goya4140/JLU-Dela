@@ -16,7 +16,7 @@ export const jluServices = [
   {
     id: 'learning',
     name: '学在吉大',
-    description: '同步学期、课程及回放目录，播放请前往学校平台。',
+    description: '同步课程与回放，在应用内播放、查看字幕并记笔记。',
     url: 'https://ilearntec.jlu.edu.cn/studycenter-web/index#/',
     integration: 'preview',
   },

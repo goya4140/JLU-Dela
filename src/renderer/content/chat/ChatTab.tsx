@@ -27,7 +27,14 @@ export function parseChatTabId(tabId: string): string | null {
 
 /** 会话作为标签内容。会话身份来自 tabId（chat:{sessionId}），项目归属来自会话快照；
  *  引用候选与邮件草稿弹窗经 ChatTabSourceProvider 注入。 */
-export function ChatTab({ tabId }: { tabId: TabId; groupId: string }) {
+export function ChatTab({
+  tabId,
+  embedded = false,
+}: {
+  tabId: TabId;
+  groupId: string;
+  embedded?: boolean;
+}) {
   const sessionId = parseChatTabId(tabId);
   const source = useChatTabSource();
   const projectId = useSessions((state) =>
@@ -46,6 +53,7 @@ export function ChatTab({ tabId }: { tabId: TabId; groupId: string }) {
     <ChatSessionView
       key={sessionId}
       active={sessionId}
+      embedded={embedded}
       mailDialog={source?.mailDialog}
       onOpenSource={source?.onOpenSource}
       onSaveNote={source?.onSaveNote}
@@ -137,6 +145,7 @@ const ChatSessionView = memo(function ChatSessionView({
   mailDialog,
   onOpenSource,
   onSaveNote,
+  embedded,
 }: {
   active: string;
   projectId: string | null;
@@ -144,6 +153,7 @@ const ChatSessionView = memo(function ChatSessionView({
   mailDialog?: MailDraftDialog;
   onOpenSource?: (key: string) => void;
   onSaveNote?: (text: string) => void;
+  embedded: boolean;
 }) {
   // 「新对话」按钮与 /new 命令同一个动作：首页里开一个新随聊，工作台里（项目或资料）就地在焦点组开。
   const startNewChat = useCallback(() => {
@@ -196,7 +206,7 @@ const ChatSessionView = memo(function ChatSessionView({
       {/* @container 宿主：空态标题的 @max-[…] 按此宽度生效；ChatComposer 自身另有
           @container 宿主，其内部降级断点测量 composer 实宽（外层 p-3 会造成 24px 死区）。 */}
       {/* 会话切换条：标签标题由 workbench 标签栏承载，这里只留历史与新对话入口。 */}
-      <div className="flex h-10 shrink-0 items-center gap-1 px-3">
+      <div className={embedded ? 'hidden' : 'flex h-10 shrink-0 items-center gap-1 px-3'}>
         <IconButton aria-label="历史对话" onClick={() => setSessionsOpen(true)} title="历史对话">
           <History />
         </IconButton>
@@ -241,7 +251,7 @@ const ChatSessionView = memo(function ChatSessionView({
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-10">
           <div className="my-auto">
             <h1 className="mb-6 text-center text-3xl font-semibold tracking-tight @max-[400px]:text-2xl">
-              现在想聊些什么？
+              {embedded ? '这节课有什么疑问？' : '现在想聊些什么？'}
             </h1>
             {composer(true)}
           </div>

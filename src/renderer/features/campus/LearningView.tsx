@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ExternalLink, RefreshCw } from 'lucide-react';
-import type { JluCourse, JluLearning, JluRecordings } from '../../../shared/jlu-platforms';
+import { ArrowLeft, Play, RefreshCw } from 'lucide-react';
+import type {
+  JluCourse,
+  JluLearning,
+  JluRecording,
+  JluRecordings,
+} from '../../../shared/jlu-platforms';
+import { LearningStudy } from './LearningStudy';
 import { Button } from '../../components/ui/button';
 import {
   Select,
@@ -22,6 +28,7 @@ function DesktopLearning() {
   const [data, setData] = useState<JluLearning | null>(null);
   const [course, setCourse] = useState<JluCourse | null>(null);
   const [recordings, setRecordings] = useState<JluRecordings | null>(null);
+  const [recording, setRecording] = useState<JluRecording | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -70,6 +77,15 @@ function DesktopLearning() {
       setBusy(false);
     }
   }
+  if (course && recording)
+    return (
+      <LearningStudy
+        key={`${course.id}:${recording.id}`}
+        course={course}
+        recording={recording}
+        onBack={() => setRecording(null)}
+      />
+    );
   return (
     <div className="min-h-0 flex-1 overflow-y-auto bg-surface">
       <div className="mx-auto grid w-full max-w-4xl gap-6 px-6 py-8 md:px-10">
@@ -83,27 +99,9 @@ function DesktopLearning() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                void api.openLearning('recordings').catch((reason) => setError(errorText(reason)))
-              }
-            >
-              录直播学习
-              <ExternalLink className="size-3.5" />
-            </Button>
             <Button size="sm" disabled={busy} onClick={() => void sync(data?.termId ?? undefined)}>
               <RefreshCw className={busy ? 'size-4 animate-spin' : 'size-4'} />
               {busy ? '正在读取…' : data ? '同步课程' : '登录并同步'}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void api.openLearning().catch((reason) => setError(errorText(reason)))}
-            >
-              学校平台
-              <ExternalLink className="size-3.5" />
             </Button>
           </div>
         </header>
@@ -158,18 +156,27 @@ function DesktopLearning() {
               {course.teacher} · 回放目录{recordings ? ` · ${recordings.items.length} 条` : ''}
             </p>
             {recordings?.items.map((item) => (
-              <div key={item.id} className="grid gap-1 rounded-control bg-field p-4">
+              <button
+                key={item.id}
+                disabled={busy || item.resourceId === ''}
+                onClick={() => setRecording(item)}
+                className="grid gap-1 rounded-control bg-field p-4 text-left hover:bg-hover disabled:opacity-50"
+              >
                 <h3 className="break-words text-sm text-ink">{item.name}</h3>
                 <p className="text-xs text-ink-3">
                   {[item.date, item.time, item.room].filter(Boolean).join(' · ')}
                 </p>
-              </div>
+                <span className="mt-2 inline-flex items-center gap-1 text-xs text-ink-3">
+                  <Play className="size-3.5" />
+                  {item.resourceId === '' ? '尚未提供录像' : '进入学习'}
+                </span>
+              </button>
             ))}
             {recordings && !recordings.items.length && (
               <p className="text-13 text-ink-3">该课程暂未返回回放记录。</p>
             )}
             <p className="text-xs leading-relaxed text-ink-3">
-              点击「录直播学习」打开学校的跨课程录播列表。播放、课件与下载在学校页面操作。
+              选择录像开始学习。笔记自动保存在本机，需要人工验证时才显示学校登录窗口。
             </p>
           </section>
         ) : (

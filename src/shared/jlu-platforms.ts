@@ -46,11 +46,17 @@ export interface JluLearning {
 }
 export interface JluRecording {
   id: string;
+  resourceId?: string;
   name: string;
   date: string;
   time: string;
   room: string;
   status: string;
+}
+export interface JluStudyMedia {
+  streams: { name: string; playbackUrl: string }[];
+  subtitles: { startMs: number; endMs: number; text: string }[];
+  subtitleError: string | null;
 }
 export interface JluRecordings {
   courseId: string;
@@ -68,6 +74,11 @@ export interface JluPlatformsApi {
   syncLearning(termId?: string): Promise<JluPlatformResult<JluLearning>>;
   getRecordings(courseId: string): Promise<JluRecordings | null>;
   syncRecordings(courseId: string): Promise<JluPlatformResult<JluRecordings>>;
+  studyMedia(courseId: string, recordingId: string): Promise<JluPlatformResult<JluStudyMedia>>;
+  studyWorkspace(
+    courseId: string,
+    recordingId: string,
+  ): Promise<{ noteId: string; sessionId: string }>;
   openLearning(target?: 'recordings'): Promise<void>;
   openNotice(id: string, channel: string): Promise<void>;
   openAttachment(id: string, channel: string, index: number): Promise<void>;

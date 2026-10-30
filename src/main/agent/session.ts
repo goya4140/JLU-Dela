@@ -761,6 +761,8 @@ function emptyGeneralSessionId(scope: ChatScope): string | undefined {
     .prepare(
       `SELECT id FROM sessions WHERE project_id IS NULL AND archived = 0 AND message_count = 0
        AND cwd IS NOT NULL AND cwd IS ${scope === 'library' ? '?' : 'NOT ?'}
+       AND NOT EXISTS (SELECT 1 FROM jlu_platform_cache WHERE key LIKE 'study-workspace:%'
+         AND json_extract(data, '$.sessionId') = sessions.id)
        ORDER BY updated_at DESC LIMIT 1`,
     )
     .get(coursesDirectory()) as { id: string } | undefined;
@@ -770,7 +772,11 @@ function emptyGeneralSessionId(scope: ChatScope): string | undefined {
 /** 每个项目只保留一个空会话入口；文件在首条消息后由 Pi 写出。
  *  通用会话建自己的私有目录（随聊）或课件根目录（资料页）并写进 cwd 列，项目会话留 NULL
  *  继续按项目目录解析。 */
-export function newSession(projectId: string | null, scope: ChatScope): WorkspaceChat {
+export function newSession(
+  projectId: string | null,
+  scope: ChatScope,
+  reuseEmpty = true,
+): WorkspaceChat {
   if (projectId !== null) sessionCwd(projectId, null);
   const empty =
     projectId === null
@@ -782,7 +788,7 @@ export function newSession(projectId: string | null, scope: ChatScope): Workspac
             )
             .get(projectId) as { id: string } | undefined
         )?.id;
-  if (empty && !live.get(empty)?.run) return snapshot(empty);
+  if (reuseEmpty && empty && !live.get(empty)?.run) return snapshot(empty);
   const id = randomUUID();
   const cwd =
     projectId !== null ? null : scope === 'library' ? libraryDirectory() : chatSessionDirectory(id);

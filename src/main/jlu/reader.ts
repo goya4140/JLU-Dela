@@ -7,6 +7,7 @@ export async function readSchoolPage(options: {
   url: string;
   title: string;
   accepts: (url: URL) => boolean;
+  resumeFrom?: (url: URL) => boolean;
   script: string;
   sender?: WebContents;
 }): Promise<unknown> {
@@ -29,6 +30,7 @@ export async function readSchoolPage(options: {
     let done = false;
     let checking = false;
     let shown = false;
+    let resumed = false;
     const finish = (error: Error | null, value?: unknown) => {
       if (done) return;
       done = true;
@@ -56,11 +58,21 @@ export async function readSchoolPage(options: {
               window.focus();
             }
           }
-        } else if (
-          !window.webContents.isLoadingMainFrame() &&
-          current.startsWith('https://') &&
-          options.accepts(new URL(current))
-        ) {
+        } else if (!window.webContents.isLoadingMainFrame() && current.startsWith('https://')) {
+          const url = new URL(current);
+          if (!resumed && options.resumeFrom?.(url)) {
+            resumed = true;
+            if (shown) {
+              window.hide();
+              timeout = setTimeout(
+                () => finish(new Error(`${options.title}恢复后读取超时，请重试`)),
+                25000,
+              );
+            }
+            await window.loadURL(options.url);
+            return;
+          }
+          if (!options.accepts(url)) return;
           const result: { ready: boolean; data?: unknown } =
             await window.webContents.executeJavaScript(options.script);
           if (result.ready) finish(null, result.data);
@@ -82,7 +94,7 @@ export async function readSchoolPage(options: {
         checking = false;
       }
     };
-    const timeout = setTimeout(
+    let timeout = setTimeout(
       () => finish(new Error(`${options.title}连接超时，请检查校园网/VPN后重试`)),
       25000,
     );
