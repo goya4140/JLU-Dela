@@ -148,6 +148,27 @@ describe('JLU EMAP normalization', () => {
       parseEmapRows({ datas: { cxxszhxqkb: { rows: [], totalSize: 3 } } }, 'cxxszhxqkb'),
     ).toThrow('不完整');
   });
+  it('accepts the school unpaginated unknown-total response without treating it as missing data', () => {
+    expect(
+      parseEmapRows(
+        {
+          code: '0',
+          datas: { cxxszhxqkb: { rows: [course], totalSize: -1, pageSize: 0, pageNumber: 0 } },
+        },
+        'cxxszhxqkb',
+      ),
+    ).toEqual([course]);
+    expect(parseEmapRows({ datas: { jc: { rows: periods, totalSize: -1 } } }, 'jc')).toEqual(
+      periods,
+    );
+    expect(() => parseEmapRows({ datas: { jc: { rows: periods, totalSize: -2 } } }, 'jc')).toThrow(
+      '缺少',
+    );
+    expect(() => parseEmapRows({ datas: { jc: { totalSize: -1 } } }, 'jc')).toThrow('缺少');
+    expect(() =>
+      parseEmapRows({ datas: { jc: { rows: periods, totalSize: -1, pageSize: 3 } } }, 'jc'),
+    ).toThrow('分页');
+  });
 });
 
 describe('JLU requests', () => {

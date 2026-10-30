@@ -66,7 +66,13 @@ net.request = (options) => {
         Buffer.from(
           JSON.stringify({
             code: '0',
-            datas: { [key]: { rows: fixture[key], totalSize: fixture[key].length } },
+            datas: {
+              [key]: {
+                rows: fixture[key],
+                totalSize: ['jc', 'cxxszhxqkb'].includes(key) ? -1 : fixture[key].length,
+                ...(key === 'cxxszhxqkb' ? { pageSize: 0, pageNumber: 0 } : {}),
+              },
+            },
           }),
         ),
       );

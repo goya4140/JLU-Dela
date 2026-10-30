@@ -61,16 +61,24 @@ export function parseEmapRows(payload: unknown, key: string): unknown[] {
     !result.success ||
     (result.data.code !== undefined && !['0', '200'].includes(String(result.data.code)))
   )
-    throw new Error('吉大教务返回了无法识别的数据，请重新登录后重试');
+    throw new Error(`吉大教务响应结构无法识别（${key}），本地课表未更新`);
   const block = z
     .object({
       rows: z.array(z.unknown()),
-      totalSize: z.coerce.number().int().nonnegative().optional(),
+      // 吉大未分页查询以 -1 表示未统计总数，rows 仍是有效数据。
+      totalSize: z.coerce.number().int().min(-1).optional(),
+      pageSize: z.coerce.number().int().nonnegative().optional(),
     })
     .safeParse(result.data.datas[key]);
-  if (!block.success) throw new Error('吉大教务响应缺少课表数据，请重新登录后重试');
+  if (!block.success) throw new Error(`吉大教务响应缺少有效课表数据（${key}），本地课表未更新`);
   if (block.data.totalSize !== undefined && block.data.totalSize > block.data.rows.length)
     throw new Error('吉大教务返回的数据不完整，本地课表未更新');
+  if (
+    (block.data.totalSize === undefined || block.data.totalSize === -1) &&
+    block.data.pageSize &&
+    block.data.rows.length >= block.data.pageSize
+  )
+    throw new Error('吉大教务返回了未统计总数的分页数据，本地课表未更新');
   return block.data.rows;
 }
 
@@ -106,7 +114,7 @@ async function post(
 export async function currentJluSemester(): Promise<string> {
   const rows = await post('jshkcb/dqxnxq.do', 'dqxnxq');
   const parsed = z.object({ DM: z.string().regex(/^\d{4}-\d{4}-[123]$/) }).safeParse(rows[0]);
-  if (!parsed.success) throw new Error('无法读取教务当前学期，请重新登录后重试');
+  if (!parsed.success) throw new Error('教务当前学期格式无法识别，本地课表未更新');
   return parsed.data.DM;
 }
 
