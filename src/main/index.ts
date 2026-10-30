@@ -21,6 +21,7 @@ import { closeDatabase, getDatabase, SCHEMA_VERSION } from './database';
 import { runMigrations } from './migrations';
 import { registerMailIpc, hasMailComposer } from './mail/ipc';
 import { registerTimetableIpc } from './timetable/ipc';
+import { registerJluPlatformsIpc } from './jlu/ipc';
 import { registerVsjtuIpc } from './vsjtu/ipc';
 import { attachContextMenu, checkWorkspaceSender } from './ipc';
 import type { TrayAction } from '../shared/window';
@@ -224,6 +225,7 @@ app
     registerCacheIpc();
     registerMailIpc();
     registerTimetableIpc();
+    registerJluPlatformsIpc();
     registerVsjtuIpc();
     registerCanvasIpc();
     registerShuiyuanIpc();

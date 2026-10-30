@@ -6,6 +6,8 @@ import { AppShell } from '../components/AppShell';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { MailView } from '../features/mail';
 import { CampusView } from '../features/campus/CampusView';
+import { SchoolNoticesView } from '../features/campus/SchoolNoticesView';
+import { LearningView } from '../features/campus/LearningView';
 import { TimetableView } from '../features/timetable';
 import { CompletionOverlay } from '../features/onboarding/CompletionOverlay';
 import { OnboardingFlow } from '../features/onboarding/OnboardingFlow';
@@ -341,13 +343,9 @@ export default function App() {
                     />
                   )}
                   {view === 'shuiyuan' && <ShuiyuanView />}
-                  {view === 'classroom' && (
-                    <CampusView title="课程回放" serviceIds={['learning']} />
-                  )}
+                  {view === 'classroom' && <LearningView />}
                   {view === 'todo' && <TodoView request={todoRequest ?? undefined} />}
-                  {view === 'notifications' && (
-                    <CampusView title="学校通知" serviceIds={['notices']} />
-                  )}
+                  {view === 'notifications' && <SchoolNoticesView />}
                   {view === 'settings' && (
                     <SettingsView
                       fontSize={fontSize}

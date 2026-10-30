@@ -70,7 +70,7 @@ async function run(window) {
     await js(
       `Array.from(document.querySelectorAll('span')).filter((node) => node.textContent === '同步待接入').length`,
     ),
-    2,
+    0,
   );
   if (!root.endsWith('.asar')) {
     await js(
@@ -83,10 +83,8 @@ async function run(window) {
     `Array.from(document.querySelectorAll('button')).find((button) => button.textContent.trim() === '学校通知').click()`,
   );
   await wait('document.querySelector("h1")?.textContent === "学校通知"', 'JLU notifications view');
-  assert.equal(
-    await js('document.querySelectorAll("[data-setting-id=\\"jlu-campus\\"] a").length'),
-    1,
-  );
+  assert.equal(await js('document.body.textContent.includes("刷新通知")'), true);
+  assert.equal(await js('document.body.textContent.includes("尚未同步")'), true);
   await js(
     `Array.from(document.querySelectorAll('#main-nav button')).find((button) => button.textContent.trim() === '课程资料').click()`,
   );
@@ -94,6 +92,6 @@ async function run(window) {
   assert.equal(await js('document.body.textContent.includes("连接 Canvas")'), false);
   assert.equal(BrowserWindow.getAllWindows().length, 1);
   console.log(
-    'JLU smoke passed: isolated profile, native menu, campus links, pending integrations and notifications route.',
+    'JLU smoke passed: isolated profile, native menu, campus links, preview integrations and notifications route.',
   );
 }

@@ -1,6 +1,7 @@
 // 聚合出口：领域契约在同目录领域文件，本文件只 re-export，保证全仓既有 import 路径不变。
 // 领域类型变化请直接改对应文件，不在此处添加逻辑。
 import type { BackupApi } from './backup';
+import type { JluPlatformsApi } from './jlu-platforms';
 import type { CacheApi } from './cache';
 import type { CapabilityApi } from './capabilities';
 import type { CanvasApi } from './canvas';
@@ -38,6 +39,7 @@ import type { WindowApi } from './window';
 import type { WorkspaceApi } from './workspace';
 
 export interface DelaApi {
+  readonly jluPlatforms: JluPlatformsApi;
   readonly platform: string;
   readonly vsjtu: VsjtuApi;
   capability: CapabilityApi;

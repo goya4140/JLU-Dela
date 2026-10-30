@@ -47,7 +47,7 @@ it('renders JLU preview scope and preserves the upstream license link', async ()
     '使用条款',
   ]);
   expect(container.textContent).toContain('非官方适配项目');
-  expect(container.textContent).toContain('同步仍待接入');
+  expect(container.textContent).toContain('目录同步不代表已取得课件或视频');
   expect(
     container.querySelector('a[href="https://github.com/goya4140/JLU-Dela/blob/main/LICENSE"]'),
   ).not.toBeNull();

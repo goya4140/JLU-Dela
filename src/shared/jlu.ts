@@ -9,16 +9,16 @@ export const jluServices = [
   {
     id: 'notices',
     name: '吉林大学电子校务平台',
-    description: '查看学校通知与校务信息。',
+    description: '读取校内通知、正文和附件入口。',
     url: 'https://oa.jlu.edu.cn/defaultroot/login.jsp?access=oa',
-    integration: 'pending',
+    integration: 'preview',
   },
   {
     id: 'learning',
     name: '学在吉大',
-    description: '查看课程回放与课表。',
+    description: '同步学期、课程及回放目录，播放请前往学校平台。',
     url: 'https://ilearntec.jlu.edu.cn/studycenter-web/index#/',
-    integration: 'pending',
+    integration: 'preview',
   },
 ] as const;
 

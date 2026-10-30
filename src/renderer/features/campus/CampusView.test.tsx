@@ -22,7 +22,7 @@ it('shows platform integration states and opens the local library', async () => 
     );
     expect(
       [...host.querySelectorAll('span')].filter((node) => node.textContent === '同步待接入'),
-    ).toHaveLength(2);
+    ).toHaveLength(0);
     await act(async () =>
       [...host.querySelectorAll<HTMLButtonElement>('button')]
         .find((button) => button.textContent?.includes('打开课程资料'))!
@@ -34,7 +34,9 @@ it('shows platform integration states and opens the local library', async () => 
     expect([...host.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual([
       jluServices[1].url,
     ]);
-    expect(host.textContent).not.toContain('已同步');
+    expect([...host.querySelectorAll('span')].some((node) => node.textContent === '已同步')).toBe(
+      false,
+    );
   } finally {
     await act(async () => root.unmount());
     host.remove();

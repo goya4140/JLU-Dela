@@ -15,9 +15,11 @@ import { tool } from './domain/shared';
 import type { AgentTool } from './domain/shared';
 import { assertShuiyuanEnabled, experimentEnabled } from '../settings/prefs';
 import { jluServices } from '../../shared/jlu';
+import { jluTools } from './domain/jlu';
 
 // 这些是 shell 的业务命令，不常驻模型工具表；复用应用已有的缓存、登录与操作边界。
 const commandDomains = [
+  { name: 'jlu', description: '查询电子校务通知与学在吉大本地缓存', commands: jluTools },
   { name: 'canvas', description: '查询、同步 Canvas 课程与资料', commands: canvasTools },
   { name: 'classroom', description: '读取与下载课堂视频语音文稿', commands: classroomTools },
   { name: 'mail', description: '检索邮件、读取附件与准备邮件草稿', commands: mailTools },
@@ -42,7 +44,7 @@ const commands: Record<string, AgentTool> = Object.assign(
       z.object({}).strict(),
       () => ({
         services: jluServices,
-        note: '课表为接入预览，需用户在课表页登录同步；实际数据完整性以 query_schedule 的 coverage 为准。',
+        note: '课表、电子校务和学在吉大为接入预览；由用户在对应页面同步，实际数据范围以各查询命令的 coverage 为准。',
       }),
     ),
     read_resource: readResourceTool,

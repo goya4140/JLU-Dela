@@ -21,7 +21,7 @@ export function CampusView({
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
           <p className="text-13 leading-relaxed text-ink-3">
-            课表支持在应用中登录同步，当前为接入预览。课程资料与通知仍需前往学校平台。
+            读取课表、校内通知及学在吉大课程，已同步内容保存在本机。
           </p>
         </header>
         <div className="grid gap-4" data-setting-id="jlu-campus">
@@ -30,7 +30,7 @@ export function CampusView({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-base font-semibold text-ink">{service.name}</h2>
                 <span className="rounded-full bg-field px-2.5 py-1 text-xs text-ink-3">
-                  {service.integration === 'preview' ? '课表接入预览' : '同步待接入'}
+                  {service.id === 'academic' ? '课表接入预览' : '接入预览'}
                 </span>
               </div>
               <p className="text-13 text-ink-3">{service.description}</p>
@@ -41,6 +41,18 @@ export function CampusView({
                     onClick={() => useNavigationStore.getState().navigate('timetable')}
                   >
                     打开课表
+                  </Button>
+                )}
+                {service.id !== 'academic' && (
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      useNavigationStore
+                        .getState()
+                        .navigate(service.id === 'notices' ? 'notifications' : 'classroom')
+                    }
+                  >
+                    {service.id === 'notices' ? '打开通知' : '打开学在吉大'}
                   </Button>
                 )}
                 <Button asChild size="sm" variant="outline">

@@ -17,7 +17,7 @@ export const navEntries: Array<{
   { id: 'campus', label: '吉大校园', icon: GraduationCap },
   { id: 'sources', label: '课程资料', icon: FolderOpen },
   { id: 'timetable', label: '课表', icon: CalendarDays },
-  { id: 'classroom', label: '课程回放', icon: MonitorPlay },
+  { id: 'classroom', label: '学在吉大', icon: MonitorPlay },
   { id: 'notifications', label: '学校通知', icon: Bell },
 ];
 

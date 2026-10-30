@@ -42,6 +42,7 @@ jobs:
           pnpm smoke:runtime
           pnpm smoke:jlu
           pnpm smoke:timetable
+          pnpm smoke:platforms
       - name: Package development app
         run: pnpm exec electron-builder --dir --mac --arm64 --publish never -c.electronDist=node_modules/electron/dist
       - name: Verify package and smoke test packaged app
@@ -50,3 +51,4 @@ jobs:
           "dist/mac-arm64/JLU-Dela.app/Contents/MacOS/JLU-Dela" --smoke-test
           pnpm smoke:jlu "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
           pnpm smoke:timetable "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:platforms "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"

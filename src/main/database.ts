@@ -97,6 +97,7 @@ const schema: string[] = [
     items TEXT NOT NULL DEFAULT '[]'
   )`,
   `CREATE TABLE IF NOT EXISTS canvas_sources (id TEXT PRIMARY KEY, course_id INTEGER NOT NULL, data TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS jlu_platform_cache (key TEXT PRIMARY KEY, data TEXT NOT NULL)`,
   // 工作区：条目身份以路径为主，只有项目与来源引用建行；笔记不落库。
   // 远程连接：项目条目经 remote_id 指向这里，local_path 存远程绝对路径（POSIX）。
   // Dela 不保存任何 SSH 凭据：密钥、端口与跳板由 ssh 自己按 ~/.ssh/config 解析。

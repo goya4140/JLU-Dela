@@ -2,6 +2,7 @@ import { contextBridge } from 'electron';
 import { version } from '../../package.json';
 import type { DelaApi } from '../shared/api';
 import { canvas } from './canvas';
+import { jluPlatforms } from './jlu-platforms';
 import { cache } from './cache';
 import { chat } from './chat';
 import { consent } from './consent';
@@ -26,6 +27,7 @@ import { workspace } from './workspace';
 import { vsjtu } from './vsjtu';
 
 contextBridge.exposeInMainWorld('dela', {
+  jluPlatforms,
   platform: process.platform,
   vsjtu,
   version,
