@@ -14,6 +14,7 @@ import { resourceRefSchema } from '../../shared/resources';
 import { tool } from './domain/shared';
 import type { AgentTool } from './domain/shared';
 import { assertShuiyuanEnabled, experimentEnabled } from '../settings/prefs';
+import { jluServices } from '../../shared/jlu';
 
 // 这些是 shell 的业务命令，不常驻模型工具表；复用应用已有的缓存、登录与操作边界。
 const commandDomains = [
@@ -36,6 +37,11 @@ const commandDomains = [
 
 const commands: Record<string, AgentTool> = Object.assign(
   {
+    campus_status: tool(
+      '查看吉林大学校园平台入口及接入状态；不登录学校、不读取或同步个人数据。',
+      z.object({}).strict(),
+      () => ({ services: jluServices, synced: false }),
+    ),
     read_resource: readResourceTool,
     prepare_document: tool(
       '为文档读取 skill 准备临时文件和工具路径，不解析正文、不复制进项目；需要已安装文档组件。',
@@ -54,6 +60,16 @@ const commands: Record<string, AgentTool> = Object.assign(
   ...commandDomains.map((domain) => domain.commands),
 );
 
+const unavailableCampusCommands = new Set([
+  ...Object.keys(canvasTools),
+  ...Object.keys(classroomTools),
+  ...Object.keys(mailTools),
+  ...Object.keys(shuiyuanTools),
+  'link_canvas_source',
+  'query_assignments',
+  'refresh_todos',
+]);
+
 async function executeDomainCommand(name: string, input: unknown) {
   if (name === 'help') {
     const selected =
@@ -62,6 +78,7 @@ async function executeDomainCommand(name: string, input: unknown) {
         : '';
     const shuiyuanOff = !experimentEnabled('shuiyuan');
     return Object.entries(commands)
+      .filter(([name]) => !unavailableCampusCommands.has(name))
       .filter(([name]) => !shuiyuanOff || !Object.hasOwn(shuiyuanTools, name))
       .filter(([name]) => !selected || name === selected)
       .map(([name, command]) => ({
@@ -70,6 +87,8 @@ async function executeDomainCommand(name: string, input: unknown) {
         parameters: z.toJSONSchema(command.schema, { io: 'input' }),
       }));
   }
+  if (unavailableCampusCommands.has(name))
+    throw new Error('吉大校园同步尚未接入，请使用 dela campus_status 查看平台入口');
   if (!Object.hasOwn(commands, name)) throw new Error(`命令不存在：${name}，请使用 dela help`);
   if (Object.hasOwn(shuiyuanTools, name)) assertShuiyuanEnabled();
   return commands[name]!.execute(input);

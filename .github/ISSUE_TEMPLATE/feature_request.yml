@@ -1,5 +1,5 @@
 name: 功能建议
-description: 提交希望 Dela 新增或改进的功能
+description: 提交希望 JLU Dela 新增或改进的功能
 title: '[Feature] '
 labels:
   - enhancement
@@ -7,21 +7,21 @@ body:
   - type: markdown
     attributes:
       value: |
-        感谢你帮助改进 Dela。提交前请先搜索现有 Issue，避免重复建议。
+        感谢你帮助改进 JLU Dela。提交前请先搜索现有 Issue，避免重复建议。
   - type: textarea
     id: scenario
     attributes:
       label: 使用场景与受众范围
       description: 谁会在什么情况下遇到什么问题？主要针对哪一类用户的共同需求？
-      placeholder: 例如：在用 Canvas 下载课程资料的时候，无法批量下载和管理，预览也很麻烦；面向需要集中管理 Canvas 课程资料的学生。
+      placeholder: 例如：整理本地课件时，希望按课程集中管理；面向需要复习课程资料的吉大本科生。
     validations:
       required: true
   - type: textarea
     id: outcome
     attributes:
       label: 期望结果
-      description: 希望 Dela 做到什么？最终解决什么样的问题？
-      placeholder: 例如：可以在 Dela 的资料界面，批量下载 Canvas 课程资料。
+      description: 希望 JLU Dela 做到什么？最终解决什么样的问题？
+      placeholder: 例如：可以按课程整理已下载的课件，后续接入学校平台后再支持同步。
     validations:
       required: true
   - type: textarea

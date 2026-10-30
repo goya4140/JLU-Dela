@@ -56,8 +56,14 @@ import {
 import { applyTheme, registerSettingsIpc, savedIcon, savedTheme, savedZoom } from './settings';
 import { registerUpdateIpc, startBackgroundUpdateCheck } from './update';
 
+import { product } from '../shared/product';
+
 import Database from 'better-sqlite3';
 import { spawn as spawnPty } from 'node-pty';
+
+app.setName(product.name);
+if (!process.argv.includes('--smoke-test') && !process.argv.includes('--terminal-smoke-test'))
+  app.setPath('userData', join(app.getPath('appData'), product.directory));
 
 // 在数据库、窗口和托盘初始化前抢占锁，重复启动只唤起已有实例。
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -152,7 +158,7 @@ app
     if (!hasSingleInstanceLock) return;
     // Windows 系统通知按 AppUserModelID 识别应用；与 electron-builder.yml 的 appId 一致，
     // 开发运行（未走安装器）也需要显式设置才能弹通知。
-    if (process.platform === 'win32') app.setAppUserModelId('io.dela.desktop');
+    if (process.platform === 'win32') app.setAppUserModelId(product.appId);
     if (process.platform === 'darwin') {
       const action = (value: TrayAction) => () => {
         if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -162,7 +168,7 @@ app
       Menu.setApplicationMenu(
         Menu.buildFromTemplate([
           {
-            label: 'Dela',
+            label: product.name,
             submenu: [
               { role: 'about' },
               { label: '设置…', click: action('open-settings') },
@@ -269,7 +275,10 @@ app
     // 没有这个 catch 只会留下未处理的 rejection，用户看到的是「窗口一直不出现、也没提示」。
     console.error(error);
     if (!smokeTest) {
-      dialog.showErrorBox('Dela 无法启动', error instanceof Error ? error.message : String(error));
+      dialog.showErrorBox(
+        `${product.name} 无法启动`,
+        error instanceof Error ? error.message : String(error),
+      );
     }
     app.exit(1);
   });
@@ -347,7 +356,7 @@ async function createWindow(): Promise<void> {
       defaultId: 1,
       cancelId: 1,
       title: '仍有未保存的内容',
-      message: '有未保存的笔记或未发送的邮件，确定抛弃并退出 Dela 吗？',
+      message: `有未保存的笔记或未发送的邮件，确定抛弃并退出 ${product.name} 吗？`,
     });
     if (choice === 0) {
       quitting = wasQuitting;
@@ -453,7 +462,7 @@ function createTray(window: BrowserWindow): void {
     .createFromPath(join(app.getAppPath(), 'assets', `Dela_${savedIcon()}_bg.png`))
     .resize({ width: 16, height: 16 });
   tray = new Tray(icon);
-  tray.setToolTip('Dela');
+  tray.setToolTip(product.name);
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: '打开主窗口', click: () => showMainWindow(window) },

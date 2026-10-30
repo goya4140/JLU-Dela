@@ -56,7 +56,7 @@ export function GeneralSection() {
     void loadExperiments();
   }, [loadExperiments]);
 
-  const master = experiments?.master ?? false;
+  const master = false;
   // 目录行只在课堂视频下载开着时出现，跟着它读一次，不用常驻状态。
   const directoryVisible = master && Boolean(experiments?.videoDownload);
   useEffect(() => {
@@ -130,13 +130,13 @@ export function GeneralSection() {
         {/* 有主语开关的组：从属子项靠缩进表达层级。 */}
         <SettingsGroup settingId="experimental-features">
           <SettingRow
-            description="允许使用试验阶段的功能；关闭时全部子项停用。"
+            description="上游交大功能尚未适配吉大，当前版本不可开启。"
             settingId="experimental-master"
             title="试验功能"
           >
             <Switch
               checked={master}
-              disabled={experiments === null || experimentBusy}
+              disabled
               label="试验功能"
               onChange={(next) => void toggleExperiment('master', next)}
             />

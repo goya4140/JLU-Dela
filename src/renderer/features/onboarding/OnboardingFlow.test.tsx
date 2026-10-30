@@ -32,7 +32,7 @@ vi.mock('./steps/CanvasStep', () => ({ CanvasStep: () => <h2>Canvas 步骤</h2> 
 vi.mock('./steps/ShuiyuanStep', () => ({ ShuiyuanStep: () => <h2>水源步骤</h2> }));
 vi.mock('./steps/LlmStep', () => ({ LlmStep: () => <h2>模型步骤</h2> }));
 
-it('keeps capability setup inside the six-step wizard, supports going back, and completes only on confirmation', async () => {
+it('keeps capability setup inside the model-and-capability wizard, supports going back, and completes only on confirmation', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const completeSetup = vi.fn(async () => {});
   window.dela = {
@@ -52,13 +52,16 @@ it('keeps capability setup inside the six-step wizard, supports going back, and 
     );
     await act(async () => button('开始').click());
     const shell = host.firstElementChild;
-    for (let index = 0; index < 5; index++) await act(async () => button('跳过').click());
+    expect(host.textContent).toContain('模型步骤');
+    expect(host.textContent).not.toContain('Canvas 步骤');
+    expect(host.textContent).not.toContain('水源步骤');
+    for (let index = 0; index < 1; index++) await act(async () => button('跳过').click());
     expect(host.firstElementChild).toBe(shell);
-    expect(host.querySelector('[aria-label="第 6 步，共 6 步"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label="第 2 步，共 2 步"]')).not.toBeNull();
     expect(done).not.toHaveBeenCalled();
     expect(state.mark).not.toHaveBeenCalled();
     await act(async () => button('上一步').click());
-    expect(host.querySelector('[aria-label="第 5 步，共 6 步"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label="第 1 步，共 2 步"]')).not.toBeNull();
     expect(completeSetup).not.toHaveBeenCalled();
     await act(async () => button('跳过').click());
     await act(async () => button('完成配置').click());

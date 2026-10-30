@@ -1,5 +1,6 @@
-appId: io.dela.desktop
-productName: Dela
+appId: io.github.goya4140.jlu-dela
+productName: JLU Dela
+executableName: JLU-Dela
 artifactName: '${productName}-${version}-${os}-${arch}.${ext}'
 icon: assets/Dela_white_bg.png
 asar: true
@@ -48,10 +49,10 @@ extraResources:
 npmRebuild: false
 win:
   publish:
-    provider: generic
-    url: https://openlist.frameneo.com/sd/Dela_latest_release/
-    channel: latest
-    useMultipleRangeRequest: false
+    provider: github
+    owner: goya4140
+    repo: JLU-Dela
+    releaseType: draft
   extraResources:
     - from: vendor/openssh
       to: openssh
@@ -74,13 +75,12 @@ win:
 mac:
   icon: out/main/icons/Dela_white_bg.png
   category: public.app-category.productivity
-  # 与 Windows 同一个 CDN 目录：electron-updater 据此生成 latest-mac.yml 并把
-  # app-update.yml 打进 .app；mac 更新走 zip，dmg 仅供首次安装。
+  # 吉大版使用本仓库的 GitHub Releases；正式自动更新待签名与公证后验证。
   publish:
-    provider: generic
-    url: https://openlist.frameneo.com/sd/Dela_latest_release/
-    channel: latest
-    useMultipleRangeRequest: false
+    provider: github
+    owner: goya4140
+    repo: JLU-Dela
+    releaseType: draft
   target:
     - target: dmg
       arch:

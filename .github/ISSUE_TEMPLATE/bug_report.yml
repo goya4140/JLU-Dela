@@ -1,5 +1,5 @@
 name: 错误报告
-description: 报告可以复现的 Dela 使用问题
+description: 报告可以复现的 JLU Dela 使用问题
 title: '[Bug] '
 labels:
   - bug
@@ -7,8 +7,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        感谢你帮助改进 Dela。请勿上传 API Key、Token、Cookie、邮件内容、课程资料或其他个人信息。
-        提交前请先搜索现有 Issue，并确认问题来自 Dela 本身。
+        感谢你帮助改进 JLU Dela。请勿上传 API Key、Token、Cookie、邮件内容、课程资料或其他个人信息。
+        提交前请先搜索现有 Issue，并确认问题来自 JLU Dela 本身。
   - type: textarea
     id: description
     attributes:
@@ -19,7 +19,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Dela 版本
+      label: JLU Dela 版本
       description: 可以在“设置 › 关于”查看；不知道时填写“未知”。
       placeholder: 例如：1.2.0
     validations:
@@ -29,14 +29,14 @@ body:
     attributes:
       label: 操作系统
       description: 请填写系统名称和版本。
-      placeholder: 例如：Windows 11 24H2 / macOS 15.7
+      placeholder: 例如：macOS 15 / Apple Silicon
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
       label: 复现步骤
-      description: 从打开 Dela 开始，怎样可以再次看到这个问题？
+      description: 从打开 JLU Dela 开始，怎样可以再次看到这个问题？
       placeholder: |
         1. 打开……
         2. 点击……

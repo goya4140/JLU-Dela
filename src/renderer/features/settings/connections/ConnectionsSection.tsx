@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { CampusView } from '../../campus/CampusView';
 import { Dialog } from 'radix-ui';
 import { CalendarDays, GraduationCap, Mail, type LucideIcon } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
@@ -41,7 +42,11 @@ type Connection = {
 };
 
 /** 设置 › 连接：Canvas、邮箱、教务、水源四张连接卡的容器。 */
-export function ConnectionsSection({
+export function ConnectionsSection(_props: ConnectionsSectionProps) {
+  return <CampusView title="校园平台连接" />;
+}
+
+export function UpstreamConnectionsSection({
   onOpenMail,
   onOpenShuiyuan,
   onOpenTimetable,

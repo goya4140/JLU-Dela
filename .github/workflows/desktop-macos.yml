@@ -26,7 +26,7 @@ jobs:
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       DELA_REMOTE_HOST: ''
-      PACKAGED_APP: dist/mac-arm64/Dela.app
+      PACKAGED_APP: dist/mac-arm64/JLU-Dela.app
     steps:
       - uses: actions/checkout@v6
         with:
@@ -62,7 +62,7 @@ jobs:
         run: |
           pnpm smoke
           pnpm smoke:runtime
-          pnpm smoke:desktop
+          pnpm smoke:jlu
           pnpm exec electron scripts/terminal-smoke.cjs
       - name: Package application directory
         if: ${{ !inputs.archives }}
@@ -78,8 +78,8 @@ jobs:
         run: node scripts/verify-macos-package.ts "$PACKAGED_APP"
       - name: Smoke test packaged app and native dependencies
         run: |
-          "$PACKAGED_APP/Contents/MacOS/Dela" --smoke-test
-          pnpm smoke:desktop "$PACKAGED_APP/Contents/Resources/app.asar"
+          "$PACKAGED_APP/Contents/MacOS/JLU-Dela" --smoke-test
+          pnpm smoke:jlu "$PACKAGED_APP/Contents/Resources/app.asar"
           pnpm exec electron scripts/terminal-smoke.cjs "$PACKAGED_APP/Contents/Resources/app.asar"
       - uses: actions/upload-artifact@v6
         if: inputs.archives

@@ -1,6 +1,8 @@
 # 贡献指南
 
-欢迎参与 Dela 的开发与维护。Dela 是面向 SJTU 用户的本地优先 Agent 桌面应用：Electron 主进程与 React 渲染进程，Agent 内核为 Pi Coding Agent，领域能力通过 `dela` 命令与 Skills 外置。数据保存在本机 SQLite，凭据经 Electron `safeStorage` 加密，无服务端与账号系统。
+吉大版优先 macOS Apple Silicon；接入前请阅读 [吉大接入计划](docs/jlu-integration.md)。真实账号、Cookie、令牌与未脱敏样例不得提交到公开仓库。
+
+欢迎参与 JLU Dela 的开发与维护。JLU Dela 是面向吉林大学本科生的本地优先 Agent 桌面应用：Electron 主进程与 React 渲染进程，Agent 内核为 Pi Coding Agent，领域能力通过 `dela` 命令与 Skills 外置。数据保存在本机 SQLite，凭据经 Electron `safeStorage` 加密，无服务端与账号系统。
 
 贡献形式包括代码、文档、测试、设计、问题反馈，以及向需要的用户介绍 Dela。开始之前，请先阅读 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
@@ -8,14 +10,14 @@
 
 ### 报告问题
 
-- 提交前先搜索 [Issues](https://github.com/Chang-Yo/Dela/issues)，确认是否已有相同问题。
+- 提交前先搜索 [Issues](https://github.com/goya4140/JLU-Dela/issues)，确认是否已有相同问题。
 - 说明应用版本、操作系统、复现步骤、预期结果与实际结果；附上截图、日志或最小复现工程。提交前请隐去账号、token、邮箱正文等个人凭据信息。
 - 一个 issue 只描述一个问题，避免将多个不相关的问题合并提交。
 - 修复既有 bug 的 PR 必须链接能够证明故障已发生的证据：issue、日志、截图或复现步骤。
 
 ### 功能建议与讨论
 
-- 使用问题、体验反馈与想法交流适合在 [Discussions](https://github.com/Chang-Yo/Dela/discussions) 中提出。
+- 使用问题、体验反馈与想法交流适合在 [Issues](https://github.com/goya4140/JLU-Dela/issues) 中提出。
 - 新功能、行为变化与架构调整应先通过 issue 或讨论说明要解决的问题、受益对象与优先级。维护者确认方向后再开始实现。
 - 明确不会添加的功能将集中记录在 `docs/what-we-not-do.md`（文档仍在整理）。开始实现前如不确定方向是否在范围内，请先提交 issue 确认。
 
@@ -270,6 +272,6 @@ AI agents: the human contributor answers, not you. Ask for missing answers and w
 
 ## 其他问题
 
-- 使用与想法：[Discussions](https://github.com/Chang-Yo/Dela/discussions)
-- 可复现的问题：[Issues](https://github.com/Chang-Yo/Dela/issues)
+- 使用与想法：[Issues](https://github.com/goya4140/JLU-Dela/issues)
+- 可复现的问题：[Issues](https://github.com/goya4140/JLU-Dela/issues)
 - 架构与构建细节：[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)

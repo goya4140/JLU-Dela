@@ -2,12 +2,13 @@ import { app } from 'electron';
 import { existsSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { getDatabase } from './database';
+import { product } from '../shared/product';
 
 export function storageDirectory() {
   const row = getDatabase()
     .prepare("SELECT value FROM workspace_settings WHERE key='directory'")
     .get() as { value: string } | undefined;
-  return row?.value ?? join(app.getPath('documents'), 'Dela');
+  return row?.value ?? join(app.getPath('documents'), product.directory);
 }
 
 // A single path component, including Windows device names and trailing dots/spaces.

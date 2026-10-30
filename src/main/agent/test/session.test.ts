@@ -86,7 +86,7 @@ vi.mock('../environment', () => ({
   agentEnvironment: () => ({
     sessionOptions: async () => ({}),
     workspaceRoot: () => {
-      const root = join(state.root, 'Dela', 'workspace');
+      const root = join(state.root, 'JLU-Dela', 'workspace');
       mkdirSync(root, { recursive: true });
       return root;
     },
@@ -463,7 +463,7 @@ describe('会话归属与 cwd', () => {
 
   it('随聊会话的 cwd 是存储目录下 chat-sessions/<id> 的私有目录，目录随即建好', () => {
     const chat = newSession(null, 'chat');
-    const dir = join(state.root, 'Dela', 'chat-sessions', chat.sessionId!);
+    const dir = join(state.root, 'JLU-Dela', 'chat-sessions', chat.sessionId!);
     expect(chat.cwd).toBe(dir);
     expect(statSync(dir).isDirectory()).toBe(true);
     expect(newSession(null, 'chat').sessionId).toBe(chat.sessionId);
@@ -471,7 +471,7 @@ describe('会话归属与 cwd', () => {
   });
 
   it('资料页会话的 cwd 是课件根目录（与 workspace 平级），缺失时建好', () => {
-    const courses = join(state.root, 'Dela', 'courses');
+    const courses = join(state.root, 'JLU-Dela', 'courses');
     expect(existsSync(courses)).toBe(false);
     const library = newSession(null, 'library');
     expect(library).toMatchObject({ projectId: null, cwd: courses });
@@ -523,7 +523,7 @@ describe('会话归属与 cwd', () => {
       )
       .run();
     expect(openSession('old-project').cwd).toBe(state.root);
-    expect(openSession('old-chat').cwd).toBe(join(state.root, 'Dela', 'workspace'));
+    expect(openSession('old-chat').cwd).toBe(join(state.root, 'JLU-Dela', 'workspace'));
   });
 
   it('项目目录不存在时拒绝新建会话，不回退到其他目录', () => {

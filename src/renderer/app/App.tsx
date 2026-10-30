@@ -5,14 +5,13 @@ import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { AppShell } from '../components/AppShell';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { MailView } from '../features/mail';
-import { ClassroomView } from '../features/classroom';
+import { CampusView } from '../features/campus/CampusView';
 import { CompletionOverlay } from '../features/onboarding/CompletionOverlay';
 import { OnboardingFlow } from '../features/onboarding/OnboardingFlow';
 import { CapabilitySetup } from '../features/onboarding/CapabilitySetup';
 import { OnboardingWindowBar } from '../features/onboarding/onboarding-window-bar';
 import { Button } from '../components/ui/button';
 import { isSmokeTest, onboardingCompleted } from '../features/onboarding/onboarding-state';
-import { NotificationsView } from '../features/notifications/NotificationsView';
 import { leaveComposer } from '../features/mail/compose-close';
 import { SettingsView } from '../features/settings';
 import { UpdatePrompt } from '../features/settings/UpdatePrompt';
@@ -23,7 +22,6 @@ import { useExperimental, useExperimentEnabled } from '../features/settings/expe
 import { parsePreviewTabId } from '../content/preview/tab-id';
 import { ShuiyuanView } from '../features/shuiyuan';
 import { GlobalSearchDialog } from '../features/search/GlobalSearchDialog';
-import { TimetableView } from '../features/timetable';
 import { TodoView } from '../features/todo/TodoView';
 import type { ChatSessionSummary, GlobalSearchResult } from '../../shared/api';
 import type { NavSessionSummary } from '../navigation/ProjectSessionNav';
@@ -335,37 +333,17 @@ export default function App() {
                       openRequest={mailRequest ?? undefined}
                     />
                   )}
+                  {view === 'campus' && <CampusView />}
                   {view === 'timetable' && (
-                    <TimetableView
-                      onOpenTodo={(todoId) => void useNavigationStore.getState().openTodo(todoId)}
-                    />
+                    <CampusView title="课表" serviceIds={['academic', 'learning']} />
                   )}
                   {view === 'shuiyuan' && <ShuiyuanView />}
-                  {view === 'classroom' && <ClassroomView />}
+                  {view === 'classroom' && (
+                    <CampusView title="课程回放" serviceIds={['learning']} />
+                  )}
                   {view === 'todo' && <TodoView request={todoRequest ?? undefined} />}
                   {view === 'notifications' && (
-                    <NotificationsView
-                      state={notifications.notifications}
-                      loading={notifications.loading}
-                      error={notifications.error}
-                      onRefresh={() =>
-                        window.dela?.notifications &&
-                        void notifications.run(() => window.dela!.notifications.refresh())
-                      }
-                      onMarkRead={(id) =>
-                        window.dela?.notifications &&
-                        void notifications.run(() => window.dela!.notifications.markRead(id))
-                      }
-                      onMarkAllRead={() =>
-                        window.dela?.notifications &&
-                        void notifications.run(() => window.dela!.notifications.markAllRead())
-                      }
-                      onSnooze={(until) =>
-                        window.dela?.notifications &&
-                        void notifications.run(() => window.dela!.notifications.setSnooze(until))
-                      }
-                      onOpen={notifications.openNotification}
-                    />
+                    <CampusView title="学校通知" serviceIds={['notices']} />
                   )}
                   {view === 'settings' && (
                     <SettingsView

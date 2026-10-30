@@ -27,7 +27,6 @@ import { Resizer } from './ui/resizer';
 import { useEditorSettings } from '../content/editor-settings';
 import { errorText, useWorkspaceStore } from '../workspace/store';
 import { showToast, ToastHost } from '../app/toasts';
-import { DelaBrand } from './ui/dela-brand';
 import { cn } from '../lib/utils';
 import { fileManagerName, platform } from '../lib/platform';
 import { useNavigationStore, type AppView, type MobileDrawer } from '../navigation/view';
@@ -700,15 +699,14 @@ export function AppShell({
           <div className="flex h-11 shrink-0 items-center gap-1.5 px-1">
             {/* 纯品牌展示；回首页由下方「首页」行承担，避免相邻双入口。 */}
             <div className="flex min-w-0 items-center gap-2 px-1 py-0.5">
-              <DelaBrand className="h-[1.125rem] w-auto" />
               <span
                 className={cn(
-                  'text-15 font-semibold tracking-tight text-ink',
+                  'whitespace-nowrap text-13 font-semibold tracking-tight text-ink',
                   labelFade,
                   sidebarCollapsed && 'opacity-0',
                 )}
               >
-                Dela
+                JLU Dela
               </span>
             </div>
             <div className="flex-1" />

@@ -35,13 +35,35 @@ async function run(command: string, input: unknown = {}) {
   return (await response.json()) as { ok: boolean; result?: unknown; error?: string };
 }
 
-it('hides and rejects shuiyuan commands while the feature is off', async () => {
-  const names = async () =>
-    ((await run('help')).result as { name: string }[]).map((item) => item.name);
-  expect(await names()).toContain('search_shuiyuan_topics');
-  flags.shuiyuan = false;
-  expect(await names()).not.toContain('search_shuiyuan_topics');
-  expect(await names()).toContain('query_todos');
-  const result = await run('search_shuiyuan_topics', { query: '数据结构' });
-  expect(result).toMatchObject({ ok: false, error: '水源功能已关闭' });
+it('reports pending JLU integrations and rejects upstream campus commands', async () => {
+  const help = (await run('help')).result as { name: string }[];
+  const names = help.map((item) => item.name);
+  expect(names).toContain('campus_status');
+  expect(names).toContain('query_todos');
+  expect(names).toContain('query_schedule');
+  expect(names).toContain('create_entry');
+  for (const command of [
+    'search_shuiyuan_topics',
+    'list_canvas_courses',
+    'query_assignments',
+    'refresh_todos',
+    'link_canvas_source',
+  ]) {
+    expect(names).not.toContain(command);
+    expect(await run(command)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining('尚未接入'),
+    });
+  }
+  expect(await run('campus_status')).toMatchObject({
+    ok: true,
+    result: {
+      synced: false,
+      services: expect.arrayContaining([
+        expect.objectContaining({ id: 'academic', integration: 'pending' }),
+        expect.objectContaining({ id: 'notices', integration: 'pending' }),
+        expect.objectContaining({ id: 'learning', integration: 'pending' }),
+      ]),
+    },
+  });
 });

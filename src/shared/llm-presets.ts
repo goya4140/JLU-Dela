@@ -40,12 +40,6 @@ export const reasoningEffortLevels = [
 
 export const llmProviderPresets: readonly LlmProviderPreset[] = [
   {
-    id: 'zhiyuan',
-    name: '致远一号',
-    baseUrl: 'https://models.sjtu.edu.cn/api/v1',
-    models: ['qwen', 'deepseek-chat', 'deepseek-reasoner', 'minimax'],
-  },
-  {
     id: 'deepseek',
     name: 'DeepSeek',
     baseUrl: 'https://api.deepseek.com',

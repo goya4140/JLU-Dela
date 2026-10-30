@@ -509,6 +509,21 @@ export function WorkbenchExplorer({
             >
               {/* 课程资料只在通用（无项目）工作台显示；项目工作台只呈现项目自己的文件。 */}
               {projectId === null && (
+                <div className="grid gap-2 px-4 py-3 text-xs text-ink-3">
+                  <p className="font-medium text-ink-2">本地课程资料</p>
+                  <p>导入已下载的课件，或按课程创建项目。学校课程同步待接入。</p>
+                  <div>
+                    <Button
+                      onClick={() => useAppNavigation.getState().navigate('campus')}
+                      size="sm"
+                      variant="outline"
+                    >
+                      查看学校平台
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {projectId === null && canvas.connected && (
                 <>
                   <div className={eyebrowClass}>同步</div>
                   <div className={sectionClass}>

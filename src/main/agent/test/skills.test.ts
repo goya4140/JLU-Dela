@@ -93,13 +93,12 @@ it('shows capability setup once without resetting existing skills or other onboa
   ).toEqual({ value: '1' });
 });
 
-it('lists the shuiyuan skill only while the feature is enabled', async () => {
-  expect(await byName('shuiyuan')).toHaveLength(1);
-  expect(effectiveDisabledSkills().has('shuiyuan')).toBe(false);
-  state.shuiyuan = false;
-  expect(await byName('shuiyuan')).toHaveLength(0);
-  expect(effectiveDisabledSkills().has('shuiyuan')).toBe(true);
-  expect(readDisabledSkills().has('shuiyuan')).toBe(false);
+it('does not publish upstream campus skills as working JLU integrations', async () => {
+  for (const name of ['canvas', 'classroom', 'mail', 'shuiyuan', 'todo', 'curriculum']) {
+    expect(await byName(name)).toHaveLength(0);
+    expect(effectiveDisabledSkills().has(name)).toBe(true);
+    expect(readDisabledSkills().has(name)).toBe(false);
+  }
 });
 
 it('writes the document skill but excludes it until its dependencies are installed', async () => {
@@ -112,11 +111,11 @@ it('writes the document skill but excludes it until its dependencies are install
 
 describe('分组', () => {
   it('分开 Dela 内置与本机目录里用户自己放的', async () => {
-    writeSkill(join(home, '.dela', 'skills'), 'my-notes');
+    writeSkill(join(home, '.jlu-dela', 'skills'), 'my-notes');
     writeSkill(join(home, '.agents', 'skills'), 'from-agents');
     const skills = await listSkills();
     const origin = (name: string) => skills.find((skill) => skill.name === name)?.origin;
-    expect(origin('canvas')).toBe('builtin');
+    expect(origin('document-reading')).toBe('builtin');
     expect(origin('my-notes')).toBe('user');
     expect(origin('from-agents')).toBe('user');
   });
@@ -202,7 +201,7 @@ describe('分组', () => {
 });
 
 it('restores user-edited builtin skills to the bundled version', async () => {
-  const path = join(home, '.dela', 'skills', 'canvas', 'SKILL.md');
+  const path = join(home, '.jlu-dela', 'skills', 'document-reading', 'SKILL.md');
   const bundled = readFileSync(path, 'utf8');
   writeFileSync(path, `${bundled}\n用户补充的指引\n`);
   vi.resetModules();

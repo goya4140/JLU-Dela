@@ -135,28 +135,10 @@ export const settingsSearchItems: SettingsSearchItem[] = [
   },
   // 连接
   {
-    id: 'canvas',
+    id: 'jlu-campus',
     section: 'connections',
-    title: 'Canvas',
-    keywords: ['连接', 'canvas', '令牌', 'token', '课程', '作业'],
-  },
-  {
-    id: 'mail',
-    section: 'connections',
-    title: '学校邮箱',
-    keywords: ['连接', '邮箱', '邮件', 'imap', 'jaccount', 'mail'],
-  },
-  {
-    id: 'timetable',
-    section: 'connections',
-    title: '教学信息服务网',
-    keywords: ['连接', '教务', '课表', 'timetable', '课程表'],
-  },
-  {
-    id: 'shuiyuan',
-    section: 'connections',
-    title: '水源社区',
-    keywords: ['连接', '水源', '社区', '论坛', 'shuiyuan'],
+    title: '吉大校园平台（同步待接入）',
+    keywords: ['连接', '吉大', '吉林大学', '教务', '课表', '课程', '学在吉大', '校务', '通知'],
   },
   // 模型服务
   {

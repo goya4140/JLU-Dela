@@ -1,13 +1,14 @@
 // Skills：发现、加载与渐进注入由 Pi 完成（agentskills.io 规范）。这里只负责
-// 把 Dela 内置的领域 skill 写进 ~/.dela/skills、给设置页列出可见 skill、维护禁用名单。
+// 把 Dela 内置的领域 skill 写进 ~/.jlu-dela/skills、给设置页列出可见 skill、维护禁用名单。
 // 设置页按来处分组：内置、本机目录、Pi package、每个本地项目；后两者按 SKILL.md 路径开关。
 import { app, shell } from 'electron';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { z } from 'zod';
+import { product } from '../../shared/product';
 import type { SkillOrigin, SkillView } from '../../shared/capabilities';
 import { getDatabase } from '../database';
-import { experimentEnabled, readSetting, writeSetting } from '../settings/prefs';
+import { readSetting, writeSetting } from '../settings/prefs';
 import { discoverProjectSkills } from './discovery';
 import { listPackages, packagesEnabled } from './packages';
 import {
@@ -41,9 +42,9 @@ export function completeCapabilitySetup(): void {
     .run(CAPABILITY_SETUP_KEY, '1');
 }
 
-/** 全局 Skill 根目录：~/.dela/skills（内置 Skill 随应用写入；用户自己的 Skill 也放这里）。 */
+/** 全局 Skill 根目录：~/.jlu-dela/skills（内置 Skill 随应用写入；用户自己的 Skill 也放这里）。 */
 export function builtinSkillsDirectory(): string {
-  return join(app.getPath('home'), '.dela', 'skills');
+  return join(app.getPath('home'), product.skillsDirectory, 'skills');
 }
 
 /** 本机全局 Skill 目录（与 Pi 的默认位置一致）；项目级的随会话 cwd 由 Pi 发现，见 discovery.ts。 */
@@ -67,14 +68,16 @@ const BUILTIN_SKILLS: Readonly<Record<string, { path: string; content: string }[
 
 let builtinEnsured = false;
 /**
- * 进程内首次使用时把内置 Skill 覆写到 ~/.dela/skills：正文与 dela 命令面强绑定，
+ * 进程内首次使用时把内置 Skill 覆写到 ~/.jlu-dela/skills：正文与 dela 命令面强绑定，
  * 始终以应用内版本为准，用户对内置 Skill 的编辑会被还原（自定义请另建名字不同的 Skill）。
  * 先比后写：无变化不写盘，也避开文件被短暂占用时启动失败。
  */
 export function ensureBuiltinSkills(): void {
   if (builtinEnsured) return;
   builtinEnsured = true;
-  for (const [name, files] of Object.entries(BUILTIN_SKILLS))
+  for (const [name, files] of Object.entries(BUILTIN_SKILLS).filter(
+    ([name]) => !featureHiddenSkills().has(name),
+  ))
     for (const file of files) {
       const path = join(builtinSkillsDirectory(), name, file.path);
       if (existsSync(path) && readFileSync(path, 'utf8') === file.content) continue;
@@ -96,9 +99,9 @@ export function readDisabledSkills(): Set<string> {
   return new Set(parsed.success ? parsed.data : []);
 }
 
-/** 随功能开关隐藏的内置 Skill：水源关闭时既不注入 Agent，也不在设置页列出。 */
+/** 吉大尚未接入的上游校园 Skill 不发布到本机，也不注入 Agent。 */
 function featureHiddenSkills(): Set<string> {
-  return new Set(experimentEnabled('shuiyuan') ? [] : ['shuiyuan']);
+  return new Set(['canvas', 'classroom', 'mail', 'shuiyuan', 'todo', 'curriculum']);
 }
 
 /** 注入 Pi 的禁用名单：用户禁用的 + 随功能关闭隐藏的（后者不写回用户名单）。 */

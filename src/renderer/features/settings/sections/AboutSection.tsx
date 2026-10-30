@@ -54,8 +54,8 @@ const sponsorChannelMeta: Record<SponsorChannelKind, { dotClass: string; label: 
 };
 
 const projectLinks: { icon: ReactNode; label: string; url: string }[] = [
-  { icon: <Globe />, label: '官网', url: 'https://dela.changyo.me' },
-  { icon: <GithubMark />, label: 'GitHub 仓库', url: 'https://github.com/Chang-Yo/Dela' },
+  { icon: <Globe />, label: '上游 Dela', url: 'https://github.com/Chang-Yo/Dela' },
+  { icon: <GithubMark />, label: 'GitHub 仓库', url: 'https://github.com/goya4140/JLU-Dela' },
 ];
 
 function PersonLinks({ links }: { links: SocialLink[] }) {
@@ -202,8 +202,8 @@ export function AboutSection() {
       <SectionHeader title="关于" />
       <section className="grid justify-items-center gap-1.5 px-6 pb-10 pt-6 text-center">
         <DelaBrand className="h-48 w-48" />
-        <h2 className="text-4xl font-script tracking-tight">Dela</h2>
-        <p className="text-13 text-ink-3">The world keeps changing. Dela stays with you.</p>
+        <h2 className="text-4xl font-script tracking-tight">JLU Dela</h2>
+        <p className="text-13 text-ink-3">面向吉林大学本科生的本地学习工作台 · 基于开源 Dela</p>
         <p className="mt-5 text-xs text-ink-3">版本 {window.dela?.version ?? '浏览器预览'}</p>
         <div className="mt-1 flex items-center justify-center gap-1.5">
           {projectLinks.map(({ icon, label, url }) => (

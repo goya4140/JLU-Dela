@@ -41,53 +41,27 @@ async function render(node: ReactElement) {
   await act(async () => root.render(node));
 }
 
-it('使用条款：小节标题、加粗、接受声明与附录表格都按版式渲染', async () => {
+it('renders JLU preview scope and preserves the upstream license link', async () => {
   await render(<TermsSection />);
-
-  // 页面标题只有 SectionHeader 那一个：Markdown 的 h1 与它重复，不渲染。
   expect([...container.querySelectorAll('h1')].map((node) => node.textContent)).toEqual([
     '使用条款',
   ]);
-
-  const sections = [...container.querySelectorAll('h2')].map((node) => node.textContent);
-  expect(sections[0]).toBe('1. 软件性质');
-  expect(sections).toContain('12. 开源协议');
-
-  const strong = expectBoldAllRendered(terms);
-  expect(strong.some((text) => text.includes('不存在隶属、合作、赞助、认可或授权关系'))).toBe(true);
-
-  expect(container.querySelector('blockquote')?.textContent).toContain(
-    '以其他方式安装、运行本软件，同样视为你已阅读、理解并接受',
-  );
-  // 附录联网位置表 16 行（含 Pi packages 的 Node 下载、npm/git 源与包自行访问的地址）。
-  expect(container.querySelectorAll('tbody tr').length).toBe(16);
-  expect(container.textContent).toContain('已启用的 Pi package 自行访问的地址');
+  expect(container.textContent).toContain('非官方适配项目');
+  expect(container.textContent).toContain('同步仍待接入');
+  expect(
+    container.querySelector('a[href="https://github.com/goya4140/JLU-Dela/blob/main/LICENSE"]'),
+  ).not.toBeNull();
+  expectBoldAllRendered(terms);
 });
 
-it('隐私条款：小节标题、加粗与两张表格都按版式渲染', async () => {
+it('renders the isolated JLU data paths and describes model transmission', async () => {
   await render(<PrivacySection />);
-
   expect([...container.querySelectorAll('h1')].map((node) => node.textContent)).toEqual([
     '隐私条款',
   ]);
-
-  const sections = [...container.querySelectorAll('h2')].map((node) => node.textContent);
-  expect(sections).toEqual([
-    '1. 数据保存在本机',
-    '2. 凭据如何保护',
-    '3. 运行 Agent 时发送到模型服务的内容',
-    '4. 本软件会联网的位置',
-    '5. 本机记录了什么',
-    '6. 本软件没有的功能',
-  ]);
-
-  const strong = expectBoldAllRendered(privacy);
-  expect(strong.some((text) => text.includes('没有远程数据库'))).toBe(true);
-
-  // 凭据文件表 5 行 + 联网位置表 15 行（含按需下载文档组件与 Pi packages）。
-  const tables = [...container.querySelectorAll('table')];
-  expect(tables.map((table) => table.querySelectorAll('tbody tr').length)).toEqual([5, 15]);
-  expect(tables[1]?.textContent).toContain('Pi packages');
-  expect(tables[1]?.textContent).toContain('文档解析组件');
-  expect(tables[0]?.querySelector('th')?.textContent).toBe('凭据文件');
+  expect(container.textContent).toContain('~/Library/Application Support/JLU-Dela/');
+  expect(container.textContent).toContain('~/.jlu-dela/skills/');
+  expect(container.textContent).toContain('不代表模型推理离线');
+  expect(container.textContent).toContain('当前仅在系统浏览器中打开');
+  expectBoldAllRendered(privacy);
 });

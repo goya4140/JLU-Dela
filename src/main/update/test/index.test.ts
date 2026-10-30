@@ -226,9 +226,7 @@ it('清除待装标记失败时不启动安装器', async () => {
   expect(mocks.quitAndInstall).not.toHaveBeenCalled();
 });
 
-it('手动下载兜底指向 CDN 分享页', async () => {
+it('手动下载兜底指向吉大版仓库发布页', async () => {
   await invoke('open-download-page');
-  expect(mocks.openExternal).toHaveBeenCalledWith(
-    'https://openlist.frameneo.com/@s/Dela_latest_release',
-  );
+  expect(mocks.openExternal).toHaveBeenCalledWith('https://github.com/goya4140/JLU-Dela/releases');
 });

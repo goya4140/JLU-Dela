@@ -13,6 +13,7 @@ import { showToast } from '../app/toasts';
 
 export type AppView =
   | 'home'
+  | 'campus'
   | 'workbench'
   | 'mail'
   | 'timetable'

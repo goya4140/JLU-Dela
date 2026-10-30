@@ -1,9 +1,9 @@
 {
-  "name": "dela",
-  "version": "2.2.2",
+  "name": "jlu-dela",
+  "version": "0.1.0-alpha.1",
   "private": true,
-  "description": "A local-first campus project workspace",
-  "author": "Dela contributors",
+  "description": "A local-first Jilin University undergraduate workspace, forked from Dela",
+  "author": "JLU Dela contributors; upstream Dela contributors",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "main": "out/main/index.cjs",
@@ -41,7 +41,9 @@
     "smoke:shuiyuan": "electron scripts/shuiyuan-smoke.cjs",
     "smoke:remote": "node scripts/run-ts-smoke.ts remote-smoke",
     "smoke:packages": "electron scripts/packages-smoke.cjs",
-    "prepare:runtime": "node scripts/prepare-runtime.ts"
+    "prepare:runtime": "node scripts/prepare-runtime.ts",
+    "package:mac": "node scripts/prepare-runtime.ts && pnpm build && electron-builder --mac --arm64 --publish never",
+    "smoke:jlu": "electron scripts/jlu-smoke.cjs"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.1.0",
@@ -113,5 +115,13 @@
     "vitest": "5.0.0",
     "xlsx": "file:vendor/xlsx/xlsx-0.20.3.tgz",
     "zustand": "5.0.15"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/goya4140/JLU-Dela.git"
+  },
+  "homepage": "https://github.com/goya4140/JLU-Dela",
+  "bugs": {
+    "url": "https://github.com/goya4140/JLU-Dela/issues"
   }
 }
