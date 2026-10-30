@@ -70,6 +70,7 @@ async function run(window) {
     1,
   );
   const notice = await js('window.dela.jluPlatforms.getNotices("179577",1)');
+  assert.equal((await js('window.dela.jluPlatforms.syncNotices("179577",2)')).ok, true);
   const learning = await js('window.dela.jluPlatforms.syncLearning()');
   assert.equal(learning.ok, true);
   assert.equal(learning.data.courses.length, 1);
@@ -134,6 +135,12 @@ async function run(window) {
   assert.deepEqual(await js('window.dela.jluPlatforms.getNotices("179577",1)'), notice);
   assert.equal((await js('window.dela.jluPlatforms.syncLearning()')).ok, false);
   assert.deepEqual(await js('window.dela.jluPlatforms.getLearning()'), learning.data);
+  await js(
+    `Array.from(document.querySelectorAll('#main-nav button')).find(b=>b.textContent.trim()==='学校通知').click()`,
+  );
+  await wait('!!document.querySelector(\'button[aria-label="下一页通知"]\')');
+  await js(`document.querySelector('button[aria-label="下一页通知"]').click()`);
+  await wait('document.body.textContent.includes("第 2")');
   assert.ok(preferences.every((p) => p.sandbox && p.contextIsolation && !p.preload));
   console.log(
     'Platforms smoke passed with synthetic data: notices, body, attachments, learning terms/courses/recordings, cache preservation, isolated sessions and four viewport widths. No live school requests.',

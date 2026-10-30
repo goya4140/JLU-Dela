@@ -39,6 +39,15 @@ function DesktopNotices() {
     setBusy(true);
     setError(null);
     try {
+      if (next !== page) {
+        const cached = await api.getNotices('179577', next);
+        if (id !== request.current) return;
+        if (cached) {
+          setData(cached);
+          setPage(next);
+          setDetail(null);
+        }
+      }
       const result = await api.syncNotices('179577', next);
       if (id !== request.current) return;
       if (result.ok) {
