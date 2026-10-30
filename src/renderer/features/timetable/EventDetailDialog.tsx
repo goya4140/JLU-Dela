@@ -10,6 +10,7 @@ import {
   User,
   X,
 } from 'lucide-react';
+import { hasLessonTime } from '../../../shared/schedule';
 import type { CalendarEvent } from '../../../shared/api';
 import { Button } from '../../components/ui/button';
 import {
@@ -18,7 +19,6 @@ import {
   formatEventRange,
   formatMinuteOfDay,
   formatMonthDay,
-  periodBoundary,
   weekdayName,
 } from './timetable-format';
 import type { CalendarItemDetail } from './WeekCalendar';
@@ -65,11 +65,14 @@ export function EventDetailDialog({
 
   let timeText;
   if (detail.kind === 'lesson') {
-    const start = periodBoundary(detail.lesson.startPeriod, 'start');
-    const end = periodBoundary(detail.lesson.endPeriod, 'end');
-    timeText = detail.date
-      ? `${formatMonthDay(detail.date)}（${weekdayName(detail.date)}）${formatMinuteOfDay(start)} – ${formatMinuteOfDay(end)}`
-      : `${formatMinuteOfDay(start)} – ${formatMinuteOfDay(end)}`;
+    const start = detail.lesson.startMinute;
+    const end = detail.lesson.endMinute;
+    timeText =
+      hasLessonTime(detail.lesson) && start !== null && end !== null
+        ? detail.date
+          ? `${formatMonthDay(detail.date)}（${weekdayName(detail.date)}）${formatMinuteOfDay(start)} – ${formatMinuteOfDay(end)}`
+          : `${formatMinuteOfDay(start)} – ${formatMinuteOfDay(end)}`
+        : detail.lesson.periodsText;
   } else {
     timeText = formatEventRange(detail.event);
   }

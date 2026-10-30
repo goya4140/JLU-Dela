@@ -2,9 +2,9 @@ export const jluServices = [
   {
     id: 'academic',
     name: '吉林大学教务系统',
-    description: '查看课表、成绩与培养方案。',
+    description: '同步本科课表；成绩与培养方案请前往学校平台。',
     url: 'https://iedu.jlu.edu.cn/jwapp/sys/emaphome/portal/index.do',
-    integration: 'pending',
+    integration: 'preview',
   },
   {
     id: 'notices',

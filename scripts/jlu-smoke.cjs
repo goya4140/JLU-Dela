@@ -44,7 +44,7 @@ async function run(window) {
   const skills = await js('window.dela.capability.listSkills()');
   assert.ok(
     !skills.some((skill) =>
-      ['canvas', 'classroom', 'shuiyuan', 'mail', 'curriculum', 'todo'].includes(skill.name),
+      ['canvas', 'classroom', 'shuiyuan', 'mail', 'todo'].includes(skill.name),
     ),
   );
   assert.ok(
@@ -70,7 +70,7 @@ async function run(window) {
     await js(
       `Array.from(document.querySelectorAll('span')).filter((node) => node.textContent === '同步待接入').length`,
     ),
-    3,
+    2,
   );
   if (!root.endsWith('.asar')) {
     await js(

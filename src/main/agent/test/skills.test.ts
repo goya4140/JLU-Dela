@@ -94,11 +94,16 @@ it('shows capability setup once without resetting existing skills or other onboa
 });
 
 it('does not publish upstream campus skills as working JLU integrations', async () => {
-  for (const name of ['canvas', 'classroom', 'mail', 'shuiyuan', 'todo', 'curriculum']) {
+  for (const name of ['canvas', 'classroom', 'mail', 'shuiyuan', 'todo']) {
     expect(await byName(name)).toHaveLength(0);
     expect(effectiveDisabledSkills().has(name)).toBe(true);
     expect(readDisabledSkills().has(name)).toBe(false);
   }
+});
+
+it('publishes the local JLU timetable skill', async () => {
+  expect(await byName('curriculum')).toHaveLength(1);
+  expect(effectiveDisabledSkills().has('curriculum')).toBe(false);
 });
 
 it('writes the document skill but excludes it until its dependencies are installed', async () => {

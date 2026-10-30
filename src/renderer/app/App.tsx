@@ -6,6 +6,7 @@ import { AppShell } from '../components/AppShell';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { MailView } from '../features/mail';
 import { CampusView } from '../features/campus/CampusView';
+import { TimetableView } from '../features/timetable';
 import { CompletionOverlay } from '../features/onboarding/CompletionOverlay';
 import { OnboardingFlow } from '../features/onboarding/OnboardingFlow';
 import { CapabilitySetup } from '../features/onboarding/CapabilitySetup';
@@ -335,7 +336,9 @@ export default function App() {
                   )}
                   {view === 'campus' && <CampusView />}
                   {view === 'timetable' && (
-                    <CampusView title="课表" serviceIds={['academic', 'learning']} />
+                    <TimetableView
+                      onOpenTodo={(todoId) => void useNavigationStore.getState().openTodo(todoId)}
+                    />
                   )}
                   {view === 'shuiyuan' && <ShuiyuanView />}
                   {view === 'classroom' && (

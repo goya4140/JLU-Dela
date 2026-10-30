@@ -40,7 +40,10 @@ const commands: Record<string, AgentTool> = Object.assign(
     campus_status: tool(
       '查看吉林大学校园平台入口及接入状态；不登录学校、不读取或同步个人数据。',
       z.object({}).strict(),
-      () => ({ services: jluServices, synced: false }),
+      () => ({
+        services: jluServices,
+        note: '课表为接入预览，需用户在课表页登录同步；实际数据完整性以 query_schedule 的 coverage 为准。',
+      }),
     ),
     read_resource: readResourceTool,
     prepare_document: tool(

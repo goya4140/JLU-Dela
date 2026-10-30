@@ -62,6 +62,7 @@ it('renders the isolated JLU data paths and describes model transmission', async
   expect(container.textContent).toContain('~/Library/Application Support/JLU-Dela/');
   expect(container.textContent).toContain('~/.jlu-dela/skills/');
   expect(container.textContent).toContain('不代表模型推理离线');
-  expect(container.textContent).toContain('当前仅在系统浏览器中打开');
+  expect(container.textContent).toContain('persist:jlu-campus');
+  expect(container.textContent).toContain('不把账号、Cookie 或验证码发给模型');
   expectBoldAllRendered(privacy);
 });

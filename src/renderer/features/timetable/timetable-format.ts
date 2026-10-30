@@ -1,4 +1,3 @@
-import { classPeriods } from '../../../shared/schedule';
 import type { CSSProperties } from 'react';
 import {
   calendarEventColors,
@@ -161,13 +160,6 @@ export function formatSyncTime(value: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value))}`;
-}
-
-export function periodBoundary(period: number, edge: 'start' | 'end'): number {
-  const known = classPeriods[period - 1];
-  if (known) return edge === 'start' ? known[0] : known[1];
-  const start = timelineStart + (period - 1) * 55;
-  return edge === 'start' ? start : start + 45;
 }
 
 export function minuteOfDay(date: Date): number {

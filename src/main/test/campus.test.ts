@@ -129,7 +129,7 @@ describe.each(['darwin', 'win32'])('校园窗口平台边界（%s）', (platform
     expect(options.frame).not.toBe(false);
     expect(options.closable).not.toBe(false);
     expect(options.webPreferences).toEqual({
-      partition: 'persist:dela-campus',
+      partition: 'persist:jlu-campus',
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -319,6 +319,25 @@ describe('openCampusLoginWindow', () => {
     loginWindow.webContents.emit('did-navigate', {}, 'https://i.sjtu.edu.cn/jsxsd/');
     await expect(pending).resolves.toEqual({ ok: false, error: '课表接口失败' });
     expect(loginWindow.closeCalled).toBe(true);
+  });
+
+  it('JLU stops retrying on an incompatible response instead of waiting indefinitely', async () => {
+    const pending = openCampusLoginWindow({
+      sender,
+      title: '登录吉大教务',
+      url: 'https://iedu.jlu.edu.cn/jwapp/sys/wdkb/*default/index.do',
+      reached: () => true,
+      retryProbe: (error) => error instanceof CampusAuthError,
+      probe: vi.fn().mockRejectedValue(new Error('课表字段已变化')),
+    });
+    await flush();
+    asWindow().webContents.emit(
+      'did-navigate',
+      {},
+      'https://iedu.jlu.edu.cn/jwapp/sys/wdkb/*default/index.do',
+    );
+    await expect(pending).resolves.toEqual({ ok: false, error: '课表字段已变化' });
+    expect(asWindow().closeCalled).toBe(true);
   });
 
   it('用户直接关闭窗口按未完成登录收场', async () => {

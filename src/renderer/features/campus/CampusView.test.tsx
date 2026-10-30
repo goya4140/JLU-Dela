@@ -10,7 +10,7 @@ vi.mock('../../navigation/view', () => ({
   useNavigationStore: { getState: () => ({ openProject }) },
 }));
 
-it('shows verified platform links with pending status and opens the local library', async () => {
+it('shows platform integration states and opens the local library', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const host = document.createElement('div');
   document.body.append(host);
@@ -22,8 +22,12 @@ it('shows verified platform links with pending status and opens the local librar
     );
     expect(
       [...host.querySelectorAll('span')].filter((node) => node.textContent === '同步待接入'),
-    ).toHaveLength(3);
-    await act(async () => host.querySelector<HTMLButtonElement>('button')!.click());
+    ).toHaveLength(2);
+    await act(async () =>
+      [...host.querySelectorAll<HTMLButtonElement>('button')]
+        .find((button) => button.textContent?.includes('打开课程资料'))!
+        .click(),
+    );
     expect(openProject).toHaveBeenCalledWith('');
     await act(async () => root.render(<CampusView title="学校通知" serviceIds={['notices']} />));
     expect(host.querySelector('h1')?.textContent).toBe('学校通知');

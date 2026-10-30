@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { attachContextMenu } from './ipc';
 
-export const CAMPUS_PARTITION = 'persist:dela-campus';
+export const CAMPUS_PARTITION = 'persist:jlu-campus';
 let ready: Promise<Session> | undefined;
 let persistenceError: Error | undefined;
 
@@ -23,7 +23,7 @@ function snapshotPath(): string {
 
 function campusCookie(cookie: Cookie): boolean {
   const domain = cookie.domain?.replace(/^\./, '') ?? '';
-  return domain === 'sjtu.edu.cn' || domain.endsWith('.sjtu.edu.cn');
+  return domain === 'jlu.edu.cn' || domain.endsWith('.jlu.edu.cn');
 }
 
 function cookieKey(cookie: Cookie): string {
@@ -184,7 +184,7 @@ export function campusRequest(
 export interface CampusLoginOptions {
   readonly sender: WebContents;
   readonly title: string;
-  /** 登录窗加载的入口地址（校园域内会触发 jAccount SSO）。 */
+  /** 登录窗加载的入口地址（校园域内会触发学校统一身份认证）。 */
   readonly url: string;
   /** 导航 URL 是否已到达目标校园域（登录页自身不算）。 */
   readonly reached: (url: string) => boolean;
@@ -194,7 +194,7 @@ export interface CampusLoginOptions {
    * 入口页本身就在目标域时（课堂视频）：首次导航必然尚未登录，
    * 探测失败不关窗；页内导航及定时重探覆盖 SPA 与异步登录完成。
    */
-  readonly retryProbe?: boolean;
+  readonly retryProbe?: boolean | ((error: unknown) => boolean);
 }
 
 export function createCampusLoginWindow(sender: WebContents, title: string): BrowserWindow {
@@ -275,7 +275,10 @@ export async function openCampusLoginWindow(
           await options.probe();
           finish({ ok: true });
         } catch (error) {
-          if (options.retryProbe) {
+          if (
+            options.retryProbe &&
+            (typeof options.retryProbe !== 'function' || options.retryProbe(error))
+          ) {
             checking = false;
             return;
           }

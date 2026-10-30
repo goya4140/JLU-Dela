@@ -10,6 +10,8 @@ export interface TimetableLesson {
   readonly weekday: number;
   readonly startPeriod: number;
   readonly endPeriod: number;
+  readonly startMinute: number | null;
+  readonly endMinute: number | null;
   readonly periodsText: string;
   readonly weeksText: string;
   readonly weekNumbers: readonly number[];
@@ -21,6 +23,8 @@ export interface TimetableState {
   readonly semester: string;
   readonly lastSyncedAt: string | null;
   readonly semesterStart: string | null;
+  readonly warnings?: readonly string[];
+  readonly totalWeeks?: number | null;
 }
 
 // 日历事件候选色 key，与 renderer 的 --cal-* 设计 token 一一对应。

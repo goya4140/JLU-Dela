@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MapPin } from 'lucide-react';
+import { hasLessonTime, type ScheduledLesson } from '../../../shared/schedule';
 import type { CalendarEvent, TimetableLesson } from '../../../shared/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
 import {
@@ -19,7 +20,6 @@ import {
   localEventsByDay,
   minuteOfDay,
   minutesToRem,
-  periodBoundary,
   startOfDay,
   timelineEnd,
   timelineStart,
@@ -48,6 +48,7 @@ export function WeekCalendar({
   weekStart: Date | null;
   onOpen: (detail: CalendarItemDetail) => void;
 }) {
+  const timedLessons = lessons.filter(hasLessonTime);
   const [, setNowTick] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setNowTick((tick) => tick + 1), NOW_REFRESH_INTERVAL_MS);
@@ -71,6 +72,9 @@ export function WeekCalendar({
 
   return (
     <div className="@container min-h-0 flex-1 overflow-auto">
+      {timedLessons.length < lessons.length && (
+        <p className="px-4 py-2 text-xs text-ink-3">部分课程缺少节次时间，请重新同步后查看。</p>
+      )}
       {/* 容器查询按内容区实际宽度切换桌面网格/按日堆叠：窗口断点会被主导航侧栏（200–360px）顶掉，
           窗口 768–1050px 时内容区不足 860px 仍渲染桌面网格，必然出现横向滚动。 */}
       <div className="hidden min-w-[53.75rem] @min-[860px]:block">
@@ -127,14 +131,14 @@ export function WeekCalendar({
           </div>
           {weekDays.map((day, index) => {
             const date = weekStart ? addDays(weekStart, index) : null;
-            const dailyLessons = lessons.filter((lesson) => lesson.weekday === index + 1);
+            const dailyLessons = timedLessons.filter((lesson) => lesson.weekday === index + 1);
             const dailyEvents = date ? (groupedEvents.get(dateKey(date)) ?? []) : [];
             // 课程与本地事件共享同一条日列，必须参与同一次并排布局，否则时间重叠时互相覆盖。
             const layout = layoutDayColumns([
               ...dailyLessons.map((lesson) => ({
                 id: `lesson-${lesson.id}`,
-                start: periodBoundary(lesson.startPeriod, 'start'),
-                end: periodBoundary(lesson.endPeriod, 'end'),
+                start: lesson.startMinute,
+                end: lesson.endMinute,
               })),
               ...dailyEvents.map((event) => ({ id: `event-${event.id}`, ...eventSpan(event) })),
             ]);
@@ -175,7 +179,7 @@ export function WeekCalendar({
       <div className="hidden gap-5 p-3 @max-[860px]:grid">
         {weekDays.map((day, index) => {
           const date = weekStart ? addDays(weekStart, index) : null;
-          const dailyLessons = lessons.filter((lesson) => lesson.weekday === index + 1);
+          const dailyLessons = timedLessons.filter((lesson) => lesson.weekday === index + 1);
           const dailyEvents = date ? (groupedEvents.get(dateKey(date)) ?? []) : [];
           if (!dailyLessons.length && !dailyEvents.length) return null;
           return (
@@ -220,11 +224,11 @@ function LessonBlock({
 }: {
   date: Date | null;
   layout: DayColumnLayout;
-  lesson: TimetableLesson;
+  lesson: ScheduledLesson;
   onOpen: (detail: CalendarItemDetail) => void;
 }) {
-  const start = periodBoundary(lesson.startPeriod, 'start');
-  const end = periodBoundary(lesson.endPeriod, 'end');
+  const start = lesson.startMinute;
+  const end = lesson.endMinute;
   const open = () => onOpen({ kind: 'lesson', lesson, date });
   // 与 LocalEventBlock 同一阈值（rem，随字号缩放）：2.75rem 起显示第二行、3.75rem 起显示节次行，
   // 2.25rem 的单节课块只留课程名，避免第三行被 overflow-hidden 裁半。
@@ -379,10 +383,10 @@ function MobileLesson({
   onOpen,
 }: {
   date: Date | null;
-  lesson: TimetableLesson;
+  lesson: ScheduledLesson;
   onOpen: (detail: CalendarItemDetail) => void;
 }) {
-  const start = periodBoundary(lesson.startPeriod, 'start');
+  const start = lesson.startMinute;
   const open = () => onOpen({ kind: 'lesson', lesson, date });
   return (
     <article
