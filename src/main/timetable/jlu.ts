@@ -4,6 +4,26 @@ import { CampusAuthError, campusRequest, getCampusSession } from '../campus';
 export const JLU_TIMETABLE_URL = 'https://iedu.jlu.edu.cn/jwapp/sys/wdkb/*default/index.do';
 const origin = 'https://iedu.jlu.edu.cn';
 const root = '/jwapp/sys/wdkb/modules/';
+
+export function isJluLoginUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.origin === 'https://cas.jlu.edu.cn' && /^\/tpass\/login(?:[/.;]|$)/.test(url.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function isJluTimetableUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.origin === origin && url.pathname.startsWith('/jwapp/sys/wdkb/');
+  } catch {
+    return false;
+  }
+}
 const text = z
   .union([z.string(), z.number()])
   .nullish()
@@ -90,6 +110,8 @@ async function post(
   const body = await campusRequest(await getCampusSession(), `${origin}${root}${path}`, {
     service: '吉大教务',
     loginError: '教务登录已失效，请重新登录',
+    authStatuses: [401],
+    authRedirect: isJluLoginUrl,
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -100,7 +122,7 @@ async function post(
     },
     body: new URLSearchParams(values).toString(),
   });
-  if (/loginForm|tpass\/login|统一身份认证/i.test(body))
+  if (/<form\b[^>]*\bid\s*=\s*["']loginForm["']/i.test(body))
     throw new CampusAuthError('教务登录已失效，请重新登录');
   let payload: unknown;
   try {

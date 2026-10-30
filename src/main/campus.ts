@@ -100,6 +100,8 @@ export interface CampusRequestOptions {
   loginError: string;
   /** 接口另用此状态码表示未登录（交大视频身份接口返回 500）。 */
   loginStatus?: number;
+  authStatuses?: readonly number[];
+  authRedirect?: (url: string) => boolean;
   method?: 'GET' | 'POST';
   headers?: Record<string, string>;
   body?: string;
@@ -110,7 +112,7 @@ export class CampusAuthError extends Error {}
 
 /**
  * 直接消费 Chromium 响应：Electron session.fetch 在内部构造 Response 时可能抛出未捕获的
- * 状态码异常。重定向一律视为登录失效；超时、断网与 408/5xx 失败的 `cause` 为 'transient'，
+ * 状态码异常。调用方可限定认证状态码和登录跳转；超时、断网与 408/5xx 失败的 `cause` 为 'transient'，
  * 由调用方决定是否重试。
  */
 export function campusRequest(
@@ -140,20 +142,35 @@ export function campusRequest(
       15000,
     );
     request.on('error', () => fail(new Error(`无法连接${options.service}，请检查网络`), true));
-    request.on('redirect', () => fail(new CampusAuthError(options.loginError)));
+    request.on('redirect', (_status, _method, target: string) => {
+      fail(
+        !options.authRedirect || options.authRedirect(target)
+          ? new CampusAuthError(options.loginError)
+          : new Error(`${options.service}返回了非登录跳转，请检查学校服务或校园网/VPN`),
+      );
+    });
     request.on('response', (response) => {
       const status = response.statusCode;
       if (!Number.isInteger(status) || status < 200 || status > 599) {
-        fail(new Error(`${options.service}返回了无效状态，请稍后重试或重新登录`));
+        fail(new Error(`${options.service}返回了无效状态，请稍后重试`));
         return;
       }
-      if (
-        status === 401 ||
-        status === 403 ||
-        status === options.loginStatus ||
-        (status >= 300 && status < 400)
-      ) {
+      if ((options.authStatuses ?? [401, 403, options.loginStatus]).includes(status)) {
         fail(new CampusAuthError(options.loginError));
+        return;
+      }
+      if (status >= 300 && status < 400) {
+        const location = response.headers?.location?.[0];
+        fail(
+          !options.authRedirect ||
+            (location && options.authRedirect(URL.parse(location, url)?.href ?? ''))
+            ? new CampusAuthError(options.loginError)
+            : new Error(`${options.service}返回了非登录跳转，请检查学校服务或校园网/VPN`),
+        );
+        return;
+      }
+      if (status === 403) {
+        fail(new Error(`${options.service}拒绝访问（403），请确认账号权限或校园网/VPN`));
         return;
       }
       if (status !== 200) {

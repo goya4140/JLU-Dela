@@ -419,6 +419,31 @@ describe('campusRequest', () => {
     expect(request.abort).toHaveBeenCalledOnce();
   });
 
+  it('lets JLU distinguish authentication redirects from forbidden and unrelated redirects', async () => {
+    const jlu = {
+      ...options,
+      authStatuses: [401],
+      authRedirect: (target: string) => target === 'https://cas.jlu.edu.cn/tpass/login',
+    };
+    mockRequest(403);
+    const forbidden = await campusRequest({} as Session, url, jlu).catch((error: unknown) => error);
+    expect(forbidden).toBeInstanceOf(Error);
+    expect(forbidden).not.toBeInstanceOf(CampusAuthError);
+    expect((forbidden as Error).message).toContain('403');
+    for (const [target, authenticated] of [
+      ['https://cas.jlu.edu.cn/tpass/login', true],
+      ['https://iedu.jlu.edu.cn/maintenance', false],
+      ['https://unrelated.example/login', false],
+    ] as const) {
+      const request = mockRequest('redirect');
+      request.end.mockImplementation(() => {
+        queueMicrotask(() => request.emit('redirect', 302, 'GET', target, {}));
+      });
+      const error = await campusRequest({} as Session, url, jlu).catch((error: unknown) => error);
+      expect(error instanceof CampusAuthError).toBe(authenticated);
+    }
+  });
+
   it('408/5xx 标记可重试，其余状态不标记', async () => {
     const unavailable = mockRequest(503);
     let caught: unknown;

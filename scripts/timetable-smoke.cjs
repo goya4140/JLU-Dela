@@ -15,7 +15,9 @@ const profile = mkdtempSync(join(tmpdir(), 'jlu-timetable-smoke-'));
 for (const name of ['userData', 'home', 'documents']) app.setPath(name, profile);
 process.argv.push('--terminal-smoke-test');
 const schoolUrl = 'https://iedu.jlu.edu.cn/jwapp/sys/wdkb/*default/index.do';
-let offline = false;
+let failure = 'none';
+let recovery = 'automatic';
+const schoolWindows = [];
 let loginPreferences;
 const requests = [];
 const fixture = {
@@ -55,25 +57,41 @@ net.request = (options) => {
     body += value ?? '';
     requests.push({ url: options.url, body });
     setImmediate(() => {
-      if (offline) return request.emit('error', new Error('fixture offline'));
+      if (failure === 'offline') return request.emit('error', new Error('fixture offline'));
+      if (failure === 'expired' || failure === 'redirect') {
+        request.emit(
+          'redirect',
+          302,
+          'GET',
+          failure === 'expired'
+            ? 'https://cas.jlu.edu.cn/tpass/login?service=iedu'
+            : 'https://iedu.jlu.edu.cn/maintenance',
+          {},
+        );
+        return;
+      }
       const key = new URL(options.url).pathname.split('/').pop().replace('.do', '');
       assert.ok(Object.hasOwn(fixture, key), `unexpected fixture: ${key}`);
       const response = new EventEmitter();
-      response.statusCode = 200;
+      response.statusCode = failure === 'forbidden' ? 403 : failure === 'server' ? 500 : 200;
       request.emit('response', response);
       response.emit(
         'data',
         Buffer.from(
-          JSON.stringify({
-            code: '0',
-            datas: {
-              [key]: {
-                rows: fixture[key],
-                totalSize: ['jc', 'cxxszhxqkb'].includes(key) ? -1 : fixture[key].length,
-                ...(key === 'cxxszhxqkb' ? { pageSize: 0, pageNumber: 0 } : {}),
-              },
-            },
-          }),
+          JSON.stringify(
+            failure === 'schema'
+              ? { code: '0', datas: {} }
+              : {
+                  code: '0',
+                  datas: {
+                    [key]: {
+                      rows: fixture[key],
+                      totalSize: ['jc', 'cxxszhxqkb'].includes(key) ? -1 : fixture[key].length,
+                      ...(key === 'cxxszhxqkb' ? { pageSize: 0, pageNumber: 0 } : {}),
+                    },
+                  },
+                },
+          ),
         ),
       );
       response.emit('end');
@@ -85,13 +103,22 @@ const originalLoad = BrowserWindow.prototype.loadURL;
 BrowserWindow.prototype.loadURL = function (url, options) {
   if (url !== schoolUrl) return originalLoad.call(this, url, options);
   loginPreferences = this.webContents.getLastWebPreferences();
+  const hidden = !this.isVisible();
+  schoolWindows.push({ window: this, hidden, preferences: loginPreferences });
+  if (hidden && recovery === 'network') return Promise.reject(new Error('fixture offline'));
+  if (hidden && recovery === 'schema') failure = 'schema';
+  else if (!hidden || recovery === 'automatic') failure = 'none';
+  const target =
+    hidden && recovery === 'manual' ? 'https://cas.jlu.edu.cn/tpass/login?service=iedu' : schoolUrl;
+  this.webContents.getURL = () => target;
   this.hide();
-  this.webContents.once('did-finish-load', () =>
-    this.webContents.emit('did-navigate', {}, schoolUrl),
-  );
+  this.webContents.once('did-finish-load', () => this.webContents.emit('did-navigate', {}, target));
   return originalLoad.call(
     this,
-    'data:text/html,<title>School login fixture</title><p>Test fixture</p>',
+    'data:text/html,<title>School login fixture</title>' +
+      (target === schoolUrl
+        ? '<p>Test fixture</p>'
+        : '<form id="loginForm"><input type="password"></form>'),
     options,
   );
 };
@@ -133,8 +160,8 @@ async function run(window) {
   assert.equal(loginPreferences.sandbox, true);
   assert.equal(loginPreferences.contextIsolation, true);
   assert.ok(!loginPreferences.preload);
-  const state = await js('window.dela.timetable.getState()');
-  const lessons = await js('window.dela.timetable.listLessons()');
+  let state = await js('window.dela.timetable.getState()');
+  let lessons = await js('window.dela.timetable.listLessons()');
   assert.equal(state.semesterStart, '2026-09-14');
   assert.equal(state.totalWeeks, 20);
   assert.equal(lessons[0].startMinute, 550);
@@ -165,14 +192,57 @@ async function run(window) {
       );
     }
   }
-  offline = true;
-  assert.equal((await js('window.dela.timetable.syncNow("2026-2027-1")')).ok, false);
-  assert.deepEqual(await js('window.dela.timetable.getState()'), state);
-  assert.deepEqual(await js('window.dela.timetable.listLessons()'), lessons);
+  let count = schoolWindows.length;
+  failure = 'expired';
+  assert.equal((await js('window.dela.timetable.syncNow("2026-2027-1")')).ok, true);
+  assert.equal(schoolWindows.length, count + 1);
+  assert.equal(schoolWindows.at(-1).hidden, true);
+  assert.equal(schoolWindows.at(-1).window.isDestroyed(), true);
+  state = await js('window.dela.timetable.getState()');
+  lessons = await js('window.dela.timetable.listLessons()');
+  for (const mode of ['offline', 'forbidden', 'server', 'redirect', 'schema']) {
+    failure = mode;
+    count = schoolWindows.length;
+    const result = await js('window.dela.timetable.syncNow("2026-2027-1")');
+    assert.equal(result.ok, false, mode);
+    assert.equal(result.reason, undefined, mode);
+    assert.equal(schoolWindows.length, count, mode);
+    assert.deepEqual(await js('window.dela.timetable.getState()'), state);
+    assert.deepEqual(await js('window.dela.timetable.listLessons()'), lessons);
+  }
+  for (const mode of ['manual', 'network', 'schema']) {
+    recovery = mode;
+    failure = 'expired';
+    const result = await js('window.dela.timetable.syncNow("2026-2027-1")');
+    assert.equal(result.ok, false, mode);
+    assert.equal(result.reason, mode === 'manual' ? 'auth' : undefined, mode);
+    assert.equal(schoolWindows.at(-1).hidden, true);
+    assert.equal(schoolWindows.at(-1).window.isDestroyed(), true);
+    assert.deepEqual(await js('window.dela.timetable.getState()'), state);
+    assert.deepEqual(await js('window.dela.timetable.listLessons()'), lessons);
+  }
+  recovery = 'manual';
+  failure = 'expired';
+  count = schoolWindows.length;
+  await js(`document.querySelector('button[aria-label="同步课表"]').click()`);
+  await wait(
+    `window.dela.timetable.getState().then((value) => value.lastSyncedAt !== ${JSON.stringify(state.lastSyncedAt)})`,
+  );
+  assert.equal(schoolWindows.length, count + 2);
+  assert.equal(schoolWindows.at(-2).hidden, true);
+  assert.equal(schoolWindows.at(-1).hidden, false);
+  assert.ok(schoolWindows.slice(count).every((item) => item.window.isDestroyed()));
+
+  failure = 'forbidden';
+  count = schoolWindows.length;
+  await wait(`!document.querySelector('button[aria-label="同步课表"]').disabled`);
+  await js(`document.querySelector('button[aria-label="同步课表"]').click()`);
+  await wait('document.body.textContent.includes("403")');
+  assert.equal(schoolWindows.length, count);
   assert.ok(
     requests.some((request) => new URLSearchParams(request.body).get('XNXQDM') === '2026-2027-1'),
   );
   console.log(
-    'Timetable smoke passed with synthetic fixtures: login, school clock times, persistence, offline cache, and four viewport widths. No school account or live school request was used.',
+    'Timetable smoke passed with synthetic fixtures: login, SSO recovery, manual-only authentication, error classification, cache preservation, clock times, and four viewport widths. No school account or live school request was used.',
   );
 }

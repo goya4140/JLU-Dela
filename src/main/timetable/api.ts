@@ -11,7 +11,8 @@ import { getDatabase } from '../database';
 import { lessonOccurrences } from '../../shared/schedule';
 import { CampusAuthError, flushCampusSession, openCampusLoginWindow } from '../campus';
 import { readSetting, writeSetting } from '../settings/prefs';
-import { fetchJluTimetable, JLU_TIMETABLE_URL, probeJluTimetable } from './jlu';
+import { fetchJluTimetable, isJluTimetableUrl, JLU_TIMETABLE_URL, probeJluTimetable } from './jlu';
+import { restoreJluTimetableSession } from './auth';
 
 const semesterSchema = z.string().regex(/^\d{4}-\d{4}-[123]$/);
 const dateTimeSchema = z.string().datetime();
@@ -150,15 +151,8 @@ export function openLoginWindow(sender: WebContents): Promise<TimetableResult> {
     sender,
     title: '登录吉林大学教务系统',
     url: JLU_TIMETABLE_URL,
-    reached: (url) => {
-      const reached = new URL(url);
-      return (
-        reached.origin === 'https://iedu.jlu.edu.cn' &&
-        reached.pathname.startsWith('/jwapp/sys/wdkb/')
-      );
-    },
-    retryProbe: (error) =>
-      error instanceof CampusAuthError || (error instanceof Error && error.cause === 'transient'),
+    reached: isJluTimetableUrl,
+    retryProbe: (error) => error instanceof CampusAuthError,
     probe: async () => {
       await probeJluTimetable();
       await flushCampusSession();
@@ -168,9 +162,21 @@ export function openLoginWindow(sender: WebContents): Promise<TimetableResult> {
 
 export async function syncTimetable(requested?: unknown): Promise<TimetableResult> {
   try {
-    const data = await fetchJluTimetable(
-      requested === undefined ? undefined : resolveSemester(requested),
-    );
+    const semester = requested === undefined ? undefined : resolveSemester(requested);
+    let data: Awaited<ReturnType<typeof fetchJluTimetable>>;
+    try {
+      data = await fetchJluTimetable(semester);
+    } catch (error) {
+      if (!(error instanceof CampusAuthError)) throw error;
+      await restoreJluTimetableSession();
+      try {
+        data = await fetchJluTimetable(semester);
+      } catch (retryError) {
+        if (retryError instanceof CampusAuthError)
+          throw new Error('统一认证恢复后教务仍未接受会话，请稍后重试；本地课表未更新');
+        throw retryError;
+      }
+    }
     await flushCampusSession();
     const db = getDatabase();
     const insert = db.prepare(

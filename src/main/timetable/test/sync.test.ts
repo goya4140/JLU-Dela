@@ -13,8 +13,10 @@ vi.mock('../jlu', () => ({
   probeJluTimetable: vi.fn(),
   JLU_TIMETABLE_URL: 'https://iedu.jlu.edu.cn/jwapp/sys/wdkb/*default/index.do',
 }));
+vi.mock('../auth', () => ({ restoreJluTimetableSession: vi.fn(async () => {}) }));
 import { CampusAuthError, flushCampusSession } from '../../campus';
 import { fetchJluTimetable } from '../jlu';
+import { restoreJluTimetableSession } from '../auth';
 import { getTimetableState, listLessons, querySchedule, syncTimetable } from '../api';
 
 const lesson = {
@@ -46,6 +48,7 @@ const snapshot = () => ({
 const fetchTimetable = vi.mocked(fetchJluTimetable);
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(restoreJluTimetableSession).mockResolvedValue(undefined);
   database = new Database(':memory:');
   database.exec(`
     CREATE TABLE workspace_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -92,17 +95,55 @@ it('does not replace the official current semester when syncing historical data'
   expect(listLessons('2025-2026-2')).toHaveLength(1);
 });
 
-it('keeps cached rows and synchronization time when authentication or transport fails', async () => {
+it('keeps cached rows and synchronization time when manual authentication or parsing is required', async () => {
   await syncTimetable();
   const before = getTimetableState();
   const lessons = listLessons('2026-2027-1');
   fetchTimetable.mockRejectedValueOnce(new CampusAuthError('教务登录已失效'));
+  vi.mocked(restoreJluTimetableSession).mockRejectedValueOnce(new CampusAuthError('需要学校验证'));
   expect(await syncTimetable()).toMatchObject({ ok: false, reason: 'auth' });
   expect(getTimetableState()).toEqual(before);
   expect(listLessons('2026-2027-1')).toEqual(lessons);
   fetchTimetable.mockRejectedValueOnce(new Error('课表字段不完整'));
   expect(await syncTimetable()).toMatchObject({ ok: false });
   expect(listLessons('2026-2027-1')).toEqual(lessons);
+});
+
+it('silently restores SSO once and retries the same requested semester', async () => {
+  fetchTimetable.mockRejectedValueOnce(new CampusAuthError('业务会话已过期'));
+  expect(await syncTimetable('2026-2027-1')).toEqual({ ok: true });
+  expect(restoreJluTimetableSession).toHaveBeenCalledOnce();
+  expect(fetchTimetable.mock.calls).toEqual([['2026-2027-1'], ['2026-2027-1']]);
+  expect(listLessons('2026-2027-1')).toHaveLength(1);
+});
+
+it.each(['网络不可达', '教务拒绝访问（403）', '接口结构变化'])(
+  'does not attempt SSO for %s',
+  async (message) => {
+    await syncTimetable();
+    const before = getTimetableState();
+    fetchTimetable.mockRejectedValueOnce(new Error(message));
+    expect(await syncTimetable()).toEqual({ ok: false, error: message });
+    expect(restoreJluTimetableSession).not.toHaveBeenCalled();
+    expect(getTimetableState()).toEqual(before);
+  },
+);
+
+it('preserves the cache when SSO fails or its single retry is still unauthenticated', async () => {
+  await syncTimetable();
+  const before = getTimetableState();
+  fetchTimetable.mockRejectedValueOnce(new CampusAuthError('已过期'));
+  vi.mocked(restoreJluTimetableSession).mockRejectedValueOnce(new Error('认证网络不可达'));
+  expect(await syncTimetable()).toEqual({ ok: false, error: '认证网络不可达' });
+  expect(getTimetableState()).toEqual(before);
+  vi.mocked(restoreJluTimetableSession).mockClear();
+  fetchTimetable.mockRejectedValueOnce(new CampusAuthError('已过期'));
+  fetchTimetable.mockRejectedValueOnce(new CampusAuthError('仍未认证'));
+  const result = await syncTimetable();
+  expect(result.ok).toBe(false);
+  expect(result.reason).toBeUndefined();
+  expect(restoreJluTimetableSession).toHaveBeenCalledOnce();
+  expect(getTimetableState()).toEqual(before);
 });
 
 it('does not replace the cache if session persistence fails', async () => {

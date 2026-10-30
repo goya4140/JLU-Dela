@@ -9,6 +9,7 @@ import { CampusAuthError, campusRequest } from '../../campus';
 import {
   currentJluSemester,
   fetchJluTimetable,
+  isJluLoginUrl,
   jluWeekNumbers,
   normalizeJluTimetable,
   parseEmapRows,
@@ -199,6 +200,13 @@ describe('JLU requests', () => {
   it('recognizes an HTTP 200 CAS login page as an expired session', async () => {
     request.mockResolvedValue('<html><form id="loginForm"></form></html>');
     await expect(fetchJluTimetable()).rejects.toBeInstanceOf(CampusAuthError);
+  });
+  it('does not classify maintenance text or malformed JSON as an expired session', async () => {
+    request.mockResolvedValue('<html>统一身份认证维护中，请稍后访问 tpass/login</html>');
+    await expect(fetchJluTimetable()).rejects.not.toBeInstanceOf(CampusAuthError);
+    expect(isJluLoginUrl('https://cas.jlu.edu.cn/tpass/login?service=iedu')).toBe(true);
+    expect(isJluLoginUrl('https://cas.jlu.edu.cn.evil.example/tpass/login')).toBe(false);
+    expect(isJluLoginUrl('https://iedu.jlu.edu.cn/maintenance')).toBe(false);
   });
   it('preserves warnings if optional adjustment data is unavailable', async () => {
     const original = request.getMockImplementation()!;

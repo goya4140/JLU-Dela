@@ -64,7 +64,7 @@ export interface CalendarEventInput {
 export interface TimetableResult {
   readonly ok: boolean;
   readonly error?: string;
-  /** 非空表示失败原因是登录失效，界面据此引导重新登录而非当作普通失败。 */
+  /** SSO 恢复时已确认学校要求人工认证，界面可打开登录窗口。 */
   readonly reason?: 'auth';
 }
 
