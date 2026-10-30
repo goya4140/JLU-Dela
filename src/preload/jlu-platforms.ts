@@ -9,7 +9,7 @@ export const jluPlatforms = {
   syncLearning: (termId?: string) => invoke('jlu:learning:sync', termId),
   getRecordings: (id: string) => invoke('jlu:recordings:get', id),
   syncRecordings: (id: string) => invoke('jlu:recordings:sync', id),
-  openLearning: () => invoke('jlu:learning:open'),
+  openLearning: (target?: 'recordings') => invoke('jlu:learning:open', target),
   openNotice: (id: string, channel: string) => invoke('jlu:notice:open', id, channel),
   openAttachment: (id: string, channel: string, index: number) =>
     invoke('jlu:attachment:open', id, channel, index),

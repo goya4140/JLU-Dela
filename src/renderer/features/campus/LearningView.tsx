@@ -83,6 +83,16 @@ function DesktopLearning() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                void api.openLearning('recordings').catch((reason) => setError(errorText(reason)))
+              }
+            >
+              录直播学习
+              <ExternalLink className="size-3.5" />
+            </Button>
             <Button size="sm" disabled={busy} onClick={() => void sync(data?.termId ?? undefined)}>
               <RefreshCw className={busy ? 'size-4 animate-spin' : 'size-4'} />
               {busy ? '正在读取…' : data ? '同步课程' : '登录并同步'}
@@ -159,7 +169,7 @@ function DesktopLearning() {
               <p className="text-13 text-ink-3">该课程暂未返回回放记录。</p>
             )}
             <p className="text-xs leading-relaxed text-ink-3">
-              播放、课件与下载请在学校平台中操作。当前同步的是课程和回放目录。
+              点击「录直播学习」打开学校的跨课程录播列表。播放、课件与下载在学校页面操作。
             </p>
           </section>
         ) : (

@@ -68,7 +68,7 @@ export interface JluPlatformsApi {
   syncLearning(termId?: string): Promise<JluPlatformResult<JluLearning>>;
   getRecordings(courseId: string): Promise<JluRecordings | null>;
   syncRecordings(courseId: string): Promise<JluPlatformResult<JluRecordings>>;
-  openLearning(): Promise<void>;
+  openLearning(target?: 'recordings'): Promise<void>;
   openNotice(id: string, channel: string): Promise<void>;
   openAttachment(id: string, channel: string, index: number): Promise<void>;
 }

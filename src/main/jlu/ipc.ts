@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron';
+import { z } from 'zod';
 import { checkWorkspaceSender } from '../ipc';
 import {
   getLearning,
@@ -53,9 +54,16 @@ export function registerJluPlatformsIpc(): void {
     checkWorkspaceSender(event);
     return platformResult(() => syncRecordings(id, event.sender));
   });
-  ipcMain.handle('jlu:learning:open', async (event) => {
+  ipcMain.handle('jlu:learning:open', async (event, target?: 'recordings') => {
     checkWorkspaceSender(event);
-    await openSchoolUrl(event.sender, LEARNING_URL, '学在吉大');
+    z.literal('recordings').optional().parse(target);
+    await openSchoolUrl(
+      event.sender,
+      target === 'recordings'
+        ? 'https://ilearntec.jlu.edu.cn/studycenter-web/recordLiveStudy#/'
+        : LEARNING_URL,
+      target === 'recordings' ? '学在吉大 · 录播学习' : '学在吉大',
+    );
   });
   ipcMain.handle('jlu:attachment:open', (event, id: string, channel: string, index: number) => {
     checkWorkspaceSender(event);
