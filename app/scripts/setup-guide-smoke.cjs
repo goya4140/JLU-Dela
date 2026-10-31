@@ -120,7 +120,12 @@ async function run(window) {
     js(
       `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===${JSON.stringify(label)}).click()`,
     );
-  const idle = () => wait(`!document.querySelector('[aria-label="校园平台配置"] button').disabled`);
+  const idle = () =>
+    wait(
+      `Array.from(document.querySelectorAll('[aria-label="校园平台配置"] button')).every(button => !button.disabled)`,
+    );
+  const connectService = (id) =>
+    js(`document.querySelector('[data-platform="${id}"] button').click()`);
   await wait('!!window.dela && !!document.querySelector("#main-nav")');
   await click('设置');
   await wait('!!document.querySelector("[aria-label=设置分区]")');
@@ -130,7 +135,7 @@ async function run(window) {
   assert.deepEqual(calls, [], 'opening the guide must only read local cache');
   assert.ok(
     await js(
-      'document.querySelector("[data-platform=academic]").textContent.includes("本机已有数据")',
+      'document.querySelector("[data-platform=academic]").textContent.includes("已有课表可查看")',
     ),
   );
   assert.ok(await js('document.body.textContent.includes("尚未配置模型")'));
@@ -170,9 +175,13 @@ async function run(window) {
   await wait('!!document.querySelector("[aria-label=设置分区]")');
   await click('使用指南');
   await idle();
-  await click('依次连接吉大平台');
+  assert.equal(await js(`document.body.textContent.includes('依次连接吉大平台')`), false);
+  await connectService('notices');
   await idle();
-  assert.deepEqual(calls, ['timetable:sync', 'jlu:notices:sync', 'jlu:learning:sync']);
+  assert.deepEqual(calls, ['jlu:notices:sync']);
+  await connectService('learning');
+  await idle();
+  assert.deepEqual(calls, ['jlu:notices:sync', 'jlu:learning:sync']);
   assert.ok(
     await js(
       'document.querySelector("[data-platform=learning]").textContent.includes("本次连接成功")',
@@ -182,17 +191,28 @@ async function run(window) {
   await idle();
   assert.equal(calls.at(-1), 'cx:courses:sync');
   calls.length = 0;
-  mode = 'network';
-  await click('依次连接吉大平台');
+  await click('同步课表');
   await idle();
-  assert.deepEqual(calls, ['timetable:sync', 'jlu:notices:sync', 'jlu:learning:sync']);
+  assert.deepEqual(calls, ['timetable:sync']);
+  assert.ok(
+    await js(
+      `document.querySelector('[aria-label="本次教务操作"]').textContent.includes('本次课表已更新')`,
+    ),
+  );
+  calls.length = 0;
+  mode = 'network';
+  await click('同步课表');
+  await idle();
+  assert.deepEqual(calls, ['timetable:sync']);
   assert.ok(
     await js(
       'document.querySelector("[data-platform=academic]").textContent.includes("示例网络超时")',
     ),
   );
   assert.ok(
-    await js('document.querySelector("[data-platform=academic]").textContent.includes("最近同步")'),
+    await js(
+      'document.querySelector("[data-platform=academic]").textContent.includes("上次课表更新")',
+    ),
   );
   assert.equal(
     await js(
@@ -202,9 +222,9 @@ async function run(window) {
   );
   calls.length = 0;
   mode = 'forbidden';
-  await click('依次连接吉大平台');
+  await click('同步课表');
   await idle();
-  assert.deepEqual(calls, ['timetable:sync', 'jlu:notices:sync', 'jlu:learning:sync']);
+  assert.deepEqual(calls, ['timetable:sync']);
   assert.ok(
     await js(
       'document.querySelector("[data-platform=academic]").textContent.includes("访问被拒绝（403）")',
@@ -248,28 +268,53 @@ async function run(window) {
   await idle();
   calls.length = 0;
   mode = 'cancel';
-  await click('依次连接吉大平台');
+  await click('打开教务认证');
   await idle();
-  assert.deepEqual(calls, ['timetable:sync', 'timetable:connect']);
+  assert.deepEqual(calls, ['timetable:connect']);
+  await connectService('notices');
+  await idle();
+  assert.deepEqual(calls, ['timetable:connect', 'jlu:notices:sync']);
+  calls.length = 0;
+  mode = 'forbidden';
+  await click('打开教务认证');
+  await idle();
+  assert.deepEqual(calls, ['timetable:connect', 'timetable:sync']);
+  assert.ok(
+    await js(
+      `document.querySelector('[aria-label="本次教务操作"]').textContent.includes('学校认证已通过，但本次课表未更新')`,
+    ),
+  );
+  assert.ok(
+    await js(
+      `document.querySelector('[aria-label="本机课表状态"]').textContent.includes('已有课表可查看')`,
+    ),
+  );
   calls.length = 0;
   academicAttempts = 0;
   mode = 'recover';
-  await click('依次连接吉大平台');
+  await click('同步课表');
   await idle();
-  assert.deepEqual(calls, [
-    'timetable:sync',
-    'timetable:connect',
-    'timetable:sync',
-    'jlu:notices:sync',
-    'jlu:learning:sync',
-  ]);
+  assert.deepEqual(calls, ['timetable:sync']);
+  assert.ok(
+    await js(
+      `document.querySelector('[aria-label="教务处理建议"]').textContent.includes('微信认证')`,
+    ),
+  );
+  await click('打开教务认证');
+  await idle();
+  assert.deepEqual(calls, ['timetable:sync', 'timetable:connect', 'timetable:sync']);
+  assert.ok(
+    await js(
+      `document.querySelector('[aria-label="本次教务操作"]').textContent.includes('本次课表已更新')`,
+    ),
+  );
   await click('配置模型');
   await wait('!document.querySelector("[aria-label=使用指南正文]")');
   await click('使用指南');
   await idle();
   assert.equal(
     await js(
-      'document.querySelector("[data-platform=academic]").textContent.includes("本次连接成功")',
+      'document.querySelector("[data-platform=academic]").textContent.includes("本次课表已更新")',
     ),
     false,
     'revisit uses cache status, not a persistent logged-in claim',
@@ -358,6 +403,6 @@ async function run(window) {
     false,
   );
   console.log(
-    'Setup guide smoke passed: local-only status, ordered JLU connection, separate Chaoxing, network errors preserve cache, interrupted authentication stops batch, recovery retries, revisit, four viewport widths, first-run steps, inline mail configuration, failed login retry, busy navigation protection, connected mail before first sync, model skip, resume and completion opening the guide and mail completion timestamps. Synthetic IPC fixtures and consent record in an isolated profile only; no school or model requests.',
+    'Setup guide smoke passed: local-only status, independent platform connections, separate academic authentication, cached timetable availability vs latest attempt, no automatic login on 403, cancellation leaves other platforms usable, verified authentication vs failed synchronization, explicit recovery, revisit, four viewport widths, first-run steps, inline mail configuration, failed login retry, busy navigation protection, connected mail before first sync, model skip, resume and completion opening the guide and mail completion timestamps. Synthetic IPC fixtures and consent record in an isolated profile only; no school or model requests.',
   );
 }

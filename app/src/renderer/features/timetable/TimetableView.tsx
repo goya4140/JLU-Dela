@@ -386,7 +386,23 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
               <li key={step}>{step}</li>
             ))}
           </ol>
+          {state.lastSyncedAt && (
+            <p className="text-xs text-ink-3">
+              本次课表未更新，当前仍显示本机课表。上次更新：
+              {new Date(state.lastSyncedAt).toLocaleString()}
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
+            {state.lastSyncedAt && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => void connectAndSync()}
+              >
+                打开教务认证
+              </Button>
+            )}
             {failureHelp.checkWebsite && (
               <Button asChild size="sm" variant="outline">
                 <a href={jluServices[0].url} target="_blank" rel="noreferrer">

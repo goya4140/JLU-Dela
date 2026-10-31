@@ -37,7 +37,7 @@ export function CampusStep({
       <header className="grid gap-2">
         <h2 className="text-2xl font-semibold tracking-tight">校园连接</h2>
         <p className="text-13 leading-relaxed text-ink-3">
-          按需同步课表、通知与课程。可以先跳过，之后在使用指南继续连接。
+          各平台分别配置，教务认证可稍后完成。可以先连接邮箱，或跳过后在使用指南继续配置。
         </p>
       </header>
       <PlatformConnections onConnectMail={() => setMailOpen(true)} onBusyChange={changeBusy} />

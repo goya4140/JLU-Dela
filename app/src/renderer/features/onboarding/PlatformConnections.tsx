@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, LoaderCircle } from 'lucide-react';
-import { jluServices, type JluServiceId } from '../../../shared/jlu';
+import { jluServices } from '../../../shared/jlu';
 import { Button } from '../../components/ui/button';
 import { useNavigationStore } from '../../navigation/view';
+import { AcademicConnection } from '../timetable/AcademicConnection';
 import { platformFailureHelp } from './platform-failure-help';
 import {
-  connectPlatforms,
+  connectPlatform,
   emptyPlatformProgress,
-  jluSetupOrder,
   readPlatformProgress,
+  type SetupPlatformId,
+  type SetupResult,
 } from './platform-setup';
+
+const services = jluServices.filter((service) => service.id !== 'academic');
 
 export function PlatformConnections({
   onBusyChange,
@@ -21,6 +25,7 @@ export function PlatformConnections({
   const [progress, setProgress] = useState(emptyPlatformProgress);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [academicBusy, setAcademicBusy] = useState(false);
   const active = useRef(false);
   const running = useRef(false);
   useEffect(() => {
@@ -39,34 +44,32 @@ export function PlatformConnections({
       active.current = false;
     };
   }, []);
-  async function connect(ids: JluServiceId[]) {
+  async function connect(id: SetupPlatformId) {
     if (!window.dela || running.current) return;
     running.current = true;
     setBusy(true);
     onBusyChange?.(true);
+    setProgress((previous) => ({
+      ...previous,
+      [id]: { ...previous[id], phase: 'busy', error: undefined, reason: undefined },
+    }));
     try {
-      await connectPlatforms(
-        window.dela,
-        ids,
-        (id, result) => {
-          if (!active.current) return;
-          setProgress((previous) => ({
-            ...previous,
-            [id]:
-              result === null
-                ? { ...previous[id], phase: 'busy', error: undefined, reason: undefined }
-                : result.ok
-                  ? { phase: 'verified', syncedAt: result.syncedAt }
-                  : {
-                      ...previous[id],
-                      phase: 'failed',
-                      error: result.error,
-                      reason: result.reason,
-                    },
-          }));
-        },
-        () => active.current,
-      );
+      let result: SetupResult;
+      try {
+        result = await connectPlatform(window.dela, id);
+      } catch (error) {
+        result = {
+          ok: false,
+          error: error instanceof Error ? error.message : '平台连接失败，请重试',
+        };
+      }
+      if (active.current)
+        setProgress((previous) => ({
+          ...previous,
+          [id]: result.ok
+            ? { phase: 'verified', syncedAt: result.syncedAt }
+            : { ...previous[id], phase: 'failed', error: result.error, reason: result.reason },
+        }));
     } finally {
       running.current = false;
       if (active.current) {
@@ -80,25 +83,23 @@ export function PlatformConnections({
       <div className="grid gap-2">
         <h3 className="text-base font-semibold text-ink">连接校园平台</h3>
         <p className="text-13 leading-relaxed text-ink-3">
-          吉大平台先尝试复用校园会话和统一认证，仍需验证时再显示学校页面。学习通独立连接；邮箱需填写邮箱地址与密码。
+          各平台分别配置，可以跳过任意一项。教务可能需要微信认证；学生邮箱只需邮箱地址与邮箱密码，不依赖教务连接。
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          disabled={loading || busy || !window.dela}
-          size="sm"
-          onClick={() => void connect(jluSetupOrder)}
-        >
-          {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}依次连接吉大平台
-        </Button>
-      </div>
+      <AcademicConnection
+        onBusyChange={(value) => {
+          setAcademicBusy(value);
+          onBusyChange?.(value);
+        }}
+        disabled={busy}
+      />
       {loading && (
         <p role="status" className="text-13 text-ink-3">
           正在读取本机同步记录…
         </p>
       )}
       <div className="grid gap-4">
-        {jluServices.map((service) => {
+        {services.map((service) => {
           const status = progress[service.id];
           const help = status.phase === 'failed' ? platformFailureHelp(status) : null;
           const label =
@@ -130,7 +131,7 @@ export function PlatformConnections({
                   </p>
                 </div>
                 <Button
-                  disabled={loading || busy || !window.dela}
+                  disabled={loading || busy || academicBusy || !window.dela}
                   size="sm"
                   variant="outline"
                   onClick={() =>
@@ -138,9 +139,10 @@ export function PlatformConnections({
                       ? onConnectMail
                         ? onConnectMail()
                         : useNavigationStore.getState().navigate('mail')
-                      : void connect([service.id])
+                      : void connect(service.id)
                   }
                 >
+                  {status.phase === 'busy' && <LoaderCircle className="size-3.5 animate-spin" />}
                   {service.id === 'mail'
                     ? '打开邮箱'
                     : service.id === 'chaoxing'
@@ -150,6 +152,13 @@ export function PlatformConnections({
                         : '连接'}
                 </Button>
               </div>
+              <p className="text-xs leading-relaxed text-ink-3">
+                {service.id === 'mail'
+                  ? '邮箱地址与邮箱密码，无需先完成教务认证。'
+                  : service.id === 'chaoxing'
+                    ? '使用学习通账号独立登录。'
+                    : '单独连接；已有校园会话可复用，学校仍可能要求再次验证。'}
+              </p>
               {status.syncedAt && (
                 <p className="text-xs text-ink-3">
                   最近同步：{new Date(status.syncedAt).toLocaleString()}

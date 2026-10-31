@@ -152,9 +152,9 @@ async function run(window) {
   await js(
     `Array.from(document.querySelectorAll('#main-nav button')).find((button) => button.textContent.trim() === '课表').click()`,
   );
-  await wait('document.body.textContent.includes("登录并同步")');
+  await wait('document.body.textContent.includes("打开教务认证")');
   await js(
-    `Array.from(document.querySelectorAll('button')).find((button) => button.textContent.trim() === '登录并同步').click()`,
+    `Array.from(document.querySelectorAll('button')).find((button) => button.textContent.trim() === '打开教务认证').click()`,
   );
   await wait('window.dela.timetable.getState().then((state) => !!state.lastSyncedAt)');
   assert.equal(loginPreferences.sandbox, true);

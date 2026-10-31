@@ -10,7 +10,7 @@ vi.mock('framer-motion', () => ({
   motion: { div: ({ children }: { children: ReactNode }) => <div>{children}</div> },
 }));
 
-it('configures mail inside the campus step and returns with a connected state without navigating away', async () => {
+it('configures mail after cancelled academic authentication inside the campus step and returns with a connected state without navigating away', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   let connected = false;
   let finish!: (result: { ok: true }) => void;
@@ -22,7 +22,11 @@ it('configures mail inside the campus step and returns with a connected state wi
   );
   const syncNow = vi.fn(async () => {});
   window.dela = {
-    timetable: { getState: async () => ({ lastSyncedAt: null }) },
+    timetable: {
+      getState: async () => ({ lastSyncedAt: '2026-10-30T14:35:35.000Z' }),
+      connect: vi.fn(async () => ({ ok: false, error: '未完成登录' })),
+      syncNow: vi.fn(),
+    },
     jluPlatforms: { getNotices: async () => null, getLearning: async () => null },
     chaoxing: { courses: async () => null },
     mail: {
@@ -42,6 +46,12 @@ it('configures mail inside the campus step and returns with a connected state wi
     [...host.querySelectorAll('button')].find((node) => node.textContent?.trim() === label)!;
   try {
     await act(async () => root.render(<CampusStep onDone={onDone} onBusyChange={onBusy} />));
+    expect(host.textContent).not.toContain('依次连接吉大平台');
+    await act(async () => button('打开教务认证').click());
+    expect(host.querySelector('[data-platform="academic"]')?.textContent).toContain(
+      '已有课表可查看',
+    );
+    expect(window.dela!.timetable.syncNow).not.toHaveBeenCalled();
     await act(async () => button('打开邮箱').click());
     expect(host.textContent).toContain('连接吉大邮箱');
     expect(host.querySelector('input[placeholder="name@mails.jlu.edu.cn"]')).not.toBeNull();

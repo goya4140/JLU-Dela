@@ -24,7 +24,7 @@ export function WelcomeStep({ onDone }: { onDone: () => void }) {
             title: '按需连接学校平台',
             content: (
               <p className="text-13 leading-relaxed text-ink-3">
-                吉大会话会尝试复用，学校仍可能要求分别验证；学习通单独认证。账号密码和验证码只在对应平台的登录页面输入。
+                教务单独配置，可能需要微信认证；通知、学在吉大和学习通分别连接。学生邮箱直接填写邮箱地址和邮箱密码。
               </p>
             ),
           },
