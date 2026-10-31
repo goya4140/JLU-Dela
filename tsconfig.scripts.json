@@ -4,6 +4,7 @@
   "include": [
     "scripts/build-helper.ts",
     "scripts/dev.ts",
+    "scripts/web.ts",
     "scripts/document-runtime-smoke.ts",
     "scripts/fix-native-permissions.ts",
     "scripts/prepare-runtime.ts",

@@ -47,7 +47,10 @@
     "smoke:timetable": "electron scripts/timetable-smoke.cjs",
     "smoke:platforms": "electron scripts/platforms-smoke.cjs",
     "smoke:chaoxing": "electron scripts/chaoxing-smoke.cjs",
-    "smoke:knowledge": "electron scripts/knowledge-smoke.cjs"
+    "smoke:knowledge": "electron scripts/knowledge-smoke.cjs",
+    "build:web": "pnpm build && vite build --config vite.web-host.config.ts",
+    "web": "pnpm build:web && node scripts/web.ts",
+    "smoke:web": "electron scripts/web-smoke.cjs"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.1.0",
