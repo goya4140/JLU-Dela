@@ -1,3 +1,8 @@
+import {
+  chaoxingDeadline,
+  type ChaoxingCalendar,
+  type ChaoxingCalendarSync,
+} from '../../shared/chaoxing-calendar';
 import { net, safeStorage, type IncomingMessage, type WebContents } from 'electron';
 import { mkdirSync, rmSync, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
@@ -293,4 +298,54 @@ export async function importChaoxingFile(courseId: string, folderId: string, fil
     request.abort();
   }
   return { id: path };
+}
+
+export function getChaoxingCalendar(): ChaoxingCalendar {
+  const courses = getChaoxingCourses();
+  const snapshots = (courses?.items ?? []).map((course) => ({
+    course,
+    works: getChaoxingWorks(course.id),
+  }));
+  return {
+    coursesSyncedAt: courses?.syncedAt ?? null,
+    courses: snapshots.map(({ course, works }) => ({
+      id: course.id,
+      name: course.name,
+      syncedAt: works?.syncedAt ?? null,
+    })),
+    works: snapshots.flatMap(({ course, works }) =>
+      (works?.items ?? []).map((work) => ({
+        ...work,
+        courseId: course.id,
+        courseName: course.name,
+        syncedAt: works!.syncedAt,
+        deadline: chaoxingDeadline(work.timing),
+      })),
+    ),
+  };
+}
+
+let calendarSync: Promise<ChaoxingCalendarSync> | null = null;
+export function syncChaoxingCalendar(sender?: WebContents): Promise<ChaoxingCalendarSync> {
+  if (calendarSync) return calendarSync;
+  calendarSync = (async () => {
+    const failures: ChaoxingCalendarSync['failures'] = [];
+    const courses = await chaoxingResult(() => syncChaoxingCourses(sender));
+    if (!courses.ok)
+      return {
+        data: getChaoxingCalendar(),
+        failures: [{ courseId: null, error: courses.error, reason: courses.reason }],
+      };
+    for (const course of courses.data.items) {
+      const result = await chaoxingResult(() => syncChaoxingWorks(course.id, sender));
+      if (!result.ok) {
+        failures.push({ courseId: course.id, error: result.error, reason: result.reason });
+        if (result.reason === 'auth') break;
+      }
+    }
+    return { data: getChaoxingCalendar(), failures };
+  })().finally(() => {
+    calendarSync = null;
+  });
+  return calendarSync;
 }

@@ -70,6 +70,7 @@ export function TodoDetail({
   onEdit,
   onDelete,
   onOpenLink,
+  onToggleCompleted,
 }: {
   item: TodoItem;
   now: number;
@@ -77,6 +78,7 @@ export function TodoDetail({
   onEdit: () => void;
   onDelete: () => void;
   onOpenLink: (url: string) => void;
+  onToggleCompleted?: () => void;
 }) {
   const personal = item.source === 'personal';
   const done = todoCompleted(item.status);
@@ -103,7 +105,7 @@ export function TodoDetail({
         {personal && item.calendar && (
           <p className="flex items-center gap-1.5">
             <CalendarCheck className="size-3.5 shrink-0" />
-            已写入日历
+            已同时显示在课表页
           </p>
         )}
       </div>
@@ -122,6 +124,11 @@ export function TodoDetail({
         <div className="mt-auto flex items-center justify-end gap-2 pt-4">
           {personal ? (
             <>
+              {onToggleCompleted && (
+                <Button variant="outline" onClick={onToggleCompleted}>
+                  {done ? '重新打开' : '标为完成'}
+                </Button>
+              )}
               <Button variant="ghost" onClick={onDelete}>
                 <Trash2 className="size-4" />
                 删除

@@ -14,7 +14,7 @@ import { DesktopOnlyNotice } from '../../components/ui/desktop-only-notice';
 import { useNavigationStore } from '../../navigation/view';
 import { errorText } from '../../workspace/store';
 
-export type ChaoxingPageApi = Omit<ChaoxingApi, 'importFile'> &
+export type ChaoxingPageApi = Omit<ChaoxingApi, 'importFile' | 'calendar' | 'syncCalendar'> &
   Partial<Pick<ChaoxingApi, 'importFile'>>;
 export function ChaoxingView({ api = window.dela?.chaoxing }: { api?: ChaoxingPageApi } = {}) {
   return api ? (

@@ -22,7 +22,11 @@ vi.mock('../../jlu/api', () => ({
     try {
       return { ok: true, data: await work() };
     } catch (error) {
-      return { ok: false, error: (error as Error).message };
+      return {
+        ok: false,
+        error: (error as Error).message,
+        ...((error as Error).cause === 'auth' ? { reason: 'auth' } : {}),
+      };
     }
   },
 }));
@@ -39,6 +43,8 @@ vi.mock('../../storage', () => ({ availablePath: (dir: string, name: string) => 
 import { readSchoolPage } from '../../jlu/reader';
 import {
   getChaoxingCourses,
+  getChaoxingCalendar,
+  syncChaoxingCalendar,
   getChaoxingFiles,
   getChaoxingWorks,
   syncChaoxingCourses,
@@ -185,4 +191,52 @@ it('does not replace or remove an existing note when file creation is refused', 
   downloadRequest();
   await expect(importChaoxingFile('1:2', '', 'd1')).rejects.toThrow();
   expect(readFileSync(file, 'utf8')).toBe('original');
+});
+
+it('aggregates only cached course works, without reading a school page or exposing signed routes', async () => {
+  await seedCourse();
+  db.prepare('INSERT INTO jlu_platform_cache VALUES (?, ?)').run(
+    'cx:works:1:2',
+    JSON.stringify({
+      courseId: '1:2',
+      syncedAt: '2026-10-31T00:00:00Z',
+      items: [{ id: 'w', title: '报告', status: '未交', timing: '截止时间：2026-11-02 23:59' }],
+    }),
+  );
+  reader.mockClear();
+  expect(getChaoxingCalendar().works[0]).toMatchObject({
+    courseId: '1:2',
+    deadline: { date: '2026-11-02', time: '23:59' },
+  });
+  expect(JSON.stringify(getChaoxingCalendar())).not.toContain('private');
+  expect(reader).not.toHaveBeenCalled();
+});
+it('continues after a course network failure, stops on authentication, and preserves previous snapshots', async () => {
+  const courses = ['1', '2', '3'].map((key) => ({
+    id: key,
+    name: '课程' + key,
+    teacher: '',
+    ended: false,
+    url: 'https://mooc1.chaoxing.com/mycourse/stu?courseid=' + key,
+  }));
+  db.prepare('INSERT INTO jlu_platform_cache VALUES (?, ?)').run(
+    'cx:works:1',
+    JSON.stringify({
+      courseId: '1',
+      syncedAt: '2026-10-30T00:00:00Z',
+      items: [{ id: 'w', title: '旧作业', status: '未交', timing: '剩余2天' }],
+    }),
+  );
+  reader
+    .mockResolvedValueOnce({ url: 'https://mooc2-ans.chaoxing.com/visit/interaction' })
+    .mockResolvedValueOnce(courses)
+    .mockRejectedValueOnce(new Error('网络超时'))
+    .mockRejectedValueOnce(new Error('需要登录', { cause: 'auth' }));
+  const result = await syncChaoxingCalendar();
+  expect(result.failures).toEqual([
+    { courseId: '1', error: '网络超时', reason: undefined },
+    { courseId: '2', error: '需要登录', reason: 'auth' },
+  ]);
+  expect(result.data.works).toEqual([expect.objectContaining({ title: '旧作业' })]);
+  expect(reader).toHaveBeenCalledTimes(4);
 });
