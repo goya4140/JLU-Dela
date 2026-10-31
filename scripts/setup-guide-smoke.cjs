@@ -35,6 +35,8 @@ ipcMain.handle = (channel, handler) =>
       calls.push(channel);
       if (channel === 'timetable:sync') {
         academicAttempts++;
+        if (mode === 'forbidden')
+          return { ok: false, error: '吉大教务拒绝访问（403），请确认账号权限或校园网/VPN' };
         if (mode === 'network') throw new Error('示例网络超时');
         if (mode === 'cancel' || (mode === 'recover' && academicAttempts === 1))
           return { ok: false, reason: 'auth', error: '示例认证失效' };
@@ -153,6 +155,52 @@ async function run(window) {
     ),
     false,
   );
+  calls.length = 0;
+  mode = 'forbidden';
+  await click('依次连接吉大平台');
+  await idle();
+  assert.deepEqual(calls, ['timetable:sync', 'jlu:notices:sync', 'jlu:learning:sync']);
+  assert.ok(
+    await js(
+      'document.querySelector("[data-platform=academic]").textContent.includes("访问被拒绝（403）")',
+    ),
+  );
+  assert.ok(
+    await js(
+      'document.querySelector("[data-platform=academic]").textContent.includes("网页可以访问但 Dela 仍报 403")',
+    ),
+  );
+  assert.equal(
+    await js('document.querySelector("[data-platform=academic] a").href'),
+    'https://iedu.jlu.edu.cn/jwapp/sys/emaphome/portal/index.do',
+  );
+  for (const width of [600, 900, 1280, 1800]) {
+    window.setSize(width, 850);
+    await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+    assert.equal(
+      await js('document.documentElement.scrollWidth<=document.documentElement.clientWidth'),
+      true,
+      'recovery guidance width ' + width,
+    );
+    if (!root.endsWith('.asar'))
+      writeFileSync(
+        `.build/setup-recovery-${width}.png`,
+        (await window.webContents.capturePage()).toPNG(),
+      );
+  }
+  await click('课表');
+  await wait(`!!document.querySelector('button[aria-label="同步课表"]')`);
+  await js(`document.querySelector('button[aria-label="同步课表"]').click()`);
+  await wait(`!!document.querySelector('[aria-label="课表同步处理建议"]')`);
+  assert.ok(
+    await js(
+      `document.querySelector('[aria-label="课表同步处理建议"]').textContent.includes('网页可以访问但 Dela 仍报 403')`,
+    ),
+  );
+  await click('设置');
+  await wait('!!document.querySelector("[aria-label=设置分区]")');
+  await click('使用指南');
+  await idle();
   calls.length = 0;
   mode = 'cancel';
   await click('依次连接吉大平台');

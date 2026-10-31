@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Check, LoaderCircle } from 'lucide-react';
 import { jluServices, type JluServiceId } from '../../../shared/jlu';
 import { Button } from '../../components/ui/button';
+import { platformFailureHelp } from './platform-failure-help';
 import {
   connectPlatforms,
   emptyPlatformProgress,
@@ -92,15 +93,14 @@ export function PlatformConnections({ onBusyChange }: { onBusyChange?: (busy: bo
       <div className="grid gap-4">
         {jluServices.map((service) => {
           const status = progress[service.id];
+          const help = status.phase === 'failed' ? platformFailureHelp(status) : null;
           const label =
             status.phase === 'busy'
               ? '正在连接，可能需要学校验证…'
               : status.phase === 'verified'
                 ? '本次连接成功'
                 : status.phase === 'failed'
-                  ? status.reason === 'auth'
-                    ? '需要完成学校认证'
-                    : '连接未完成'
+                  ? help?.title
                   : status.phase === 'cached'
                     ? '本机已有数据'
                     : '尚未同步';
@@ -136,10 +136,32 @@ export function PlatformConnections({ onBusyChange }: { onBusyChange?: (busy: bo
                   最近同步：{new Date(status.syncedAt).toLocaleString()}
                 </p>
               )}
-              {status.error && (
-                <p role="alert" className="break-words text-13 text-red">
-                  {status.error}
-                </p>
+              {help && (
+                <div className="grid gap-3">
+                  <ol
+                    aria-label="解决建议"
+                    className="grid list-decimal gap-1.5 pl-4 text-13 leading-relaxed text-ink-2"
+                  >
+                    {help.steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ol>
+                  {help.checkWebsite && (
+                    <div>
+                      <Button asChild size="sm" variant="outline">
+                        <a href={service.url} target="_blank" rel="noreferrer">
+                          在浏览器检查平台
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                  {status.syncedAt && (
+                    <p className="text-xs text-ink-3">旧数据仍可阅读；本次未更新。</p>
+                  )}
+                  <p role="alert" className="break-words text-13 text-red">
+                    错误详情：{status.error}
+                  </p>
+                </div>
               )}
             </div>
           );

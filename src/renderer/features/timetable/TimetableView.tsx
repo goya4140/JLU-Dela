@@ -33,6 +33,8 @@ import {
 import { cn } from '../../lib/utils';
 import { showToast } from '../../app/toasts';
 import { errorText } from '../../workspace/store';
+import { platformFailureHelp } from '../onboarding/platform-failure-help';
+import { jluServices } from '../../../shared/jlu';
 
 type CalendarMode = 'week' | 'month';
 
@@ -194,7 +196,7 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
     try {
       const failure = await connectAndSyncTimetable(requestedSemester);
       if (failure) {
-        showToast({ variant: 'error', title: '登录同步失败', description: failure });
+        setError(failure);
         return;
       }
       await loadSemester(requestedSemester);
@@ -214,11 +216,7 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
           await connectAndSync();
           return;
         }
-        showToast({
-          variant: 'error',
-          title: '同步课表失败',
-          description: result.error ?? '同步失败',
-        });
+        setError(result.error ?? '同步失败');
         return;
       }
       await loadSemester(requestedSemester);
@@ -240,6 +238,7 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
     return <div className="grid h-full place-items-center text-13 text-ink-3">正在读取课表…</div>;
   }
 
+  const failureHelp = error ? platformFailureHelp({ error }) : null;
   const weekEnd = addDays(visibleWeekStart, 6);
   const headerTitle =
     mode === 'week'
@@ -376,14 +375,34 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
         </div>
       </header>
 
-      {error ? (
-        <p
-          className="mx-4 mt-3 break-words rounded-card border border-line border-destructive/30 bg-red-tint px-3 py-2 text-xs text-red"
-          role="alert"
+      {failureHelp && (
+        <section
+          aria-label="课表同步处理建议"
+          className="mx-4 mt-3 grid shrink-0 gap-2 rounded-card bg-field p-3 text-13"
         >
-          {error}
-        </p>
-      ) : null}
+          <h2 className="font-medium text-ink">{failureHelp.title}</h2>
+          <ol className="grid list-decimal gap-1.5 pl-4 leading-relaxed text-ink-2">
+            {failureHelp.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+          <div className="flex flex-wrap gap-2">
+            {failureHelp.checkWebsite && (
+              <Button asChild size="sm" variant="outline">
+                <a href={jluServices[0].url} target="_blank" rel="noreferrer">
+                  在浏览器检查教务
+                </a>
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setError(null)}>
+              收起提示
+            </Button>
+          </div>
+          <p role="alert" className="break-words text-red">
+            错误详情：{error}
+          </p>
+        </section>
+      )}
 
       {state.warnings?.length ? (
         <div className="px-4 py-2 text-xs text-ink-3" role="status">
