@@ -30,7 +30,7 @@ import {
   knowledgeNote,
 } from '../api';
 beforeEach(() => {
-  root = realpathSync(mkdtempSync(join(tmpdir(), 'knowledge-test-')));
+  root = realpathSync.native(mkdtempSync(join(tmpdir(), 'knowledge-test-')));
   db = new Database(':memory:');
   db.exec(`CREATE TABLE knowledge_roots(id TEXT PRIMARY KEY,name TEXT,path TEXT);
  CREATE TABLE knowledge_courses(id TEXT PRIMARY KEY,root_id TEXT,name TEXT,relative_path TEXT,session_id TEXT);
