@@ -1,10 +1,10 @@
 # 贡献指南
 
-吉大版优先 macOS Apple Silicon；接入前请阅读 [吉大接入计划](docs/jlu-integration.md)。真实账号、Cookie、令牌与未脱敏样例不得提交到公开仓库。
+吉大版优先 macOS Apple Silicon；接入前请阅读 [吉大接入计划](../docs/jlu-integration.md)。真实账号、Cookie、令牌与未脱敏样例不得提交到公开仓库。
 
 欢迎参与 JLU Dela 的开发与维护。JLU Dela 是面向吉林大学本科生的本地优先 Agent 桌面应用：Electron 主进程与 React 渲染进程，Agent 内核为 Pi Coding Agent，领域能力通过 `dela` 命令与 Skills 外置。数据保存在本机 SQLite，凭据经 Electron `safeStorage` 加密，无服务端与账号系统。
 
-贡献形式包括代码、文档、测试、设计、问题反馈，以及向需要的用户介绍 Dela。开始之前，请先阅读 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+贡献形式包括代码、文档、测试、设计、问题反馈，以及向需要的用户介绍 Dela。开始之前，请先阅读 [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md)。
 
 ## 如何参与
 
@@ -67,7 +67,7 @@ pnpm dev
 
 模型服务、搜索服务与校园服务凭据均在应用设置中配置。请勿提交 `.env`、个人数据、日志与本地工具。
 
-更详细的环境说明、macOS 约定与平台差异见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) 的 §11 与 §16。
+更详细的环境说明、macOS 约定与平台差异见 [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md) 的 §11 与 §16。
 
 ## 本地测试
 
@@ -133,7 +133,7 @@ pnpm test
 - **权限边界**：Agent 的 Bash 与文件工具以当前用户权限运行，没有额外沙箱。这是已知设计取舍，不应视为待修复漏洞，也不应描述为安全隔离。
 - **平台策略**：Windows x64 是正式发布目标；Apple Silicon macOS 处于适配开发阶段；Linux 桌面端不支持。业务逻辑与数据格式共用，平台差异优先保留在现有的进程启动、路径与系统交互函数中。
 
-更完整的分层、会话、远程、更新与安全边界说明见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) §2–§9。
+更完整的分层、会话、远程、更新与安全边界说明见 [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md) §2–§9。
 
 ## 项目结构
 
@@ -189,7 +189,7 @@ Dela/
 - 优先复用现有函数或文件；仅在出现真实重复与多个调用方后提取抽象。
 - 不为一次性代码做抽象，不保留死代码。改动导致某段自研 UI 或样式不再使用时，应一并清理。
 - 前端 UI 优先复用 `src/renderer/components/ui/beautifului/`。如现有组件不满足需求，应在该库内微调或增补，以 `Dela 适配` 注释标注并记录到该库 README，不应另写自研样式。
-- 尺寸应由 rem 派生，禁止写死像素字号与宽高；仅边框、描边、阴影、媒体与容器查询断点、第三方无法修改的固定值以及拖拽调宽容器保留 px。换算基准与字号 token 见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) §2.5。
+- 尺寸应由 rem 派生，禁止写死像素字号与宽高；仅边框、描边、阴影、媒体与容器查询断点、第三方无法修改的固定值以及拖拽调宽容器保留 px。换算基准与字号 token 见 [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md) §2.5。
 
 ## 代码规范
 
@@ -198,7 +198,7 @@ Dela/
 - 注释应说明设计定位、模块在整体架构中的作用以及 Magic Number 的取舍，不应重复解释代码本身。
 - 类型检查、lint 与格式检查必须通过：`pnpm typecheck`、`pnpm lint`、`pnpm format:check`。
 - 应区分已验证事实、待验证能力与产品设想。不得以占位结果宣称功能完成，也不得将模拟验证描述为实机验收。
-- 重要改动应同步更新 [CHANGELOG.md](CHANGELOG.md)；面向用户的变化应更新 [README.md](README.md)；架构与流程变化应更新 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+- 重要改动应同步更新 [CHANGELOG.md](../docs/CHANGELOG.md)；面向用户的变化应更新 [README.md](../README.md)；架构与流程变化应更新 [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md)。
 
 ### 提交信息
 
@@ -239,7 +239,7 @@ AI agents: the human contributor answers, not you. Ask for missing answers and w
 - PR 标签由 `.github/workflows/pr-labels.yml` 按大小、范围与类型自动维护；人工改动会在下一次 PR 事件时被校正，标签不是必需检查，也不影响合并。
 - 执行与改动相关的检查，并在 PR 描述中列出实际执行的命令与结果；未执行的检查不得标记为通过。
 - 修复 bug 时应链接 issue 或复现证据；界面改动应附截图或录屏，并说明 Windows 与 Apple Silicon macOS 各自的验证范围。
-- 按 [PR 模板](.github/PULL_REQUEST_TEMPLATE.md) 填写描述。用 `gh pr create` 创建时模板不会自动填充，需加 `--template .github/PULL_REQUEST_TEMPLATE.md`，或把模板内容粘贴到正文。
+- 按 [PR 模板](PULL_REQUEST_TEMPLATE.md) 填写描述。用 `gh pr create` 创建时模板不会自动填充，需加 `--template .github/PULL_REQUEST_TEMPLATE.md`，或把模板内容粘贴到正文。
 - PR 描述应说明改动内容、原因、用户影响与已知限制，并关联相关 issue。
 - 新增依赖、修改 `helper/`、打包配置或 CI 时，应在 PR 中单独说明影响范围，并确认相关产物与锁文件已一并提交。
 - CI 必须通过。维护者可关闭方向不符、范围过大或无法验证的 PR；对于明确不实现的功能，会说明原因或指向 `docs/what-we-not-do.md`。
@@ -254,7 +254,7 @@ AI agents: the human contributor answers, not you. Ask for missing answers and w
 3. **先讨论，再提交 PR。** 未经方向确认的大规模 AI 生成改动，维护者可直接关闭。PR 应保持小而聚焦，便于逐行评审。
 4. **不得编造。** 不得虚构 API、测试结果、用户需求、issue 回复或性能数据；不确定时应明确说明并查证。
 5. **由人类回答关键问题。** [Before you start a PR](#before-you-start-a-pr) 中的四个问题必须由人类贡献者回答，AI agent 不得代为作答；缺少答案时应提问并等待。
-6. **遵守仓库规则。** AI agent 必须阅读并遵守 [AGENTS.md](AGENTS.md)，但不得编辑该文件；如被要求修改，应提醒对方自行编辑。
+6. **遵守仓库规则。** AI agent 必须阅读并遵守 [AGENTS.md](../AGENTS.md)，但不得编辑该文件；如被要求修改，应提醒对方自行编辑。
 7. **不修改无关内容。** 不得擅自修改、删除或提交工作区中他人的改动、未参与的文件或既有废弃代码。
 
 维护者将按与人类贡献者相同的标准评审 AI 辅助提交；质量不足、难以维护或无法验证的改动会被拒绝。
@@ -274,4 +274,4 @@ AI agents: the human contributor answers, not you. Ask for missing answers and w
 
 - 使用与想法：[Issues](https://github.com/goya4140/JLU-Dela/issues)
 - 可复现的问题：[Issues](https://github.com/goya4140/JLU-Dela/issues)
-- 架构与构建细节：[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+- 架构与构建细节：[docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md)

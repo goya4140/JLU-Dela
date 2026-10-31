@@ -60,9 +60,12 @@ process.once('SIGINT', () => void shutdown());
 process.once('SIGTERM', () => void shutdown());
 
 try {
-  server = await createServer({ configFile: 'vite.renderer.config.ts', mode: 'development' });
+  server = await createServer({
+    configFile: 'config/vite.renderer.config.ts',
+    mode: 'development',
+  });
   await server.listen();
-  for (const configFile of ['vite.main.config.ts', 'vite.preload.config.ts']) {
+  for (const configFile of ['config/vite.main.config.ts', 'config/vite.preload.config.ts']) {
     // build.watch 模式的返回值是 watcher，静态类型上是三态联合，这里断言成 watcher。
     const watcher = (await build({
       configFile,

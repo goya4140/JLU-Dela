@@ -1,6 +1,6 @@
 // 更新后首次启动的「更新内容」：数据源是 CHANGELOG.md 每个版本的扁平列表。
 // 构建时以 ?raw 内联，运行时只取条目文本，`## Unreleased` 不进弹窗。
-import changelog from '../../../../CHANGELOG.md?raw';
+import changelog from '../../../../docs/CHANGELOG.md?raw';
 
 export interface ReleaseNote {
   version: string;

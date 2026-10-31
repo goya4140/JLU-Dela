@@ -1,5 +1,5 @@
 <!--
-感谢你向 JLU Dela 提交 PR。填写前请阅读 CONTRIBUTING.md 的「PR 要求」。
+感谢你向 JLU Dela 提交 PR。填写前请阅读 `.github/CONTRIBUTING.md` 的「PR 要求」。
 标题遵循 Conventional Commits，例如：fix(chat): 随聊 @ 候选不再列出其他项目的文件
 本文件里的提示写在 HTML 注释中，预览时不会显示，填写后可以删掉。
 -->

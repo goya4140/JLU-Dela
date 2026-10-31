@@ -33,9 +33,9 @@ Canvas 接入已移除，课程资料与作业以学习通为入口；旧数据�
 其他文档导航：
 
 - 使用者视角：[README.md](../README.md)
-- 协作方式：[CONTRIBUTING.md](../CONTRIBUTING.md)
+- 协作方式：[CONTRIBUTING.md](../.github/CONTRIBUTING.md)
 - 需求索引：[requirements/README.md](requirements/README.md)
-- 按版本分节的变更记录：[CHANGELOG.md](../CHANGELOG.md)
+- 按版本分节的变更记录：[CHANGELOG.md](CHANGELOG.md)
 - 日常编码约束：[AGENTS.md](../AGENTS.md)
 - 远端 helper 的协议与端点表：[helper/README.md](../helper/README.md)
 - 校园接口实测与资料索引：[sjtu-apis.md](sjtu-apis.md)
@@ -297,7 +297,7 @@ pnpm test
 
 - 改动远端（`src/main/remotes/`、`helper/`）时另用 `pnpm test:remote` 对真机跑一遍，那批用例默认套件与 CI 都会跳过。
 - 涉及构建、原生依赖或打包时另验证 `pnpm smoke` 与打包目录启动。
-- 用户能感知的变化写进 [CHANGELOG.md](../CHANGELOG.md)；面向使用者的功能概览更新 [README.md](../README.md)；架构、取舍与平台状态变化更新本文。
+- 用户能感知的变化写进 [CHANGELOG.md](CHANGELOG.md)；面向使用者的功能概览更新 [README.md](../README.md)；架构、取舍与平台状态变化更新本文。
 - 单元测试只保留能挡住回归的用例：优先行为契约、边界与错误、安全、持久化/迁移、平台差异。不为字面默认值、setter/getter 往返、第三方库行为或纯 DOM 结构写用例；同一行为只留一处覆盖。
 - UI 测试断言状态、动作与副作用，不锁具体措辞；只有条款/同意、危险操作确认与可访问性名称保留原文。
 
@@ -331,17 +331,17 @@ pnpm test
 
 ### 发布
 
-从 main 的已验收提交创建 `v` + `package.json` 版本号的 tag，触发 `release.yml`。当前只发布 macOS Apple Silicon：完成源码检查、业务冒烟、DMG / ZIP 完整性、归档内应用启动及打包后业务验证，才允许发布 GitHub Release。
+从 main 的已验收提交创建 `v` + `package.json` 版本号的 tag，触发 `release.yml`。当前发布 macOS Apple Silicon 和 Windows x64：Mac 完成源码检查、业务冒烟、DMG / ZIP 完整性与归档内应用启动；Windows 完成源码检查、目录启动、NSIS 安装、安装后启动与卸载。两端通过并确认源码提交一致后，才允许公开 GitHub Release。
 
 构建任务只有仓库读取权限；独立发布任务拥有 Releases 写权限，先上传到草稿，再公开全部附件。已公开版本不覆盖安装包，变更须升版。手动运行工作流只生成 Actions 构建产物，不公开 Release。
 
-发布前为 CHANGELOG 新增对应版本条目。下载附件包括 DMG、ZIP、SHA256SUMS 与 source-commit.txt；主页使用固定版本下载链接。开发预览包尚未做 Developer ID 签名和公证，自动更新未验收，安装方式见 [macOS 安装说明](install-macos.md)。
+发布前为 CHANGELOG 新增对应版本条目。下载附件包括 DMG、ZIP、Windows EXE、SHA256SUMS 与 source-commit.txt；主页使用固定版本下载链接。开发预览包未签名，Mac 包尚未公证，自动更新未验收；安装方式见 [macOS 安装说明](install-macos.md) 与 [Windows 安装说明](windows-testing.md)。
 
 ## 16. 平台基线
 
 | 平台    | 最低系统基线 | 架构  | 产物               | GitHub runner  |
 | ------- | ------------ | ----- | ------------------ | -------------- |
-| Windows | Windows 10   | x64   | NSIS `.exe` 安装包 | `windows-2022` |
+| Windows | Windows 10   | x64   | NSIS `.exe` 安装包 | `windows-2025` |
 | macOS   | macOS 13.0   | arm64 | DMG / ZIP          | `macos-15`     |
 
 以上是构建基线，不代表最低系统实机兼容性已验收；runner 是构建环境，与最低运行系统不同。

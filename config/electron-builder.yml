@@ -48,6 +48,7 @@ extraResources:
       - 'README.md'
 npmRebuild: false
 win:
+  artifactName: 'JLU-Dela-${version}-win-${arch}-setup.${ext}'
   publish:
     provider: github
     owner: goya4140

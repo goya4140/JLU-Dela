@@ -4,17 +4,18 @@
 
 <h1 align="center">JLU Dela</h1>
 <p align="center"><strong>你的课表、作业、课堂与笔记，一个工作台。</strong></p>
-<p align="center">面向吉林大学本科生 · 本地优先 · macOS Apple Silicon</p>
+<p align="center">面向吉林大学本科生 · 本地优先 · macOS / Windows</p>
 
 <p align="center">
-  <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.8"><img alt="开发预览 v0.1.0-alpha.8" src="https://img.shields.io/badge/preview-v0.1.0--alpha.8-8dd8c3?style=flat-square" /></a>
+  <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.9"><img alt="开发预览 v0.1.0-alpha.9" src="https://img.shields.io/badge/preview-v0.1.0--alpha.9-8dd8c3?style=flat-square" /></a>
   <a href="https://github.com/goya4140/JLU-Dela/actions/workflows/ci.yml"><img alt="macOS CI" src="https://github.com/goya4140/JLU-Dela/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
   <a href="LICENSE"><img alt="GPL-3.0-or-later" src="https://img.shields.io/badge/license-GPL--3.0--or--later-aac5f5?style=flat-square" /></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.8/JLU-Dela-0.1.0-alpha.8-mac-arm64.dmg"><strong>↓ 下载 macOS DMG</strong></a> ·
-  <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.8">Release / ZIP</a> ·
+  <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-mac-arm64.dmg"><strong>↓ 下载 macOS DMG</strong></a> ·
+  <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-win-x64-setup.exe"><strong>↓ 下载 Windows 安装包</strong></a> ·
+  <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.9">全部下载 / 校验值</a> ·
   <a href="docs/install-macos.md">安装说明</a> ·
   <a href="docs/user-guide.md">使用指南</a> ·
   <a href="https://github.com/goya4140/JLU-Dela/issues">反馈</a>
@@ -22,7 +23,7 @@
 
 ![JLU Dela：把一学期，装进工作台](docs/demos/hero.svg)
 
-> **开发预览 · 非吉林大学官方产品。** 当前下载面向 macOS 13+、M 系列芯片，尚未做 Developer ID 签名和公证；Intel Mac 未验证。安装前请查看[说明](docs/install-macos.md)。
+> **开发预览 · 非吉林大学官方产品。** 提供 macOS 13+ M 系列 DMG 和 Windows 10/11 x64 安装包，均为未签名预览；Mac 包尚未公证，Intel Mac 未验证。[Mac 安装说明](docs/install-macos.md) · [Windows 安装说明](docs/windows-testing.md)。
 
 ## 从「今天学什么」开始
 
@@ -79,16 +80,18 @@
 
 ## 三步开始
 
-1. **安装**：下载 [DMG](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.8/JLU-Dela-0.1.0-alpha.8-mac-arm64.dmg)，拖入 Applications 并启动。
+1. **安装**：Mac 下载 [DMG](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-mac-arm64.dmg)，拖入 Applications；Windows 下载 [安装程序](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-win-x64-setup.exe)，运行安装。
 2. **连接**：按向导连接需要的平台。教务、电子校务与学在吉大尝试复用校园认证；学习通独立登录，邮箱单独配置。
 3. **学习**：同步课表，连接课程资料文件夹，或打开回放。只使用校园与本地功能，可以跳过模型配置。
 
 使用 AI 时再配置自己的模型服务。资料引用先进入草稿，发送后相关内容才会交给所选服务；费用与数据处理方式由该服务决定。校园连接失败会保留旧数据，不会把网络错误一律当作登录失效。
 
-[安装与校验](docs/install-macos.md) · [使用须知与配置](docs/user-guide.md) · [更新日志](CHANGELOG.md) · [隐私说明](docs/privacy.md)
+[安装与校验](docs/install-macos.md) · [使用须知与配置](docs/user-guide.md) · [更新日志](docs/CHANGELOG.md) · [隐私说明](docs/privacy.md)
 
 <details>
 <summary>本地开发与验证</summary>
+
+构建、类型与测试配置集中在 `config/`；协作文档在 `.github/`，更新日志和使用文档在 `docs/`。
 
 使用 [.node-version](.node-version) 和 [package.json](package.json) 指定的 Node.js / pnpm。
 
@@ -115,7 +118,7 @@ pnpm dev
 
 主分支与 PR 运行 macOS CI；发布 tag 触发安装包验证和 Release 发布，详见[开发文档](docs/DEVELOPMENT.md)。自动化使用合成数据，不访问真实校园账号。
 
-Windows 打包步骤、已知问题及合作者的验收记录见 [Windows 打包与测试](docs/windows-testing.md)；本次 Release 仅提供 macOS 安装包。
+Windows 打包步骤、已知问题及合作者的验收记录见 [Windows 打包与测试](docs/windows-testing.md)。
 
 `pnpm web` 提供共用本机学习数据的浏览器预览，仅监听本机；不是公网多用户服务，见[网页端说明](docs/web.md)。
 
@@ -133,8 +136,14 @@ Windows 打包步骤、已知问题及合作者的验收记录见 [Windows 打�
 
 </details>
 
+## 维护团队
+
+| [goya4140](https://github.com/goya4140)                                          | [ldx825](https://github.com/ldx825)                                          |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| <img src="https://github.com/goya4140.png?size=120" width="64" alt="goya4140" /> | <img src="https://github.com/ldx825.png?size=120" width="64" alt="ldx825" /> |
+
 ## 致谢与许可
 
 JLU Dela 基于 [Dela](https://github.com/Chang-Yo/Dela) 的工作台持续开发吉林大学校园接入与学习功能，保留原项目历史和版权声明，遵循 [GPL-3.0-or-later](LICENSE)。当前使用原创折纸天鹅标识。感谢原作者、贡献者与参与测试的同学。
 
-[贡献指南](CONTRIBUTING.md) · [使用条款](docs/terms.md) · [隐私说明](docs/privacy.md)
+[贡献指南](.github/CONTRIBUTING.md) · [使用条款](docs/terms.md) · [隐私说明](docs/privacy.md)

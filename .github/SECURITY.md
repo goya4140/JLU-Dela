@@ -1,6 +1,6 @@
 # 安全策略
 
-JLU Dela 当前为 macOS Apple Silicon 开发预览，尚无正式发行版。吉大版问题由 [goya4140/JLU-Dela](https://github.com/goya4140/JLU-Dela) 维护者处理，不应自动转给上游作者。
+JLU Dela 当前为 macOS Apple Silicon 与 Windows x64 开发预览，尚无正式发行版。吉大版问题由 [goya4140/JLU-Dela](https://github.com/goya4140/JLU-Dela) 维护者处理，不应自动转给上游作者。
 
 ## 报告方式
 

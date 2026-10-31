@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "lib": ["ES2023"], "types": ["node"] },
+  "include": [
+    "../scripts/build-helper.ts",
+    "../scripts/capture-showcase.ts",
+    "../scripts/dev.ts",
+    "../scripts/web.ts",
+    "../scripts/document-runtime-smoke.ts",
+    "../scripts/fix-native-permissions.ts",
+    "../scripts/prepare-runtime.ts",
+    "../scripts/run-ts-smoke.ts",
+    "../scripts/verify-macos-package.ts",
+    "../scripts/verify-windows-package.ts",
+    "../src/main/modules.d.ts"
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "name": "jlu-dela",
-  "version": "0.1.0-alpha.8",
+  "version": "0.1.0-alpha.9",
   "private": true,
   "description": "A local-first study workspace for Jilin University undergraduates",
   "author": "JLU Dela contributors; upstream Dela contributors",
@@ -18,16 +18,16 @@
     "version:minor": "npm version minor --no-git-tag-version",
     "version:major": "npm version major --no-git-tag-version",
     "dev": "node scripts/dev.ts",
-    "typecheck": "tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json && tsc -p tsconfig.renderer.json && tsc -p tsconfig.scripts.json",
+    "typecheck": "tsc -p config/tsconfig.main.json && tsc -p config/tsconfig.preload.json && tsc -p config/tsconfig.renderer.json && tsc -p config/tsconfig.scripts.json",
     "build": "pnpm typecheck && pnpm build:bundle",
-    "build:bundle": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
+    "build:bundle": "vite build --config config/vite.main.config.ts && vite build --config config/vite.preload.config.ts && vite build --config config/vite.renderer.config.ts",
     "build:helper": "node scripts/build-helper.ts",
     "start": "electron .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint --deny-warnings src scripts",
-    "test": "vitest run --passWithNoTests",
-    "test:remote": "vitest run --config vitest.remote.config.ts",
+    "test": "vitest run --config config/vitest.config.ts --passWithNoTests",
+    "test:remote": "vitest run --config config/vitest.remote.config.ts",
     "check": "pnpm format:check && pnpm lint && pnpm build && pnpm test",
     "postinstall": "install-electron && node scripts/fix-native-permissions.ts",
     "package:dir": "node scripts/prepare-runtime.ts && pnpm build && electron-builder --dir --publish never",
@@ -49,7 +49,7 @@
     "smoke:platforms": "electron scripts/platforms-smoke.cjs",
     "smoke:chaoxing": "electron scripts/chaoxing-smoke.cjs",
     "smoke:knowledge": "electron scripts/knowledge-smoke.cjs",
-    "build:web": "pnpm build && vite build --config vite.web-host.config.ts",
+    "build:web": "pnpm build && vite build --config config/vite.web-host.config.ts",
     "web": "pnpm build:web && node scripts/web.ts",
     "smoke:web": "electron scripts/web-smoke.cjs",
     "smoke:setup": "electron scripts/setup-guide-smoke.cjs",
@@ -133,5 +133,8 @@
   "homepage": "https://github.com/goya4140/JLU-Dela",
   "bugs": {
     "url": "https://github.com/goya4140/JLU-Dela/issues"
+  },
+  "build": {
+    "extends": "./config/electron-builder.yml"
   }
 }
