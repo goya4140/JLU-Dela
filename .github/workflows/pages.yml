@@ -20,6 +20,9 @@ jobs:
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm build:pages
+      - run: pnpm exec install-electron
+      - name: Verify layout and demo interactions
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1200x24" pnpm exec electron --no-sandbox scripts/pages-smoke.cjs
       - uses: actions/upload-pages-artifact@v4
         with:
           path: .build/pages

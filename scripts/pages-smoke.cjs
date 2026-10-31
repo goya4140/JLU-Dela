@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, nativeTheme } = require('electron');
 const { createServer } = require('node:http');
 const { readFile, mkdtemp, writeFile } = require('node:fs/promises');
 const { resolve, extname } = require('node:path');
@@ -89,6 +89,80 @@ const assert = require('node:assert/strict');
     await wait(
       `document.body.textContent.includes('交互演示')&&document.body.textContent.includes('现在想聊些什么')`,
     );
+    for (const theme of ['light', 'dark']) {
+      nativeTheme.themeSource = theme;
+      await wait(`document.documentElement.classList.contains('dark')===${theme === 'dark'}`);
+      for (const width of [390, 900, 1280, 1728]) {
+        window.setContentSize(width, 900);
+        await wait(`innerWidth===${width}`);
+        await wait(`!!document.querySelector('#main-nav')?.checkVisibility()===${width >= 768}`);
+        await wait(
+          `document.querySelector('#app-main').parentElement.getAnimations().every(animation => animation.playState !== 'running')`,
+        );
+        const layout = await js(`(() => {
+          const main = document.querySelector('#app-main');
+          const frame = main.parentElement;
+          const header = frame.querySelector(':scope > header').getBoundingClientRect();
+          const sidebar = document.querySelector('#main-nav').getBoundingClientRect();
+          const content = main.getBoundingClientRect();
+          return {
+            headerTop: header.top, headerHeight: header.height,
+            sidebarWidth: sidebar.width, contentLeft: content.left, contentTop: content.top,
+            viewportWidth: innerWidth, viewportHeight: innerHeight,
+            contentRight: content.right, contentBottom: content.bottom,
+            pageWidth: document.documentElement.scrollWidth,
+            pageHeight: document.documentElement.scrollHeight,
+            toolbarHeight: 2.5 * parseFloat(getComputedStyle(document.documentElement).fontSize),
+          };
+        })()`);
+        assert.equal(layout.headerTop, 0, `${theme} ${width}: toolbar starts at the top`);
+        assert.equal(
+          layout.headerHeight,
+          layout.toolbarHeight,
+          `${theme} ${width}: compact toolbar`,
+        );
+        assert.equal(
+          layout.sidebarWidth,
+          width >= 768 ? 200 : 0,
+          `${theme} ${width}: sidebar width`,
+        );
+        assert.ok(
+          Math.abs(layout.contentLeft - (width >= 768 ? 201 : 1)) <= 1,
+          `${theme} ${width}: content sits beside the sidebar`,
+        );
+        assert.ok(
+          Math.abs(layout.contentTop - layout.toolbarHeight) <= 4,
+          `${theme} ${width}: no blank header gap`,
+        );
+        assert.ok(
+          layout.contentRight <= width && layout.contentRight >= width - 6,
+          `${theme} ${width}: content fills available width`,
+        );
+        assert.ok(
+          layout.contentBottom <= 900 && layout.contentBottom >= 899,
+          `${theme} ${width}: content fills available height`,
+        );
+        assert.ok(
+          layout.pageWidth <= width && layout.pageHeight <= 900,
+          `${theme} ${width}: no outer page overflow`,
+        );
+        await writeFile(
+          `.build/pages-layout-${theme}-${width}.png`,
+          (await window.webContents.capturePage()).toPNG(),
+        );
+        if (theme === 'light' && width === 1728) {
+          await click('课程资料桌面端');
+          await wait(`document.body.textContent.includes('本地文件与项目')`);
+          await writeFile(
+            '.build/pages-sources-fixed.png',
+            (await window.webContents.capturePage()).toPNG(),
+          );
+          await click('首页');
+        }
+      }
+    }
+    window.setContentSize(1280, 850);
+    await wait('innerWidth===1280');
     await click('学习日历');
     await wait(`document.body.textContent.includes('网络协议分析')`);
     await click('列表');
@@ -126,7 +200,7 @@ const assert = require('node:assert/strict');
     );
     assert.deepEqual(unexpected, []);
     console.log(
-      'Pages smoke passed: project subpath, calendar, courses, video, note save, no backend or external requests; isolated synthetic data.',
+      'Pages smoke passed: light/dark layout at 390/900/1280/1728px, project subpath, calendar, courses, video, note save, no backend or external requests; isolated synthetic data.',
     );
     window.destroy();
     server.close();
