@@ -15,7 +15,7 @@ export function page<T>(items: T[], start: number, count: number) {
   };
 }
 
-// 作业描述 HTML 体积大且面向渲染，不进入模型上下文；需要正文时经 readCanvasSource 读取。
+// 作业描述 HTML 体积大且面向渲染，不进入模型上下文。
 export const slimTodo = ({
   description: _omit,
   ...item

@@ -25,8 +25,8 @@ todo → doing → done
 
 ## 需求索引
 
-| ID                                             | 需求                         | 状态   |
-| ---------------------------------------------- | ---------------------------- | ------ |
-| [REQ-0001](REQ-0001-macos-development-bash.md) | macOS 本地开发使用系统 Bash  | `done` |
-| [REQ-0002](REQ-0002-macos-window-flows.md)     | macOS 开发窗口与授权流程适配 | `done` |
-| [REQ-0003](REQ-0003-canvas-course-download.md) | Canvas 课程文件批量下载      | `todo` |
+| ID                                             | 需求                         | 状态        |
+| ---------------------------------------------- | ---------------------------- | ----------- |
+| [REQ-0001](REQ-0001-macos-development-bash.md) | macOS 本地开发使用系统 Bash  | `done`      |
+| [REQ-0002](REQ-0002-macos-window-flows.md)     | macOS 开发窗口与授权流程适配 | `done`      |
+| [REQ-0003](REQ-0003-canvas-course-download.md) | Canvas 课程文件批量下载      | `cancelled` |

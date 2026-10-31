@@ -6,7 +6,6 @@ import type { KnowledgeApi } from './knowledge';
 import type { ChaoxingApi } from './chaoxing';
 import type { CacheApi } from './cache';
 import type { CapabilityApi } from './capabilities';
-import type { CanvasApi } from './canvas';
 import type { ChatApi } from './chat';
 import type { PackageApi } from './packages';
 import type { ConsentApi } from './consent';
@@ -65,7 +64,6 @@ export interface DelaApi {
   readonly mail: MailApi;
   readonly timetable: TimetableApi;
   readonly shuiyuan: ShuiyuanApi;
-  readonly canvas: CanvasApi;
   readonly workspace: WorkspaceApi;
   readonly session: SessionApi;
   readonly sidechat: SidechatApi;
@@ -207,15 +205,6 @@ export type {
   TurnChanges,
   UncommittedChanges,
 } from './chat';
-
-export type {
-  CachedCourseFile,
-  CanvasCourse,
-  CanvasExportResult,
-  SourceItem,
-  CanvasState,
-  CanvasApi,
-} from './canvas';
 
 export type {
   ExtensionSessionState,

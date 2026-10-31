@@ -479,9 +479,8 @@ describe('会话归属与 cwd', () => {
     expect(openSession(chat.sessionId!).cwd).toBe(dir);
   });
 
-  it('资料页会话的 cwd 是课件根目录（与 workspace 平级），缺失时建好', () => {
-    const courses = join(state.root, 'JLU-Dela', 'courses');
-    expect(existsSync(courses)).toBe(false);
+  it('资料页会话使用工作区，包含学习通导入资料', () => {
+    const courses = join(state.root, 'JLU-Dela', 'workspace');
     const library = newSession(null, 'library');
     expect(library).toMatchObject({ projectId: null, cwd: courses });
     expect(statSync(courses).isDirectory()).toBe(true);

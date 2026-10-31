@@ -96,8 +96,8 @@ export function row(id: string): SessionRow {
   return found;
 }
 
-/** 资料页会话的工作目录：课件根目录，与 workspace 平级（Canvas 下载落在这里）。 */
-const coursesDirectory = () => join(storageDirectory(), 'courses');
+/** 资料页会话的工作目录：本地学习资料目录。 */
+const coursesDirectory = () => join(storageDirectory(), 'workspace');
 
 /** 通用会话的私有工作目录：与 workspace 平级的 chat-sessions/<会话 id>，建会话时建好。 */
 function chatSessionDirectory(id: string) {

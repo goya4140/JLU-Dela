@@ -8,12 +8,12 @@ import {
 } from '../timetable/timetable-format';
 
 /**
- * Canvas 作业用课程代码作为颜色键，与课表的课程条走同一套 `colorFor`；
+ * 课程作业用课程代码作为颜色键，与课表的课程条走同一套 `colorFor`；
  * 课程代码缺失时才退回课程名。个人待办不是课程，沿用自身颜色或石墨色。
  */
 export function todoCalendarColor(item: TodoItem): CalendarEventColor {
   if (item.source === 'personal') return item.color ?? 'slate';
-  return colorFor(item.courseCode || item.courseName || `course:${item.courseId ?? 'canvas'}`);
+  return colorFor(item.courseCode || item.courseName || `course:${item.courseId ?? 'course'}`);
 }
 
 /** 只把有有效截止时间的待办放入日格；同一天内按截止时刻、标题排序。 */

@@ -22,7 +22,6 @@ export class CredentialDecryptionError extends Error {
         {
           'llm-providers.bin': '模型服务配置',
           'mail-credentials.bin': '邮箱凭据',
-          'canvas-token.bin': 'Canvas 凭据',
           'shuiyuan-key.bin': '水源凭据',
         } as Record<string, string>
       )[basename(path)] ?? '凭据';
@@ -88,22 +87,6 @@ export function loadMailCredentials(): MailCredential | null {
 
 export function clearMailCredentials(): void {
   removeSealed(credentialPath());
-}
-
-function canvasTokenPath(): string {
-  return join(app.getPath('userData'), 'canvas-token.bin');
-}
-
-export function saveCanvasToken(token: string): void {
-  writeSealed(canvasTokenPath(), token);
-}
-
-export function loadCanvasToken(): string | null {
-  return readSealed(canvasTokenPath());
-}
-
-export function clearCanvasToken(): void {
-  removeSealed(canvasTokenPath());
 }
 
 /** 水源 User API Key 的本地形态；key 只存在主进程，不进 renderer 或数据库。 */

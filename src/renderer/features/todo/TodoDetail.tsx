@@ -24,12 +24,9 @@ const INITIAL_BODY_HEIGHT = 240;
  * 作业描述经清洗后放入沙箱 iframe 渲染。阅读器默认样式禁止文档纵向滚动，
  * 因此高度随内容自适应，滚动交给所在限高滚动区；链接点击转交外部打开。
  */
-function CanvasHtml({ html, onLink }: { html: string; onLink: (url: string) => void }) {
+function AssignmentHtml({ html, onLink }: { html: string; onLink: (url: string) => void }) {
   const rootSize = useRootFontSize();
-  const doc = useMemo(
-    () => sanitizeHtml(html, 'https://oc.sjtu.edu.cn', rootSize),
-    [html, rootSize],
-  );
+  const doc = useMemo(() => sanitizeHtml(html, '', rootSize), [html, rootSize]);
   const [body, setBody] = useState<HTMLElement | null>(null);
   const [height, setHeight] = useState(INITIAL_BODY_HEIGHT);
   useEffect(() => {
@@ -118,7 +115,7 @@ export function TodoDetail({
         )
       ) : (
         <div className="mt-3 min-h-0 flex-1 overflow-y-auto border-t pt-3 [scrollbar-width:none]">
-          <CanvasHtml html={item.description ?? ''} onLink={onOpenLink} />
+          <AssignmentHtml html={item.description ?? ''} onLink={onOpenLink} />
         </div>
       )}
       {(personal || item.url) && (
@@ -137,7 +134,8 @@ export function TodoDetail({
           ) : (
             item.url && (
               <Button onClick={() => onOpenLink(item.url!)}>
-                <ExternalLink className="size-4" />在 Canvas 中打开
+                <ExternalLink className="size-4" />
+                打开来源页面
               </Button>
             )
           )}

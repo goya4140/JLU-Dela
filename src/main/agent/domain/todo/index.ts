@@ -1,13 +1,10 @@
 import type { AgentTool } from '../shared';
-import { queryAssignmentsTool, queryTodosTool } from './query';
-import { refreshTodosTool } from './refresh';
+import { queryTodosTool } from './query';
 import { removeTodoTool } from './remove';
 import { saveTodoTool } from './save';
 
 export const todoTools = {
   query_todos: queryTodosTool,
-  query_assignments: queryAssignmentsTool,
   save_todo: saveTodoTool,
   remove_todo: removeTodoTool,
-  refresh_todos: refreshTodosTool,
 } satisfies Record<string, AgentTool>;

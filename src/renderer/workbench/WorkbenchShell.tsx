@@ -36,7 +36,7 @@ import { documentTabId, useNavigationStore } from '../navigation/view';
 import { showToast } from '../app/toasts';
 import { MailDraftDialog } from '../app/mail-draft-dialog';
 import { ChatHome } from '../content/chat/ChatHome';
-import { referenceEntryCandidates } from '../content/chat/reference-tokens';
+import { referenceCandidates, referenceEntryCandidates } from '../content/chat/reference-tokens';
 import { currentContainerOf, WorkbenchExplorer } from './WorkbenchExplorer';
 import { openTarget } from './open-target';
 
@@ -100,7 +100,7 @@ export function WorkbenchShell({ home = false }: { home?: boolean }) {
   }, [createProject, loaded]);
 
   const openDialog = useCallback(
-    (action: EntryAction | 'link' | 'connect', id: string | null, text?: string) =>
+    (action: EntryAction | 'link', id: string | null, text?: string) =>
       setDialog({
         action,
         id,
@@ -153,17 +153,18 @@ export function WorkbenchShell({ home = false }: { home?: boolean }) {
     () => ({
       // @ 引用即文件路径：项目会话列 cwd 下全部文件，通用池排除其他项目目录，
       // key 为绝对路径，title 为相对 cwd 的路径，与 agent 的工作目录一致。订阅 workspace 镜像。
-      // 通用池（随聊/资料页）另并入已下载课件候选：课件不在镜像里，按 cwd 过滤永远为空。
       useEntries: (projectId, cwd) => {
         const entries = useWorkspaceStore((state) => state.workspace.entries);
-        const courseFiles = useWorkspaceStore((state) => state.courseFiles);
         // 远程项目的 cwd 是远端路径，本地镜像里没有它的文件，候选改由远端索引提供。
         const remote = entries.find((item) => item.id === projectId)?.remoteId;
         const remoteEntries = useRemoteReferences(remote ? projectId : null);
         const localFiles = useLocalReferences(remote ? null : cwd);
-        useEffect(() => {
-          if (projectId === null && !remote) useWorkspaceStore.getState().ensureCourseFiles();
-        }, [projectId, remote]);
+        const importedRoot = entries.find(
+          (item) => item.parentId === null && item.name === '学习通资料' && item.kind === 'folder',
+        );
+        const importedFiles = useLocalReferences(
+          projectId === null && !remote ? (importedRoot?.path ?? null) : null,
+        );
         return useMemo(
           () =>
             referenceEntryCandidates(
@@ -172,9 +173,21 @@ export function WorkbenchShell({ home = false }: { home?: boolean }) {
               projectId,
               remote,
               remoteEntries,
-              courseFiles,
+              referenceCandidates(importedFiles, importedRoot?.path ?? null, null).map((ref) => ({
+                path: ref.key,
+                title: `学习通/${ref.title}`,
+              })),
             ),
-          [entries, localFiles, cwd, projectId, remote, remoteEntries, courseFiles],
+          [
+            entries,
+            localFiles,
+            cwd,
+            projectId,
+            remote,
+            remoteEntries,
+            importedFiles,
+            importedRoot?.path,
+          ],
         );
       },
       // 发送前冲盘引用笔记；仍无法保存时抛错阻止发送。
@@ -260,19 +273,14 @@ export function WorkbenchShell({ home = false }: { home?: boolean }) {
         entry = entries.find((e) => e.id === entryId);
         sourceId = entry?.sourceId ?? null;
       }
+      if (sourceId && !sourceId.startsWith('shuiyuan-topic:'))
+        throw new Error('此课程来源已停用，请从学习通导入资料，或导入本机已下载文件。');
       const content: DocumentContent = sourceId
-        ? sourceId.startsWith('shuiyuan-topic:')
-          ? await dela.shuiyuan.readSource(Number(sourceId.slice('shuiyuan-topic:'.length)))
-          : await dela.canvas.read(sourceId)
+        ? await dela.shuiyuan.readSource(Number(sourceId.slice('shuiyuan-topic:'.length)))
         : await dela.workspace.read(entryId!);
-      // pptx 的导出/快速预览定位：Canvas 资料用 sourceId，本地条目用条目 id。
       const officeRef: ResourceRef | undefined =
-        content.format === 'pptx'
-          ? sourceId && !sourceId.startsWith('shuiyuan-topic:')
-            ? { type: 'canvas', id: sourceId }
-            : entry?.kind === 'file'
-              ? { type: 'workspace', id: entry.id }
-              : undefined
+        content.format === 'pptx' && entry?.kind === 'file'
+          ? { type: 'workspace', id: entry.id }
           : undefined;
       const local = entry?.kind === 'file';
       return {
@@ -292,19 +300,7 @@ export function WorkbenchShell({ home = false }: { home?: boolean }) {
       loadDocument,
       openLink: (url) => {
         try {
-          const parsed = new URL(url);
-          const file =
-            parsed.origin === 'https://oc.sjtu.edu.cn'
-              ? parsed.pathname.match(/\/files\/(\d+)/)?.[1]
-              : null;
-          if (
-            file &&
-            useWorkspaceStore.getState().canvas.items.some((i) => i.sourceId === `file:${file}`)
-          ) {
-            void useNavigationStore.getState().openDocument(`source:file:${file}`);
-            return;
-          }
-          void window.dela?.canvas
+          void window.dela?.workspace
             .openLink(url)
             .catch((cause) =>
               showToast({ variant: 'error', title: '打开链接失败', description: errorText(cause) }),

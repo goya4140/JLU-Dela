@@ -65,10 +65,10 @@ export const useNoteDrafts = create<Store>((set, get) => ({
     const work = (async () => {
       const api = window.dela!;
       const sourceId = key.startsWith('source:') ? key.slice(7) : null;
+      if (sourceId && !sourceId.startsWith('shuiyuan-topic:'))
+        throw new Error('此课程来源已停用，请从学习通导入资料，或导入本机已下载文件。');
       const content = sourceId
-        ? sourceId.startsWith('shuiyuan-topic:')
-          ? await api.shuiyuan.readSource(Number(sourceId.slice('shuiyuan-topic:'.length)))
-          : await api.canvas.read(sourceId)
+        ? await api.shuiyuan.readSource(Number(sourceId.slice('shuiyuan-topic:'.length)))
         : await api.workspace.read(key);
       const current = get().drafts[key];
       // A refresh must never replace edits made while it was reading. A confirmed

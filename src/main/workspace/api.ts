@@ -17,7 +17,6 @@ import { z } from 'zod';
 import { getDatabase } from '../database';
 import { remoteById, targetOf } from '../remotes/api';
 import { locateRemote } from '../remotes/operations';
-import { canvasFilePath, readCanvasSource } from '../canvas/api';
 import { readShuiyuanSource } from '../shuiyuan/api';
 import { availablePath, diskName, storageDirectory as directory } from '../storage';
 import { officeExportPreviewInfo, readOfficeExportLink } from '../documents/links';
@@ -479,7 +478,7 @@ export function createWorkspaceEntry(input: WorkspaceCreateInput): WorkspaceEntr
     throw new Error('远程项目内暂不支持新建文件与文件夹');
   const db = getDatabase();
   if (parsed.kind === 'source') {
-    // 来源引用按前缀区分平台：水源引用行落表，其余仍是 Canvas 资料表。
+    // 只接受水源来源引用；课程资料以本地文件导入。
     if (parsed.sourceId?.startsWith('shuiyuan-topic:')) {
       const topicId = Number(parsed.sourceId.slice('shuiyuan-topic:'.length));
       if (
@@ -488,11 +487,7 @@ export function createWorkspaceEntry(input: WorkspaceCreateInput): WorkspaceEntr
         !db.prepare('SELECT 1 FROM shuiyuan_topics WHERE topic_id=?').get(topicId)
       )
         throw new Error('水源帖子引用不存在，请回到水源页重新添加');
-    } else if (
-      !parsed.sourceId ||
-      !db.prepare('SELECT 1 FROM canvas_sources WHERE id=?').get(parsed.sourceId)
-    )
-      throw new Error('资料不存在，请先同步课程');
+    } else throw new Error('此课程来源已停用，请从学习通导入资料，或导入本机已下载文件。');
     const duplicate = db
       .prepare(
         `SELECT ${entryColumns} FROM workspace_entries WHERE (local_path=? OR (local_path IS NULL AND parent_id IS ?)) AND source_id=? AND kind='source'`,
@@ -700,7 +695,7 @@ export async function workspaceFilePath(id: string): Promise<string> {
   // 水源来源是实时引用，没有本地文件路径。
   if (item.kind === 'source' && item.sourceId?.startsWith('shuiyuan-topic:'))
     throw new Error('条目不是文件');
-  if (item.kind === 'source' && item.sourceId) return canvasFilePath(item.sourceId);
+  if (item.kind === 'source') throw new Error('此课程来源已停用，请导入本机已下载文件。');
   if (item.kind !== 'file') throw new Error('条目不是文件');
   const path = entryLocalPath(item);
   if (!statSync(path).isFile()) throw new Error('文件不存在');
@@ -714,7 +709,7 @@ export async function readWorkspaceEntry(id: string): Promise<DocumentContent> {
     if (item.sourceId.startsWith('shuiyuan-topic:')) {
       return readShuiyuanSource(Number(item.sourceId.slice('shuiyuan-topic:'.length)));
     }
-    return readCanvasSource(item.sourceId);
+    throw new Error('此课程来源已停用，请从学习通导入资料，或导入本机已下载文件。');
   }
   if (item.kind !== 'file') throw new Error('请选择要打开的文档');
   const path = entryLocalPath(item);

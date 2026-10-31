@@ -114,17 +114,7 @@ export function promoteEntry(id: string, onOpenProject: (id: string) => void) {
 
 /** 保存为笔记的正文预填：显式 text 优先；否则按当前打开的资料拼来源 header。 */
 export function prefillNoteText(activeKey: string | null, text: string): string {
-  const { workspace, canvas } = useWorkspaceStore.getState();
-  const entries = workspace.entries;
-  const sourceId = activeKey?.startsWith('source:')
-    ? activeKey.slice(7)
-    : (entries.find((e) => e.id === activeKey)?.sourceId ?? null);
-  const source = sourceId ? canvas.items.find((i) => i.sourceId === sourceId) : null;
-  const originalUrl = activeKey
-    ? useNoteDrafts.getState().drafts[activeKey]?.content.url
-    : undefined;
-  const header = source
-    ? `来源：${originalUrl ? `[${source.name}](${originalUrl})` : source.name}\n\n`
-    : '';
+  const content = activeKey ? useNoteDrafts.getState().drafts[activeKey]?.content : undefined;
+  const header = content?.url ? `来源：[${content.title}](${content.url})\n\n` : '';
   return text || header;
 }

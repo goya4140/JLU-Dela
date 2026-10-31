@@ -3,7 +3,7 @@ import type { FileFormat } from './files';
 
 export interface DocumentContent {
   title: string;
-  /** html 只来自 Canvas 页面与水源；工作区与远端文件按 FileFormat 分类。 */
+  /** html 只来自 水源；工作区与远端文件按 FileFormat 分类。 */
   format: FileFormat | 'html';
   text?: string;
   /** 文本只读：超过编辑上限、或来自远端项目。truncated 表示 text 只是文件开头。 */

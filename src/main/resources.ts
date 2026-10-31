@@ -3,7 +3,6 @@ import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, stat } from 'node:fs/p
 import { basename, join } from 'node:path';
 import { z } from 'zod';
 import { resourceRefSchema, type ResourceRef } from '../shared/resources';
-import { cachedFile, canvasFilePath, getSource, readCanvasPage } from './canvas/api';
 import { mailAttachment, readMailMessage, saveMailAttachment } from './mail/api';
 import { entry, importWorkspaceFiles, workspaceFilePath } from './workspace/api';
 import { readShuiyuanSource } from './shuiyuan/api';
@@ -23,30 +22,12 @@ interface ResourceContent {
   url?: string;
 }
 
-// Canvas 只按 mime 认得出图片；与工作区图片同一套视觉模型可读的位图。
-const canvasImageMimes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-
-async function readCanvasResource(id: string): Promise<ResourceContent> {
-  const source = getSource(id);
-  if (source.kind !== 'file') {
-    const page = await readCanvasPage(id);
-    return { ...page, format: page.format === 'html' ? 'html' : 'file' };
-  }
-  if (!canvasImageMimes.includes(source.mime ?? '')) return { title: source.title, format: 'file' };
-  const cached = await cachedFile(source);
-  return {
-    title: source.title,
-    format: 'image',
-    bytes: await readFile(cached.path),
-    mime: cached.mime,
-  };
-}
-
 /** Agent 的资源读取不生成预览地址、不查询 Office 导出，也不枚举解析格式。 */
 export async function readResourceContent(
   ref: Extract<ResourceRef, { type: 'workspace' | 'canvas' | 'attachment' }>,
 ): Promise<ResourceContent> {
-  if (ref.type === 'canvas') return readCanvasResource(ref.id);
+  if (ref.type === 'canvas')
+    throw new Error('此课程来源已停用，请从学习通导入资料，或导入本机已下载文件。');
   if (ref.type === 'attachment') {
     const { attachment } = mailAttachment(ref.messageId, ref.part);
     return { title: attachment.filename, format: 'file' };
@@ -64,7 +45,7 @@ export async function readResourceContent(
         url: content.url,
       };
     }
-    return readCanvasResource(item.sourceId);
+    throw new Error('此课程来源已停用，请从学习通导入资料，或导入本机已下载文件。');
   }
   if (item.kind !== 'file') throw new Error('请选择要读取的文件');
   // 名字已能判定的 PDF/Office 直接交给文档 skill，不碰文件；其余才读内容判定。
@@ -135,9 +116,10 @@ export async function withResourceFile<T>(
   consume: (path: string) => Promise<T> | T,
 ): Promise<T> {
   source = resourceRefSchema.parse(source);
-  if (source.type === 'canvas') return consume(await canvasFilePath(source.id));
+  if (source.type === 'canvas')
+    throw new Error('此课程来源已停用，请从学习通导入资料，或导入本机已下载文件。');
   if (source.type === 'workspace') return consume(await workspaceFilePath(source.id));
-  if (source.type !== 'attachment') throw new Error('请选择项目文件、Canvas 文件或邮件附件');
+  if (source.type !== 'attachment') throw new Error('请选择项目文件或邮件附件');
   const mail = await readMailMessage(source.messageId);
   const attachment = mail.attachments.find((item) => item.part === source.part);
   if (!attachment) throw new Error('附件不存在，请先同步邮件');
@@ -164,13 +146,11 @@ export async function copyResourceToProject(input: unknown) {
 }
 
 /** 用系统默认应用打开资源的本地源文件（pptx 关联通常指向 PowerPoint）。与导出 PDF 一样
- *  只支持 Canvas 资料与我的资料条目；邮件附件要落临时目录，启动竞态下会被清理，不放行。 */
+ *  只支持本地资料条目；邮件附件要落临时目录，启动竞态下会被清理，不放行。 */
 export async function openResourceFile(ref: ResourceRef): Promise<void> {
   const parsed = resourceRefSchema.parse(ref);
-  if (parsed.type !== 'canvas' && parsed.type !== 'workspace')
-    throw new Error('仅支持资料文件与我的资料条目');
-  const path =
-    parsed.type === 'canvas' ? await canvasFilePath(parsed.id) : await workspaceFilePath(parsed.id);
+  if (parsed.type !== 'workspace') throw new Error('仅支持资料文件与我的资料条目');
+  const path = await workspaceFilePath(parsed.id);
   const error = await shell.openPath(path);
   if (error) throw new Error(`无法用系统默认程序打开：${error}`);
 }

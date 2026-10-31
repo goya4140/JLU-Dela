@@ -283,7 +283,7 @@ function CourseLibrary({
         };
       },
       openLink: (url) =>
-        void window.dela!.canvas.openLink(url).catch((cause) => setError(errorText(cause))),
+        void window.dela!.workspace.openLink(url).catch((cause) => setError(errorText(cause))),
       openShuiyuanTopic: () => {},
     }),
     [],

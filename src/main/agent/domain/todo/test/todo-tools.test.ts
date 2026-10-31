@@ -22,10 +22,9 @@ vi.mock('../../../../todo', async () => {
   };
 });
 
-import { getTodoState, refreshTodos, removeTodo, saveTodo } from '../../../../todo';
+import { getTodoState, removeTodo, saveTodo } from '../../../../todo';
 
 const state = vi.mocked(getTodoState);
-const refresh = vi.mocked(refreshTodos);
 const save = vi.mocked(saveTodo);
 const remove = vi.mocked(removeTodo);
 
@@ -87,7 +86,7 @@ describe('query_todos', () => {
     expect(result.items.every((item) => item.description === undefined)).toBe(true);
     expect(result.freshness).toEqual({ kind: 'cached', syncedAt: '2026-09-28T00:00:00.000Z' });
     expect(result.coverage).toEqual({
-      scope: 'personal_todos_and_cached_assignments',
+      scope: 'personal_todos',
       complete: true,
     });
   });
@@ -103,34 +102,6 @@ describe('query_todos', () => {
       total: number;
     };
     expect(open.total).toBe(1); // pending；unknown/offline 两不算
-  });
-
-  it('keeps personal todos visible with a coverage warning when Canvas is not connected', () => {
-    state.mockReturnValue(todoState({ connected: false, items: [todoState().items[0]!] }));
-    const result = todoTools.query_todos.execute({}) as {
-      items: unknown[];
-      coverage: { complete: boolean; warnings: string[] };
-    };
-    expect(result.items).toHaveLength(1);
-    expect(result.coverage.complete).toBe(false);
-    expect(result.coverage.warnings[0]).toContain('Canvas 未连接');
-  });
-});
-
-describe('query_assignments', () => {
-  it('filters canvas assignments by course and due range', () => {
-    const result = todoTools.query_assignments.execute({
-      courseId: 1,
-      startAt: '2026-10-01T00:00:00.000Z',
-      endAt: '2026-10-02T00:00:00.000Z',
-    }) as { items: { id: string }[]; coverage: unknown; freshness: unknown };
-    expect(result.items.map((item) => item.id)).toEqual(['canvas:owner:1:2']);
-    expect(result.coverage).toEqual({ scope: 'cached_assignments', complete: true });
-    const missed = todoTools.query_assignments.execute({
-      startAt: '2026-11-01T00:00:00.000Z',
-      endAt: '2026-11-02T00:00:00.000Z',
-    }) as { total: number };
-    expect(missed.total).toBe(0);
   });
 });
 
@@ -189,25 +160,5 @@ describe('remove_todo', () => {
     }
     expect(caught).toMatchObject({ code: 'NOT_FOUND' });
     expect(remove).not.toHaveBeenCalled();
-  });
-});
-
-describe('refresh_todos', () => {
-  it('refreshes the assignment cache and surfaces per-course errors', async () => {
-    refresh.mockResolvedValue(todoState({ error: '数据结构：无法连接 Canvas，请检查网络后重试' }));
-    const result = (await todoTools.refresh_todos.execute({})) as {
-      coverage: { complete: boolean; warnings: string[] };
-    };
-    expect(refresh).toHaveBeenCalledTimes(1);
-    expect(result.coverage.complete).toBe(false);
-    expect(result.coverage.warnings[0]).toContain('数据结构');
-  });
-
-  it('reports NOT_CONFIGURED without a canvas connection', async () => {
-    state.mockReturnValue(todoState({ connected: false }));
-    await expect(todoTools.refresh_todos.execute({})).rejects.toMatchObject({
-      code: 'NOT_CONFIGURED',
-    });
-    expect(refresh).not.toHaveBeenCalled();
   });
 });

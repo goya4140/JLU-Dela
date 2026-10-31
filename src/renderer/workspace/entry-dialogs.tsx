@@ -1,5 +1,5 @@
-// 工作区 CRUD 弹窗：新建项目/文件夹/文件、重命名、移动、移除、链接资料、连接 Canvas。
-// 弹窗只负责表单与 workspace:*/canvas:* 通道调用，「成功之后」的动作由接线方经回调接手。
+// 工作区 CRUD 弹窗：新建项目/文件夹/文件、重命名、移动、移除、链接资料。
+// 弹窗只负责表单与 workspace:* 通道调用，「成功之后」的动作由接线方经回调接手。
 import { useEffect, useState, type FormEvent } from 'react';
 import { Dialog } from 'radix-ui';
 import { Cloud, FolderOpen } from 'lucide-react';
@@ -25,7 +25,7 @@ import { cn } from '../lib/utils';
 const ROOT_SELECT_VALUE = '__root__';
 
 export interface EntryDialogRequest {
-  action: EntryAction | 'link' | 'connect';
+  action: EntryAction | 'link';
   id: string | null;
   /** note（新建文件）弹窗的正文预填：带正文时是「保存为笔记」，名称预填 .md。 */
   text?: string;
@@ -42,18 +42,16 @@ const titles: Partial<Record<EntryDialogRequest['action'], string>> = {
   move: '移动到',
   remove: '移除内容',
   link: '添加到项目',
-  connect: '连接 Canvas',
 };
 
 /** 标签页与目录共用的条目标题解析。 */
 export function titleOf(key: string): string {
-  const { workspace, canvas } = useWorkspaceStore.getState();
+  const { workspace } = useWorkspaceStore.getState();
   // 远端预览标签的 key 是「项目 id + 远端绝对路径」，条目树里没有它，标题取文件名。
   const remote = parseRemoteNodeId(key);
   if (remote) return remote.path.slice(remote.path.lastIndexOf('/') + 1);
   return (
     workspace.entries.find((e) => e.id === key)?.name ??
-    canvas.items.find((i) => `source:${i.sourceId}` === key)?.name ??
     useNoteDrafts.getState().drafts[key]?.content.title ??
     // 纯磁盘路径标签（Agent 刚产出的文件可能晚于镜像刷新）：镜像没有就直接取路径末段。
     (/[\\/]/.test(key)
@@ -148,11 +146,7 @@ export function EntryDialogs({
     try {
       const api = window.dela.workspace;
       let created: WorkspaceEntry | undefined;
-      if (request.action === 'connect') {
-        await window.dela.canvas.configure(name);
-        setName('');
-        useWorkspaceStore.getState().setCanvas(await window.dela.canvas.syncCourses());
-      } else if (request.action === 'rename') await updateEntry(request.id!, { name });
+      if (request.action === 'rename') await updateEntry(request.id!, { name });
       else if (request.action === 'move')
         await updateEntry(request.id!, { parentId: target || null });
       else if (request.action === 'remove') {
@@ -212,23 +206,21 @@ export function EntryDialogs({
             {request ? (titles[request.action] ?? '') : ''}
           </Dialog.Title>
           <Dialog.Description className="mt-2 text-xs text-ink-3">
-            {request?.action === 'connect'
-              ? '使用个人 Access Token，凭据加密保存在本机。'
-              : request?.action === 'remove'
-                ? workspace.entries.find((entry) => entry.id === request.id)?.kind === 'project'
-                  ? workspace.entries.find((entry) => entry.id === request.id)?.remoteId
-                    ? '从 Dela 移除项目并删除其全部聊天记录；远端目录与文件保留。'
-                    : '从 Dela 移除项目并删除其全部聊天记录；目录与文件保留。'
-                  : workspace.entries.find((entry) => entry.id === request.id)?.kind === 'source'
-                    ? '解除此处的资料关联，原始资料保留。'
-                    : '将文件或文件夹移至系统回收站。'
-                : request?.action === 'link'
-                  ? '在项目根目录引用资料，原位置保持不变。'
-                  : request?.action === 'note'
-                    ? '文件名原样使用，笔记请以 .md 结尾；可用 / 写子路径，如 课程/第一周.md。'
-                    : request?.action === 'project'
-                      ? '新建空项目，或导入电脑上已有的文件夹。'
-                      : '按自己的主题组织内容。'}
+            {request?.action === 'remove'
+              ? workspace.entries.find((entry) => entry.id === request.id)?.kind === 'project'
+                ? workspace.entries.find((entry) => entry.id === request.id)?.remoteId
+                  ? '从 Dela 移除项目并删除其全部聊天记录；远端目录与文件保留。'
+                  : '从 Dela 移除项目并删除其全部聊天记录；目录与文件保留。'
+                : workspace.entries.find((entry) => entry.id === request.id)?.kind === 'source'
+                  ? '解除此处的资料关联，原始资料保留。'
+                  : '将文件或文件夹移至系统回收站。'
+              : request?.action === 'link'
+                ? '在项目根目录引用资料，原位置保持不变。'
+                : request?.action === 'note'
+                  ? '文件名原样使用，笔记请以 .md 结尾；可用 / 写子路径，如 课程/第一周.md。'
+                  : request?.action === 'project'
+                    ? '新建空项目，或导入电脑上已有的文件夹。'
+                    : '按自己的主题组织内容。'}
           </Dialog.Description>
           <form onSubmit={(event) => void submit(event)} className="mt-4 grid gap-4">
             {(request?.action === 'link' || request?.action === 'move') && (
@@ -270,12 +262,12 @@ export function EntryDialogs({
               !['move', 'remove'].includes(request.action) &&
               (request.action !== 'link' || target === '__new__') && (
                 <label className="grid gap-2 text-13">
-                  {request.action === 'connect' ? 'Access Token' : '名称'}
+                  {'名称'}
                   <Input
                     autoFocus
                     autoComplete="off"
-                    type={request.action === 'connect' ? 'password' : 'text'}
-                    aria-label={request.action === 'connect' ? 'Canvas Access Token' : '名称'}
+                    type={'text'}
+                    aria-label={'名称'}
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -323,13 +315,7 @@ export function EntryDialogs({
                 disabled={busy || (request?.action === 'link' && !linkTarget)}
                 variant={request?.action === 'remove' ? 'destructive' : undefined}
               >
-                {busy
-                  ? '处理中…'
-                  : request?.action === 'remove'
-                    ? '移除'
-                    : request?.action === 'connect'
-                      ? '连接'
-                      : '确定'}
+                {busy ? '处理中…' : request?.action === 'remove' ? '移除' : '确定'}
               </Button>
             </div>
           </form>

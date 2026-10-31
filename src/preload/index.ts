@@ -1,7 +1,6 @@
 import { contextBridge } from 'electron';
 import { version } from '../../package.json';
 import type { DelaApi } from '../shared/api';
-import { canvas } from './canvas';
 import { jluPlatforms } from './jlu-platforms';
 import { cache } from './cache';
 import { chat } from './chat';
@@ -51,7 +50,6 @@ contextBridge.exposeInMainWorld('dela', {
   mail,
   timetable,
   shuiyuan,
-  canvas,
   workspace,
   session,
   sidechat,

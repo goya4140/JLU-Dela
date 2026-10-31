@@ -62,6 +62,7 @@ export interface WorkspaceCreateInput {
 }
 
 export interface WorkspaceApi {
+  openLink(url: string): Promise<void>;
   getState(): Promise<WorkspaceState>;
   listLocalDirectory(id: string | null): Promise<WorkspaceEntry[]>;
   searchLocal(rootId: string | null, query: string): Promise<WorkspaceEntry[]>;

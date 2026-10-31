@@ -197,6 +197,36 @@ async function run(window) {
   await wait(
     `!!document.querySelector('canvas') && document.body.textContent.includes('示例课件')`,
   );
+  assert.equal(await js("'canvas' in window.dela"), false);
+  const searchResults = await js('window.dela.search.query("示例课件")');
+  const importedFile = searchResults.find((row) => row.kind === 'course-file');
+  assert.ok(importedFile?.target.entryId.includes('学习通资料'));
+  assert.ok(!importedFile.target.entryId.startsWith('source:'));
+  const importedDirectory = importedFile.target.entryId.slice(
+    0,
+    importedFile.target.entryId.lastIndexOf('/'),
+  );
+  const references = await js(
+    `window.dela.workspace.localReferenceFiles(${JSON.stringify(importedDirectory)})`,
+  );
+  assert.ok(references.some((file) => file.path === importedFile.target.entryId));
+  await assert.rejects(js("window.dela.workspace.openLink('javascript:alert(1)')"), /不支持的链接/);
+  await assert.rejects(
+    js("window.dela.workspace.openLink('https://user:secret@example.test')"),
+    /不支持的链接/,
+  );
+  await js(
+    `Array.from(document.querySelectorAll('#main-nav button')).find(b=>b.textContent.trim()==='课程资料').click()`,
+  );
+  await wait(
+    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='打开学习通')`,
+  );
+  if (!root.endsWith('.asar'))
+    writeFileSync('.build/chaoxing-library.png', (await window.webContents.capturePage()).toPNG());
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='打开学习通').click()`,
+  );
+  await wait(`document.querySelector('h1')?.textContent==='学习通'`);
   const latestWorks = await js('window.dela.chaoxing.works("1:2")');
   offline = true;
   const failed = await js('window.dela.chaoxing.syncWorks("1:2")');

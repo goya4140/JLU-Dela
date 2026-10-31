@@ -6,6 +6,7 @@ import type { ResourceRef } from '../shared/resources';
 import { invoke, on } from './lib';
 
 export const workspace = {
+  openLink: (url: string) => invoke('workspace:open-link', url),
   getState: () => invoke('workspace:get-state'),
   listLocalDirectory: (id: string | null) => invoke('workspace:list-local', id),
   searchLocal: (rootId: string | null, query: string) =>

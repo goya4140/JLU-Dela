@@ -19,7 +19,6 @@ import {
 } from '../documents/runtime';
 import documentSkill from './skills/document-reading/SKILL.md?raw';
 import documentScript from './skills/document-reading/scripts/read.py?raw';
-import canvasSkill from './skills/canvas/SKILL.md?raw';
 import classroomSkill from './skills/classroom/SKILL.md?raw';
 import curriculumSkill from './skills/curriculum/SKILL.md?raw';
 import mailSkill from './skills/mail/SKILL.md?raw';
@@ -59,7 +58,6 @@ const BUILTIN_SKILLS: Readonly<Record<string, { path: string; content: string }[
     { path: 'scripts/read.py', content: documentScript },
   ],
   shuiyuan: [{ path: SKILL_ENTRY_FILE, content: shuiyuanSkill }],
-  canvas: [{ path: SKILL_ENTRY_FILE, content: canvasSkill }],
   classroom: [{ path: SKILL_ENTRY_FILE, content: classroomSkill }],
   mail: [{ path: SKILL_ENTRY_FILE, content: mailSkill }],
   todo: [{ path: SKILL_ENTRY_FILE, content: todoSkill }],
