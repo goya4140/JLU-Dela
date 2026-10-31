@@ -138,7 +138,13 @@ export function StudyCalendar({
       style={eventColorStyle(entry.color)}
     >
       <span className="shrink-0 @max-[520px]:hidden">
-        {entry.source === 'assignment' ? '截止' : entry.source === 'course' ? '课' : '待办'}
+        {entry.source === 'assignment'
+          ? entry.date
+            ? '截止'
+            : '作业'
+          : entry.source === 'course'
+            ? '课'
+            : '待办'}
       </span>
       {entry.time && (
         <span className="shrink-0 tabular-nums @max-[520px]:hidden">{entry.time}</span>
@@ -266,7 +272,10 @@ export function StudyCalendar({
             ；仅包含本次读取的作业页面。
           </span>
           {pendingCourses.length > 0 && (
-            <span>未读取：{pendingCourses.map((course) => course.name).join('、')}</span>
+            <details aria-label="未读取课程">
+              <summary>{pendingCourses.length} 门课程尚未读取作业</summary>
+              <p className="pt-2">{pendingCourses.map((course) => course.name).join('、')}</p>
+            </details>
           )}
           {academicError && (
             <p role="alert">

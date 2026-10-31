@@ -62,7 +62,12 @@ async function run(window) {
   save('cx:courses', {
     items: [
       { id: 'a', name: '示例课程', teacher: '示例教师', ended: false },
-      { id: 'b', name: '尚未读取课程', teacher: '', ended: false },
+      ...Array.from({ length: 32 }, (_, i) => ({
+        id: 'b' + i,
+        name: '尚未读取课程' + i,
+        teacher: '',
+        ended: false,
+      })),
     ],
     syncedAt,
   });
@@ -116,6 +121,12 @@ async function run(window) {
     ),
   );
   assert.ok(await js(`document.body.textContent.includes('尚未读取课程')`));
+  assert.equal(await js(`document.querySelector('[aria-label="未读取课程"]').open`), false);
+  assert.ok(
+    await js(
+      `document.querySelector('[aria-label="未读取课程"] summary').textContent.includes('32')`,
+    ),
+  );
   const click = (label) =>
     js(
       `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===${JSON.stringify(label)}).click()`,
