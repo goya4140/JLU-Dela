@@ -108,7 +108,14 @@ app.once('browser-window-created', (_event, window) => {
 });
 require(join(root, 'out/main/index.cjs'));
 async function run(window) {
-  const js = (source) => window.webContents.executeJavaScript(source);
+  const js = async (source) => {
+    try {
+      return await window.webContents.executeJavaScript(source);
+    } catch (error) {
+      console.error('Renderer step failed:', source);
+      throw error;
+    }
+  };
   const wait = async (source) => {
     const until = Date.now() + 25000;
     while (Date.now() < until) {
@@ -239,7 +246,9 @@ async function run(window) {
   await js(
     `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='打开学习通').click()`,
   );
-  await wait(`document.querySelector('h1')?.textContent==='学习通'`);
+  await wait(
+    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.includes('示例课程'))`,
+  );
   await js(
     `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('示例课程')).click()`,
   );
