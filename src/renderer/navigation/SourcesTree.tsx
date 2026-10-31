@@ -16,6 +16,7 @@ import { showToast } from '../app/toasts';
 import { compareCanvasTerms, latestTermOf } from '../../shared/canvas';
 import { dialogOverlay, dialogPanel } from '../components/ui/motion';
 import { cn } from '../lib/utils';
+import { fileManagerName } from '../lib/platform';
 
 export function SourcesTree({
   expanded,
@@ -227,21 +228,36 @@ export function SourcesTree({
                         <Link2 />
                         添加到项目
                       </DropdownMenuItem>
-                      {sourceId.startsWith('file:') && (
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            void window.dela?.canvas.download(sourceId).catch((cause) =>
-                              showToast({
-                                variant: 'error',
-                                title: '下载失败',
-                                description: errorText(cause),
-                              }),
-                            );
-                          }}
-                        >
-                          <Download />
-                          下载文件
-                        </DropdownMenuItem>
+                      {item?.kind === 'file' && (
+                        <>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              void window.dela?.canvas.reveal(sourceId).catch((cause) =>
+                                showToast({
+                                  variant: 'error',
+                                  title: `打开 ${fileManagerName} 失败`,
+                                  description: errorText(cause),
+                                }),
+                              );
+                            }}
+                          >
+                            <FolderOpen />在 {fileManagerName} 中显示
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              void window.dela?.canvas.download(sourceId).catch((cause) =>
+                                showToast({
+                                  variant: 'error',
+                                  title: '下载失败',
+                                  description: errorText(cause),
+                                }),
+                              );
+                            }}
+                          >
+                            <Download />
+                            下载文件
+                          </DropdownMenuItem>
+                        </>
                       )}
                       {sourceId.startsWith('file:') && (
                         <DropdownMenuItem
