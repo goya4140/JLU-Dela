@@ -37,6 +37,7 @@ export const navEntries: Array<{
   { id: 'classroom', label: '学在吉大', icon: MonitorPlay },
   { id: 'chaoxing', label: '学习通', icon: BookOpen },
   { id: 'notifications', label: '学校通知', icon: Bell },
+  { id: 'mail', label: '吉大邮箱', icon: Mail },
 ];
 
 export const useNavEntryPrefs = create<{

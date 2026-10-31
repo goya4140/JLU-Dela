@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react';
 import { ExternalLink, FolderOpen, GraduationCap } from 'lucide-react';
 import { jluServices, jluStudentMail, type JluServiceId } from '../../../shared/jlu';
-import type { MailState } from '../../../shared/mail';
 import { Button } from '../../components/ui/button';
 import { useNavigationStore } from '../../navigation/view';
 
@@ -105,38 +103,20 @@ export function CampusView({
   );
 }
 
-/** 吉大学生邮箱：账号在本机以 IMAP/SMTP 连接，网页入口保留给学校原站。 */
+/** 吉大学生邮箱：入口与「课表」「学习通」一致，账号在邮箱页连接。 */
 function MailCard() {
-  const [state, setState] = useState<MailState | null>(null);
-  useEffect(() => {
-    let active = true;
-    void window.dela?.mail
-      .getState()
-      .then((value) => {
-        if (active) setState(value);
-      })
-      .catch(() => {
-        /* 读取失败按未连接展示，不阻断校园页其他内容。 */
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-  const account = state?.account ?? null;
   return (
     <section className="grid gap-3 rounded-xl border border-line p-5" data-setting-id="jlu-mail">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-ink">{jluStudentMail.name}</h2>
-        <span className="rounded-full bg-field px-2.5 py-1 text-xs text-ink-3">
-          {account ? `已连接 · ${account.address}` : '未连接'}
-        </span>
+        <span className="rounded-full bg-field px-2.5 py-1 text-xs text-ink-3">接入预览</span>
       </div>
       <p className="text-13 text-ink-3">
         用学生邮箱账号（@mails.jlu.edu.cn）在本机收发、检索邮件，凭据只保存在本机。
       </p>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={() => useNavigationStore.getState().navigate('mail')}>
-          {account ? '打开邮箱' : '连接邮箱'}
+          打开邮箱
         </Button>
         <Button asChild size="sm" variant="outline">
           <a href={jluStudentMail.url} rel="noreferrer" target="_blank">
