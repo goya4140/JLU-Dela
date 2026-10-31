@@ -8,7 +8,7 @@ export function IntroSequence({ onStart }: { onStart: () => void }) {
       <OnboardingWindowBar />
       <main className="grid place-items-center p-8">
         <div className="grid max-w-lg justify-items-center gap-5 text-center">
-          <DelaBrand alt="Dela 上游标识" className="size-28" />
+          <DelaBrand alt="JLU Dela 标识" className="size-28" />
           <p className="text-xs text-ink-3">基于开源 Dela · macOS 开发预览</p>
           <h1 className="text-4xl font-semibold tracking-tight">JLU Dela</h1>
           <p className="text-base text-ink-2">吉大本科生的本地学习工作台</p>

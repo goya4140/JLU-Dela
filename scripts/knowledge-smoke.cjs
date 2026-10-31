@@ -16,7 +16,28 @@ const library = join(profile, '示例知识库'),
   coursePath = join(library, '本学期', '计算机网络');
 mkdirSync(coursePath, { recursive: true });
 const note = join(coursePath, '课堂笔记.md');
-writeFileSync(note, '# 可靠传输\n滑动窗口通过确认实现可靠传输。\n');
+const noteContent = `# 可靠传输
+滑动窗口通过确认实现可靠传输。
+
+## 本节学习目标
+
+- 解释发送窗口与接收窗口如何配合。
+- 区分累计确认与选择确认。
+- 用时间线梳理丢包后的重传过程。
+
+## 两种重传策略
+
+| 策略 | 丢包后如何处理 |
+| --- | --- |
+| Go-Back-N | 重传丢失分组及其后尚未确认的分组 |
+| Selective Repeat | 只重传尚未确认的分组 |
+
+## 课后自测
+
+如果第三个分组丢失，而第四个分组先到达，接收端应如何处理？
+结合网络课件画出发送方与接收方的时间线，再记录仍有疑问的地方。
+`;
+writeFileSync(note, noteContent);
 mkdirSync(join(library, '另一门课'));
 writeFileSync(join(library, '另一门课', '独有.md'), '只属于另一门课');
 const objects = [
@@ -175,7 +196,7 @@ async function run(window) {
   );
   assert.ok(saved.startsWith(coursePath));
   assert.ok(readFileSync(saved, 'utf8').includes('引用'));
-  assert.equal(readFileSync(note, 'utf8'), '# 可靠传输\n滑动窗口通过确认实现可靠传输。\n');
+  assert.equal(readFileSync(note, 'utf8'), noteContent);
   assert.equal((await js('window.dela.knowledge.state()')).courses[0].id, course.id);
   assert.equal(BrowserWindow.getAllWindows().length, 1);
   console.log(

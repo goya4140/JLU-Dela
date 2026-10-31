@@ -179,9 +179,11 @@ async function run(window) {
   await js(
     `document.querySelector('video').pause();document.querySelector('[aria-label="课程学习笔记"]').focus()`,
   );
-  window.webContents.insertText('人工测试笔记内容\n');
+  window.webContents.insertText(
+    '# 示例学习笔记\n\n## 课堂要点\n\n- 跟随字幕回看关键片段。\n- 记录理解过程，再补充自己的问题。\n\n## 待确认的问题\n\n这段内容能否用一个具体例子说明？\n\n',
+  );
   await wait(
-    `window.dela.workspace.read(${JSON.stringify(tools.noteId)}).then(r=>r.text.includes('人工测试笔记内容'))`,
+    `window.dela.workspace.read(${JSON.stringify(tools.noteId)}).then(r=>r.text.includes('示例学习笔记'))`,
   );
   for (const width of [600, 900, 1280, 1800]) {
     window.setSize(width, 850);
@@ -239,7 +241,7 @@ async function run(window) {
     `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('进入学习')).click()`,
   );
   await wait(
-    `document.querySelector('[aria-label="课程学习笔记"]')?.textContent.includes('人工测试笔记内容')`,
+    `document.querySelector('[aria-label="课程学习笔记"]')?.textContent.includes('示例学习笔记')`,
   );
   assert.deepEqual(await js('window.dela.jluPlatforms.studyWorkspace("c1","r1")'), tools);
   offline = true;
