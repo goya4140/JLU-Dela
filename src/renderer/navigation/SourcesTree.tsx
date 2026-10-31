@@ -2,7 +2,17 @@
 // 订阅 workspace/store 的 Canvas 概览镜像，同步/归档/下载经 preload canvas:* 通道直连。
 import { useEffect, useState } from 'react';
 import { AlertDialog } from 'radix-ui';
-import { Archive, Columns2, Ellipsis, Download, FileText, Link2, Pin, PinOff } from 'lucide-react';
+import {
+  Archive,
+  Columns2,
+  Ellipsis,
+  Download,
+  FileText,
+  FolderOpen,
+  Link2,
+  Pin,
+  PinOff,
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
   DropdownMenu,

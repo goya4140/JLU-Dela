@@ -8,10 +8,11 @@ import type { UpdateSnapshot } from '../../shared/update';
 import { useUpdateState } from '../features/settings/update';
 import { AppShell } from './AppShell';
 
+vi.mock('../lib/platform', () => ({ platform: 'mac', fileManagerName: 'Finder' }));
+
 // explorer-state 在模块顶层就读 window.matchMedia，jsdom 不提供它；
 // 必须在 import 之前装好，所以放在 hoisted 里。
 vi.hoisted(() => {
-  Object.defineProperty(navigator, 'platform', { configurable: true, value: 'MacIntel' });
   window.matchMedia = ((query: string) => ({
     matches: false,
     media: query,

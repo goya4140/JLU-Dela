@@ -81,6 +81,7 @@ beforeAll(async () => {
       created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
       provider_id TEXT, model TEXT, effort TEXT);
     CREATE TABLE workspace_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE TABLE jlu_platform_cache (key TEXT PRIMARY KEY, data TEXT NOT NULL);
   `);
   await preloadPi();
 });

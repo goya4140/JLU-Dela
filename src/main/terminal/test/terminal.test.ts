@@ -232,6 +232,7 @@ describe('Git Bash 运行时', () => {
   });
 
   it.runIf(process.platform === 'darwin')('macOS 直接使用系统 Bash', () => {
+    vi.stubGlobal('process', { ...process, platform: 'darwin' });
     expect(locateBash()).toBe('/bin/bash');
   });
 

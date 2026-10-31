@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { documentFormatOf, isTextDocumentName } from './documents';
+import { fileFormatOf } from './files';
+
+const text = new TextEncoder().encode('A=1\n');
 
 describe('文档格式判定', () => {
   it.each([
@@ -12,22 +14,22 @@ describe('文档格式判定', () => {
     'LICENSE',
     'README',
   ])('%s 按文本处理', (name) => {
-    expect(isTextDocumentName(name)).toBe(true);
-    expect(documentFormatOf(name)).toBe('text');
+    expect(fileFormatOf(name, text)).toBe('text');
   });
 
   it('点文件路径按文件名判断', () => {
-    expect(documentFormatOf('/home/u/proj/.env.example')).toBe('text');
+    expect(fileFormatOf('/home/u/proj/.env.example', text)).toBe('text');
   });
 
   it('已有格式不受文本扩展名规则影响', () => {
-    expect(documentFormatOf('README.md')).toBe('markdown');
-    expect(documentFormatOf('logo.png')).toBe('image');
-    expect(documentFormatOf('manual.pdf')).toBe('pdf');
-    expect(documentFormatOf('report.docx')).toBe('docx');
+    expect(fileFormatOf('README.md', text)).toBe('markdown');
+    expect(fileFormatOf('logo.png', text)).toBe('image');
+    expect(fileFormatOf('manual.pdf', text)).toBe('pdf');
+    expect(fileFormatOf('report.docx', text)).toBe('docx');
   });
 
-  it('未知扩展仍为不支持', () => {
-    expect(documentFormatOf('archive.bin')).toBe('unsupported');
+  it('未知扩展由实际内容区分文本与二进制', () => {
+    expect(fileFormatOf('archive.bin', text)).toBe('text');
+    expect(fileFormatOf('archive.bin', Uint8Array.of(0, 1))).toBe('binary');
   });
 });
