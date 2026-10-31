@@ -38,3 +38,20 @@ Thumbs.db
 .zcodeignore
 .pi/
 .playwright*/
+
+# 本地临时文件与编辑器残留
+scripts/tmp-*
+*.tmp
+*.bak
+*.orig
+*.rej
+*.pid
+*.local
+local/
+temp/
+tmp/
+.pnpm-store/
+.eslintcache
+.oxlintcache
+desktop.ini
+*.lnk
