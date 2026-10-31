@@ -1,3 +1,4 @@
+import { useNavigationStore } from '../../../navigation/view';
 import { Folder } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '../../../components/ui/button';
@@ -89,7 +90,18 @@ export function GeneralSection() {
 
   return (
     <div className="grid gap-10">
-      <SectionHeader title="通用" />
+      <SectionHeader
+        title="通用"
+        action={
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => useNavigationStore.getState().openSettings('guide')}
+          >
+            使用指南与首次配置
+          </Button>
+        }
+      />
       <div className="grid gap-2">
         <SettingsGroup title="启动">
           <SettingRow settingId="open-at-login" title="开机自启动">

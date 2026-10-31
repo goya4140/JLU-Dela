@@ -19,7 +19,16 @@ export function CampusView({
             <GraduationCap className="size-5" aria-hidden="true" />
             JLU Dela · 本科生开发预览
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => useNavigationStore.getState().openSettings('guide')}
+            >
+              使用指南与连接配置
+            </Button>
+          </div>
           <p className="text-13 leading-relaxed text-ink-3">
             读取课表、校内通知、学在吉大及学习通课程，已同步内容保存在本机。
           </p>

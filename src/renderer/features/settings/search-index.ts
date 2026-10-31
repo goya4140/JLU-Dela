@@ -207,6 +207,7 @@ export const settingsSearchItems: SettingsSearchItem[] = [
 ];
 
 export const settingsSectionLabels: Record<SettingsSectionId, string> = {
+  guide: '使用指南',
   general: '通用',
   appearance: '外观',
   shortcuts: '快捷键',
@@ -227,12 +228,13 @@ export const settingsSectionLabels: Record<SettingsSectionId, string> = {
 
 /** 全局搜索 setting 入口的分组摘要（与设置内搜索共用同一份关键词）。 */
 export const settingsSectionSummaries: Record<SettingsSectionId, string> = {
+  guide: '首次配置、使用须知、校园认证与学习通连接',
   general: '开机自启动与系统通知',
   appearance: '主题、缩放、字号与图标',
   shortcuts: '查看与修改快捷键',
   workspace: '工作目录与布局',
   archived: '恢复或永久删除已归档对话',
-  connections: 'Canvas、邮箱、教务与水源连接',
+  connections: '吉大校园平台与学习通入口',
   remotes: 'SSH 远程主机与连接',
   providers: 'AI 模型与 API 提供商',
   capabilities: '内置 Agent 能力开关',

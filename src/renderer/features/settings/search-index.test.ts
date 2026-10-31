@@ -5,11 +5,11 @@ import { settingsResultsFor } from './search-index';
 describe('settingsResultsFor (global search)', () => {
   it('targets the current section set and matches keywords', () => {
     const results = settingsResultsFor('吉大');
-    expect(results).toHaveLength(1);
-    expect(results[0]).toMatchObject({
+    expect(results.find((row) => row.id === 'connections')).toMatchObject({
       kind: 'setting',
       id: 'connections',
       target: { page: 'settings', section: 'connections' },
     });
+    expect(settingsResultsFor('首次配置').some((row) => row.id === 'guide')).toBe(true);
   });
 });

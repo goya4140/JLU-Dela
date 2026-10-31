@@ -1,5 +1,6 @@
 import {
   Archive,
+  BookOpen,
   Blocks,
   Bot,
   Cloud,
@@ -26,6 +27,7 @@ export type { SettingsSectionId };
 
 /** 分区目录：group 为侧栏分组标题（设置内只有一层分类，分组仅作视觉归拢）。 */
 const sections: Array<{ id: SettingsSectionId; group: string; icon: LucideIcon }> = [
+  { id: 'guide', group: '基本', icon: BookOpen },
   { id: 'general', group: '基本', icon: SlidersHorizontal },
   { id: 'appearance', group: '基本', icon: Palette },
   { id: 'shortcuts', group: '基本', icon: Keyboard },

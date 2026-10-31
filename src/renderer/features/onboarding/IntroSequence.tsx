@@ -13,8 +13,7 @@ export function IntroSequence({ onStart }: { onStart: () => void }) {
           <h1 className="text-4xl font-semibold tracking-tight">JLU Dela</h1>
           <p className="text-base text-ink-2">吉大本科生的本地学习工作台</p>
           <p className="text-13 leading-relaxed text-ink-3">
-            整理课程资料，与 Agent
-            一起学习。吉大课表、课程资料与通知同步正在适配，当前可前往学校平台使用。
+            连接本地课程资料，同步课表、通知与平台课程，在阅读中记笔记并向 AI 提问。
           </p>
           <Button onClick={onStart}>开始使用</Button>
         </div>

@@ -96,7 +96,12 @@ export function CapabilitySetup({
 
   const content = (
     <div className="grid gap-7">
-      <h2 className="text-2xl font-semibold tracking-tight">能力拓展</h2>
+      <header className="grid gap-2">
+        <h2 className="text-2xl font-semibold tracking-tight">能力拓展</h2>
+        <p className="text-13 text-ink-3">
+          这些组件为可选项，可稍后在设置中安装。点击完成配置即可开始使用。
+        </p>
+      </header>
       <div className="grid gap-3">
         {skills === null && !error && (
           <p role="status" className="text-13 text-ink-3">

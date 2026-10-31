@@ -382,7 +382,10 @@ export default function App() {
       {launchStage === 'flow' && (
         <OnboardingFlow
           onConsentDone={() => setLaunchStage('checking')}
-          onWizardDone={() => setLaunchStage('completion')}
+          onWizardDone={() => {
+            useNavigationStore.getState().openSettings('guide');
+            setLaunchStage('completion');
+          }}
         />
       )}
       {launchStage === 'checking' && (

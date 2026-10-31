@@ -54,6 +54,7 @@ export interface SettingsApi {
 }
 
 export type SettingsSectionId =
+  | 'guide'
   | 'general'
   | 'appearance'
   | 'shortcuts'

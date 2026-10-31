@@ -7,6 +7,7 @@ import { OnboardingWindowBar } from './onboarding-window-bar';
 type WizardShellProps = {
   /** 当前步骤下标（0 起）。 */
   step: number;
+  busy?: boolean;
   stepCount: number;
   /** 回到上一步；第 0 步不传，左下角不渲染回退按钮。 */
   onBack?: () => void;
@@ -20,6 +21,7 @@ type WizardShellProps = {
 /** 全屏白色向导框架：内容列顶部锚定，各步标题起点一致、切换时视线不跳；配色固定，不随主题。 */
 export function WizardShell({
   step,
+  busy = false,
   stepCount,
   onBack,
   onSkip,
@@ -75,7 +77,8 @@ export function WizardShell({
           <div className="justify-self-start">
             {onBack && (
               <button
-                className="inline-flex items-center gap-1.5 rounded-control px-2 py-2 text-13 text-ink-3 transition-colors hover:text-ink"
+                className="inline-flex items-center gap-1.5 rounded-control px-2 py-2 text-13 text-ink-3 transition-colors hover:text-ink disabled:opacity-50"
+                disabled={busy}
                 onClick={onBack}
                 type="button"
               >
@@ -85,11 +88,14 @@ export function WizardShell({
             )}
           </div>
           {footer ?? (
-            <p className="text-center text-xs text-ink-3">所有数据本地存储，不上传服务器</p>
+            <p className="text-center text-xs text-ink-3">
+              资料保存在本机；使用模型或学校平台时会联网。
+            </p>
           )}
           {onSkip ? (
             <button
-              className="inline-flex items-center gap-1.5 justify-self-end rounded-control px-2 py-2 text-13 text-ink-3 transition-colors hover:text-ink"
+              className="inline-flex items-center gap-1.5 justify-self-end rounded-control px-2 py-2 text-13 text-ink-3 transition-colors hover:text-ink disabled:opacity-50"
+              disabled={busy}
               onClick={onSkip}
               type="button"
             >

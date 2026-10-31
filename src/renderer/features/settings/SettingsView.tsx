@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SetupGuideSection } from '../onboarding/SetupGuideSection';
 import { AboutSection } from './sections/AboutSection';
 import { AppearanceSection } from './sections/AppearanceSection';
 import { ArchivedSection } from './sections/ArchivedSection';
@@ -57,6 +58,7 @@ export function SettingsView({
         {/* 内容宽度 912px = 原 760px 增大 20%（用户裁决，2026-10-06）。 */}
         <div className="mx-auto w-full max-w-[57rem] px-4 pb-8 pt-5 md:px-10 md:pt-8">
           {section === 'general' && <GeneralSection />}
+          {section === 'guide' && <SetupGuideSection />}
           {section === 'appearance' && (
             <AppearanceSection
               fontSize={fontSize}

@@ -30,9 +30,12 @@ vi.mock('./steps/MailStep', () => ({ MailStep: () => <h2>邮箱步骤</h2> }));
 vi.mock('./steps/CampusStep', () => ({ CampusStep: () => <h2>课表步骤</h2> }));
 vi.mock('./steps/CanvasStep', () => ({ CanvasStep: () => <h2>Canvas 步骤</h2> }));
 vi.mock('./steps/ShuiyuanStep', () => ({ ShuiyuanStep: () => <h2>水源步骤</h2> }));
+vi.mock('./steps/WelcomeStep', () => ({
+  WelcomeStep: ({ onDone }: { onDone: () => void }) => <button onClick={onDone}>开始配置</button>,
+}));
 vi.mock('./steps/LlmStep', () => ({ LlmStep: () => <h2>模型步骤</h2> }));
 
-it('keeps capability setup inside the model-and-capability wizard, supports going back, and completes only on confirmation', async () => {
+it('walks through usage, model, campus and optional components, and completes only on confirmation', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const completeSetup = vi.fn(async () => {});
   window.dela = {
@@ -52,16 +55,18 @@ it('keeps capability setup inside the model-and-capability wizard, supports goin
     );
     await act(async () => button('开始').click());
     const shell = host.firstElementChild;
+    expect(host.textContent).toContain('开始配置');
+    await act(async () => button('开始配置').click());
     expect(host.textContent).toContain('模型步骤');
     expect(host.textContent).not.toContain('Canvas 步骤');
     expect(host.textContent).not.toContain('水源步骤');
-    for (let index = 0; index < 1; index++) await act(async () => button('跳过').click());
+    for (let index = 0; index < 2; index++) await act(async () => button('跳过').click());
     expect(host.firstElementChild).toBe(shell);
-    expect(host.querySelector('[aria-label="第 2 步，共 2 步"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label="第 4 步，共 4 步"]')).not.toBeNull();
     expect(done).not.toHaveBeenCalled();
     expect(state.mark).not.toHaveBeenCalled();
     await act(async () => button('上一步').click());
-    expect(host.querySelector('[aria-label="第 1 步，共 2 步"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label="第 3 步，共 4 步"]')).not.toBeNull();
     expect(completeSetup).not.toHaveBeenCalled();
     await act(async () => button('跳过').click());
     await act(async () => button('完成配置').click());
