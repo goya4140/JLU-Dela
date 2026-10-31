@@ -500,10 +500,12 @@ export function AppShell({
             <div className="[-webkit-app-region:no-drag] flex h-full items-center gap-1 pr-1">
               <button
                 aria-current={view === 'todo' ? 'page' : undefined}
-                aria-label={todoUnreadCount > 0 ? `TODO，${todoUnreadCount} 条新消息` : 'TODO'}
+                aria-label={
+                  todoUnreadCount > 0 ? `学习日历，${todoUnreadCount} 条新消息` : '学习日历'
+                }
                 className={chromeIconButton}
                 onClick={() => navigate('todo')}
-                title="TODO"
+                title="学习日历"
                 type="button"
               >
                 <SquareCheckBig
@@ -667,6 +669,7 @@ export function AppShell({
       </Dialog.Root>
       {narrow && drawer !== null && (
         <div
+          data-mobile-drawer="nav"
           aria-hidden="true"
           className={cn(overlayFade, 'absolute inset-x-0 bottom-0 top-10 z-30 bg-black/30')}
           onMouseDown={() => onMobileDrawerChange?.(null)}
@@ -715,10 +718,12 @@ export function AppShell({
             <div className="flex-1" />
             <button
               aria-current={view === 'todo' ? 'page' : undefined}
-              aria-label={todoUnreadCount > 0 ? `TODO，${todoUnreadCount} 条新消息` : 'TODO'}
+              aria-label={
+                todoUnreadCount > 0 ? `学习日历，${todoUnreadCount} 条新消息` : '学习日历'
+              }
               className={chromeIconButton}
               onClick={() => navigate('todo')}
-              title="TODO"
+              title="学习日历"
               type="button"
             >
               <SquareCheckBig

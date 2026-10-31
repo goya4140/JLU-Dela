@@ -44,6 +44,7 @@ jobs:
           pnpm smoke:timetable
           pnpm smoke:platforms
           pnpm smoke:chaoxing
+          pnpm smoke:study-calendar
           pnpm smoke:knowledge
           pnpm smoke:setup
       - name: Package development app
@@ -56,5 +57,6 @@ jobs:
           pnpm smoke:timetable "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
           pnpm smoke:platforms "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
           pnpm smoke:chaoxing "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:study-calendar "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
           pnpm smoke:knowledge "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
           pnpm smoke:setup "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"

@@ -417,7 +417,18 @@ function DesktopMailView({
           showToast({ variant: 'error', title: '邮箱加载失败', description: errorText(reason) });
       });
     const unsubscribe = dela.mail.onSyncStatus((status) => {
-      setState((prev) => (prev ? { ...prev, sync: status } : prev));
+      setState((prev) =>
+        prev
+          ? {
+              ...prev,
+              sync: status,
+              account:
+                prev.account && status.phase === 'idle' && status.finishedAt
+                  ? { ...prev.account, lastSyncedAt: status.finishedAt }
+                  : prev.account,
+            }
+          : prev,
+      );
       if (status.phase === 'idle' && status.finishedAt) void refreshAll();
     });
     return () => {
@@ -679,8 +690,8 @@ function DesktopMailView({
             <div className="grid gap-1.5">
               <h2 className="text-lg font-semibold tracking-tight">连接邮箱</h2>
               <p className="text-13 leading-relaxed text-ink-3">
-                吉大邮箱用 @jlu.edu.cn（学生邮箱为 @mails.jlu.edu.cn）账号与邮箱密码；也可改用第三方
-                IMAP 服务器。凭据加密保存在本机。
+                学生邮箱使用 @mails.jlu.edu.cn 地址与邮箱密码。教工邮箱及其他邮箱请选择第三方
+                IMAP，填写对应服务器。凭据加密保存在本机。
               </p>
             </div>
             <MailAccountForm

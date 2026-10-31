@@ -7,6 +7,7 @@ import type {
   ChaoxingWorks,
   ChaoxingApi,
 } from '../../../shared/chaoxing';
+import { chaoxingWorkTime } from '../../../shared/chaoxing-calendar';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { SegmentedControl } from '../../components/ui/beautifului/atoms/SegmentedControl';
@@ -14,7 +15,7 @@ import { DesktopOnlyNotice } from '../../components/ui/desktop-only-notice';
 import { useNavigationStore } from '../../navigation/view';
 import { errorText } from '../../workspace/store';
 
-export type ChaoxingPageApi = Omit<ChaoxingApi, 'importFile'> &
+export type ChaoxingPageApi = Omit<ChaoxingApi, 'importFile' | 'calendar' | 'syncCalendar'> &
   Partial<Pick<ChaoxingApi, 'importFile'>>;
 export function ChaoxingView({ api = window.dela?.chaoxing }: { api?: ChaoxingPageApi } = {}) {
   return api ? (
@@ -24,6 +25,11 @@ export function ChaoxingView({ api = window.dela?.chaoxing }: { api?: ChaoxingPa
   );
 }
 function ChaoxingPage({ api }: { api: ChaoxingPageApi }) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [data, setData] = useState<ChaoxingCourses | null>(null);
   const [course, setCourse] = useState<ChaoxingCourse | null>(null);
   const [files, setFiles] = useState<ChaoxingFolder | null>(null);
@@ -318,14 +324,32 @@ function ChaoxingPage({ api }: { api: ChaoxingPageApi }) {
                       </h3>
                       <span className="text-xs text-ink-3">{row.status}</span>
                     </div>
-                    {row.timing && <p className="text-xs text-ink-3">{row.timing}</p>}
+                    <p className="text-xs text-ink-2">{chaoxingWorkTime(row, now)}</p>
+                    <p className="text-2xs text-ink-3">
+                      更新于{' '}
+                      {new Date(row.detailSyncedAt ?? works.syncedAt).toLocaleString('zh-CN')}
+                    </p>
+                    {window.dela?.webTabs ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="justify-self-start"
+                        onClick={() =>
+                          course && useNavigationStore.getState().openWork(course.id, row.id)
+                        }
+                      >
+                        在工作台打开作业
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-ink-3">请在桌面 App 中打开作业原网页。</p>
+                    )}
                   </article>
                 ))}
                 {works && !works.items.length && (
                   <p className="py-8 text-13 text-ink-3">当前列表暂无作业。</p>
                 )}
                 <p className="text-xs leading-relaxed text-ink-3">
-                  作业状态与时间提示来自同步时的学校页面。作答和提交请使用学习通。
+                  作业状态来自上次同步。可在工作台打开学习通原网页，查看详情、作答和提交。
                 </p>
               </>
             )}

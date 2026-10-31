@@ -62,7 +62,7 @@ export interface AgentCapabilityView {
   name: string;
   /** 面向人的显示名（设置页标题；工具名降级为次要标识）。 */
   label: string;
-  /** 所属领域 id（canvas / mail / …），设置页按域分组与批量开关。 */
+  /** 所属领域 id（jlu / mail / …），设置页按域分组与批量开关。 */
   domain: string;
   domainLabel: string;
   /** 提供给模型的工具描述（UI 摘要）。 */

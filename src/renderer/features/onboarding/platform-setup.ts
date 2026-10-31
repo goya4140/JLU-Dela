@@ -22,14 +22,15 @@ export const emptyPlatformProgress = (): PlatformProgressMap => ({
 });
 
 export async function readPlatformProgress(api: SetupApi): Promise<PlatformProgressMap> {
-  const ids: JluServiceId[] = [...jluSetupOrder, 'chaoxing', 'mail'];
-  const results = await Promise.allSettled([
+  const ids: JluServiceId[] = [...jluSetupOrder, 'chaoxing'];
+  const [academic, notices, learning, chaoxing, mail] = await Promise.allSettled([
     api.timetable.getState().then((row) => row.lastSyncedAt),
     api.jluPlatforms.getNotices('179577', 1).then((row) => row?.syncedAt ?? null),
     api.jluPlatforms.getLearning().then((row) => row?.syncedAt ?? null),
     api.chaoxing.courses().then((row) => row?.syncedAt ?? null),
-    api.mail.getState().then((row) => row.account?.lastSyncedAt ?? null),
+    api.mail.getState(),
   ]);
+  const results = [academic, notices, learning, chaoxing];
   const progress = emptyPlatformProgress();
   for (const [index, result] of results.entries()) {
     const id = ids[index]!;
@@ -38,6 +39,12 @@ export async function readPlatformProgress(api: SetupApi): Promise<PlatformProgr
         ? { phase: result.value ? 'cached' : 'empty', syncedAt: result.value }
         : { phase: 'failed', syncedAt: null, error: '无法读取本机同步记录，请重试' };
   }
+  progress.mail =
+    mail.status === 'rejected'
+      ? { phase: 'failed', syncedAt: null, error: '无法读取邮箱连接记录，请重试' }
+      : mail.value.account
+        ? { phase: 'cached', syncedAt: mail.value.account.lastSyncedAt }
+        : { phase: 'empty', syncedAt: null };
   return progress;
 }
 

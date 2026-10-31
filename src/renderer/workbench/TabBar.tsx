@@ -11,6 +11,7 @@ import {
 } from '../components/ui/context-menu';
 import { cn } from '../lib/utils';
 import { useHorizontalWheel } from '../lib/use-horizontal-wheel';
+import { useWebTabs } from '../content/web/store';
 import { useWorkbenchLayout } from './layout-store';
 import { iconOf, titleOf } from './registry';
 import { ExplorerRevealButton } from './explorer-state';
@@ -26,6 +27,7 @@ export const TabBar = memo(function TabBar({
   unfocused: boolean;
   showReveal: boolean;
 }) {
+  useWebTabs((s) => s.states);
   const openTab = useWorkbenchLayout((s) => s.openTab);
   const closeTab = useWorkbenchLayout((s) => s.closeTab);
   const closeTabs = useWorkbenchLayout((s) => s.closeTabs);

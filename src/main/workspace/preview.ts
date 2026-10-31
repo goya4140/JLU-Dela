@@ -3,7 +3,6 @@ import { createReadStream } from 'node:fs';
 import { stat as fileStat } from 'node:fs/promises';
 import { extname } from 'node:path';
 import { Readable } from 'node:stream';
-import { canvasPreviewPath } from '../canvas/api';
 import { officeZipMime } from '../documents/parse';
 import { handleShuiyuanMediaRequest } from '../shuiyuan/media';
 import { handleVsjtuMediaRequest } from '../vsjtu/playback';
@@ -29,7 +28,7 @@ export function registerPreviewScheme(): void {
     },
   ]);
 }
-// 预览协议放行的文件类型与响应 content-type；路径放行由 canvasPreviewPath/workspacePreviewPath 决定。
+// 预览协议放行的文件类型与响应 content-type；路径放行由 workspacePreviewPath 决定。
 const previewContentType: Record<string, string> = {
   '.pdf': 'application/pdf',
   '.docx': officeZipMime.docx,
@@ -193,12 +192,7 @@ export function registerPreviewProtocol(): void {
       const id = decodeURIComponent(url.pathname.slice(1));
       if (!id || (url.hostname !== 'workspace' && (id.includes('/') || id.includes('\\'))))
         throw new Error('无效的文档地址');
-      const path =
-        url.hostname === 'canvas'
-          ? await canvasPreviewPath(id)
-          : url.hostname === 'workspace'
-            ? workspacePreviewPath(id)
-            : null;
+      const path = url.hostname === 'workspace' ? workspacePreviewPath(id) : null;
       if (!path) throw new Error('无效的文档地址');
       return await fileResponse(path, request);
     } catch {

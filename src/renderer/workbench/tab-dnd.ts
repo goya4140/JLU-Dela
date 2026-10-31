@@ -8,7 +8,7 @@ export interface TabDragPayload {
   fromGroup: string;
 }
 
-const tabIdPattern = /^(?:chat|note|preview|review):.+$/;
+const tabIdPattern = /^(?:chat|note|preview|review|web):.+$/;
 
 export function encodeTabDrag(payload: TabDragPayload): string {
   return JSON.stringify(payload);

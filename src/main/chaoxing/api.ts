@@ -1,3 +1,8 @@
+import {
+  chaoxingDeadline,
+  type ChaoxingCalendar,
+  type ChaoxingCalendarSync,
+} from '../../shared/chaoxing-calendar';
 import { net, safeStorage, type IncomingMessage, type WebContents } from 'electron';
 import { mkdirSync, rmSync, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
@@ -52,6 +57,8 @@ const workSchema = z.object({
   title: z.string().min(1),
   status: z.string(),
   timing: z.string(),
+  detailTiming: z.string().optional(),
+  detailSyncedAt: z.string().optional(),
 });
 const coursesSchema = z.object({ items: z.array(courseSchema), syncedAt: z.string().datetime() });
 const filesSchema = z.object({
@@ -200,7 +207,27 @@ export function getChaoxingWorks(courseId: string) {
 }
 export async function syncChaoxingWorks(courseId: string, sender?: WebContents) {
   const url = await courseFrame(courseId, 'works', sender);
-  const items = z.array(workSchema).parse(await read(url, chaoxingWorksScript, sender));
+  const rows = z
+    .array(workSchema.extend({ url: schoolUrl }))
+    .parse(await read(url, chaoxingWorksScript, sender));
+  const routes = privateRoutes();
+  for (const row of rows) routes[`work:${courseId}:${row.id}`] = row.url;
+  saveRoutes(routes);
+  const previous = getChaoxingWorks(courseId)?.items ?? [];
+  const items = rows.map(({ url: _url, ...work }) => {
+    const saved = previous.find((item) => item.id === work.id);
+    const detailTiming = chaoxingDeadline(work.detailTiming ?? '') ? work.detailTiming : undefined;
+    const listHasDeadline = Boolean(chaoxingDeadline(work.timing));
+    return {
+      ...work,
+      detailTiming: detailTiming ?? (listHasDeadline ? undefined : saved?.detailTiming),
+      detailSyncedAt: detailTiming
+        ? new Date().toISOString()
+        : listHasDeadline
+          ? undefined
+          : saved?.detailSyncedAt,
+    };
+  });
   return save('works:' + courseId, { courseId, items, syncedAt: new Date().toISOString() });
 }
 export async function importChaoxingFile(courseId: string, folderId: string, fileId: string) {
@@ -293,4 +320,89 @@ export async function importChaoxingFile(courseId: string, folderId: string, fil
     request.abort();
   }
   return { id: path };
+}
+
+export function getChaoxingCalendar(): ChaoxingCalendar {
+  const courses = getChaoxingCourses();
+  const snapshots = (courses?.items ?? []).map((course) => ({
+    course,
+    works: getChaoxingWorks(course.id),
+  }));
+  return {
+    coursesSyncedAt: courses?.syncedAt ?? null,
+    courses: snapshots.map(({ course, works }) => ({
+      id: course.id,
+      name: course.name,
+      syncedAt: works?.syncedAt ?? null,
+    })),
+    works: snapshots.flatMap(({ course, works }) =>
+      (works?.items ?? []).map((work) => ({
+        ...work,
+        courseId: course.id,
+        courseName: course.name,
+        syncedAt: works!.syncedAt,
+        deadline: chaoxingDeadline(work.detailTiming ?? '') ?? chaoxingDeadline(work.timing),
+      })),
+    ),
+  };
+}
+
+let calendarSync: Promise<ChaoxingCalendarSync> | null = null;
+export function syncChaoxingCalendar(sender?: WebContents): Promise<ChaoxingCalendarSync> {
+  if (calendarSync) return calendarSync;
+  calendarSync = (async () => {
+    const failures: ChaoxingCalendarSync['failures'] = [];
+    const courses = await chaoxingResult(() => syncChaoxingCourses(sender));
+    if (!courses.ok)
+      return {
+        data: getChaoxingCalendar(),
+        failures: [{ courseId: null, error: courses.error, reason: courses.reason }],
+      };
+    for (const course of courses.data.items) {
+      const result = await chaoxingResult(() => syncChaoxingWorks(course.id, sender));
+      if (!result.ok) {
+        failures.push({ courseId: course.id, error: result.error, reason: result.reason });
+        if (result.reason === 'auth') break;
+      }
+    }
+    return { data: getChaoxingCalendar(), failures };
+  })().finally(() => {
+    calendarSync = null;
+  });
+  return calendarSync;
+}
+
+export function cachedWorkEntry(courseId: string, workId: string) {
+  ownCourse(courseId);
+  id.parse(workId);
+  const work = getChaoxingWorks(courseId)?.items.find((item) => item.id === workId);
+  if (!work) throw new Error('作业不在已读取的课程列表中，请先刷新学习通作业');
+  const routes = privateRoutes();
+  const direct = routes[`work:${courseId}:${workId}`];
+  const course = routes['course:' + courseId];
+  if (!direct && !course) throw new Error('缺少课程入口，请先刷新学习通课程');
+  const url = new URL(direct ?? course!);
+  if (!direct) url.searchParams.set('pageHeader', '8');
+  return { title: work.title, url: url.href, exact: Boolean(direct) };
+}
+export async function resolveWorkEntry(courseId: string, workId: string, force = false) {
+  const cached = cachedWorkEntry(courseId, workId);
+  if (!cached.exact || force) await syncChaoxingWorks(courseId);
+  const result = cachedWorkEntry(courseId, workId);
+  if (!result.exact) throw new Error('尚未取得这份作业的入口，请在原网页确认作业列表后重试');
+  return result;
+}
+export function saveWorkTiming(courseId: string, workId: string, timing: string): boolean {
+  if (!chaoxingDeadline(timing)) return false;
+  const works = getChaoxingWorks(courseId);
+  if (!works?.items.some((work) => work.id === workId)) return false;
+  save('works:' + courseId, {
+    ...works,
+    items: works.items.map((work) =>
+      work.id === workId
+        ? { ...work, detailTiming: timing, detailSyncedAt: new Date().toISOString() }
+        : work,
+    ),
+  });
+  return true;
 }

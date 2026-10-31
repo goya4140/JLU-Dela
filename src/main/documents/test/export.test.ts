@@ -8,14 +8,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('node:child_process', () => ({ spawn: vi.fn() }));
 vi.mock('../../database', () => ({ getDatabase: vi.fn() }));
-vi.mock('../../canvas/api', () => ({ canvasFilePath: vi.fn(), getSource: vi.fn() }));
 vi.mock('../../workspace/api', () => ({
   createWorkspaceEntry: vi.fn(),
   workspaceFilePath: vi.fn(),
 }));
 vi.mock('../parse', () => ({ classifyOfficeFile: vi.fn(async () => 'pptx') }));
 import { getDatabase } from '../../database';
-import { canvasFilePath, getSource } from '../../canvas/api';
 import { createWorkspaceEntry, workspaceFilePath } from '../../workspace/api';
 import { exportOfficePdf } from '../export';
 import { readOfficeExportLink } from '../links';
@@ -35,10 +33,6 @@ beforeEach(() => {
   );
   vi.mocked(getDatabase).mockReturnValue(db);
   vi.mocked(workspaceFilePath).mockResolvedValue(source);
-  vi.mocked(canvasFilePath).mockResolvedValue(source);
-  vi.mocked(getSource).mockReturnValue({ title: '课件.pptx', updatedAt: 'v1' } as ReturnType<
-    typeof getSource
-  >);
   vi.mocked(createWorkspaceEntry).mockImplementation(() => {
     const path = join(directory, '预览导出');
     mkdirSync(path);
@@ -64,21 +58,16 @@ afterEach(() => {
   rmSync(directory, { recursive: true, force: true });
 });
 
-it.each(['workspace', 'canvas'] as const)(
-  'Mac 拒绝 %s 转换，且不下载或写入导出数据',
-  async (type) => {
-    vi.stubGlobal('process', { ...process, platform: 'darwin' });
-    const progress = vi.fn();
-    await expect(exportOfficePdf({ type, id: source }, progress)).rejects.toThrow('暂不支持');
-    expect(progress).not.toHaveBeenCalled();
-    expect(workspaceFilePath).not.toHaveBeenCalled();
-    expect(canvasFilePath).not.toHaveBeenCalled();
-    expect(getSource).not.toHaveBeenCalled();
-    expect(getDatabase).not.toHaveBeenCalled();
-    expect(createWorkspaceEntry).not.toHaveBeenCalled();
-    expect(spawn).not.toHaveBeenCalled();
-  },
-);
+it.each(['workspace'] as const)('Mac 拒绝 %s 转换，且不下载或写入导出数据', async (type) => {
+  vi.stubGlobal('process', { ...process, platform: 'darwin' });
+  const progress = vi.fn();
+  await expect(exportOfficePdf({ type, id: source }, progress)).rejects.toThrow('暂不支持');
+  expect(progress).not.toHaveBeenCalled();
+  expect(workspaceFilePath).not.toHaveBeenCalled();
+  expect(getDatabase).not.toHaveBeenCalled();
+  expect(createWorkspaceEntry).not.toHaveBeenCalled();
+  expect(spawn).not.toHaveBeenCalled();
+});
 
 it('Windows 保留 PowerPoint 调用、进度与 PDF 关联保存', async () => {
   vi.stubGlobal('process', { ...process, platform: 'win32' });

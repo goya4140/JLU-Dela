@@ -97,39 +97,36 @@ function fixture() {
   return Buffer.concat(chunks);
 }
 const pdf = fixture();
-const canvas = {
-  connected: true,
-  syncedAt: null,
-  courses: [
-    { id: 1, name: '计算机视觉', term: '2026 秋季', syncedAt: '2026-09-14' },
-    { id: 2, name: '未分类课程', term: '未标注学期' },
-  ],
-  items: [1, 2].map((id) => ({
-    id: `file:${id}`,
-    courseId: 1,
-    parentId: null,
-    sourceId: `file:${id}`,
-    name: `Lecture ${id}.pdf`,
-    kind: 'file',
-  })),
-};
 const workspace = {
-  entries: [],
-  directory: '',
-  views: {
-    sources: { tabs: [], active: null, expanded: ['term:2026 秋季', 'course:1'], scroll: {} },
-  },
+  directory: '/fixture',
+  entries: [1, 2].map((n) => ({
+    id: `/fixture/Lecture ${n}.pdf`,
+    parentId: null,
+    name: `Lecture ${n}.pdf`,
+    kind: 'file',
+    path: `/fixture/Lecture ${n}.pdf`,
+    sourceId: null,
+    updatedAt: '',
+  })),
 };
 let ranges = 0;
 let failRange = false;
 const routes = {
   'workspace:get-state': () => workspace,
-  'canvas:get-state': () => canvas,
-  'canvas:read': (_, id) => ({
+  'workspace:local-reference-files': () => workspace.entries,
+  'layout:get': () => null,
+  'layout:save': () => undefined,
+  'session:list': () => [],
+  'settings:get-experiments': () => ({ enabled: false, features: {} }),
+  'settings:get-keybindings': () => ({}),
+  'remotes:list': () => [],
+  'notifications:get-state': () => ({ items: [] }),
+  'update:get-state': () => ({ phase: 'idle' }),
+  'workspace:read': (_, id) => ({
     title: id,
     format: 'pdf',
     mime: 'application/pdf',
-    previewUrl: `dela-resource://canvas/${id}`,
+    previewUrl: `dela-resource://workspace/${encodeURIComponent(id)}`,
   }),
   'window:get-state': () => ({ maximized: false }),
   'settings:get-theme': () => 'light',
@@ -174,7 +171,13 @@ app
     win.webContents.on('console-message', (event) => {
       if (event.level === 'warning' || event.level === 'error') errors.push(event.message);
     });
-    const evaluate = (code) => win.webContents.executeJavaScript(code, true);
+    const evaluate = async (code) => {
+      try {
+        return await win.webContents.executeJavaScript(code, true);
+      } catch (cause) {
+        throw new Error(`Renderer fixture failed: ${code}\n${errors.join('\n')}`, { cause });
+      }
+    };
     const wait = async (code) => {
       for (let i = 0; i < 100; i++) {
         if (await evaluate(code)) return;
@@ -190,17 +193,13 @@ app
       );
     await win.loadFile(join(root, 'out/renderer/index.html'), { query: { 'smoke-test': '1' } });
     await wait(
-      "[...document.querySelectorAll('button')].some(b => b.textContent.trim() === '资料')",
+      "[...document.querySelectorAll('button')].some(b => b.textContent.trim() === '课程资料')",
     );
-    await click('资料');
+    await click('课程资料');
     await evaluate(
       `const style = document.createElement('style'); style.textContent = '* { transition: none !important; animation: none !important; }'; document.head.append(style);`,
     );
     await wait('document.querySelector(\'[role=treeitem][aria-label="Lecture 1.pdf"]\')');
-    assert.equal(await evaluate("document.body.innerText.includes('未标注学期')"), false);
-    await click('归档');
-    await wait("document.body.innerText.includes('未标注学期')");
-    await click('归档');
     const open = (n) =>
       evaluate(`document.querySelector('[role=treeitem][aria-label="Lecture ${n}.pdf"]').click()`);
     await open(1);
@@ -210,18 +209,20 @@ app
       "document.querySelector('.textLayer').closest('.overflow-auto').scrollTop = 150000",
     );
     await wait(
-      "Number(document.querySelector('[aria-label=\"PDF 页码\"]').value) > 50 && document.querySelector('.textLayer')?.textContent",
+      "Number(document.querySelector('[aria-label=\"PDF 页码\"]')?.value) > 50 && document.querySelector('.textLayer')?.textContent",
     );
-    const page = await evaluate('document.querySelector(\'[aria-label="PDF 页码"]\').value');
+    const page = await evaluate('document.querySelector(\'[aria-label="PDF 页码"]\')?.value');
     const count = await evaluate("document.querySelectorAll('canvas').length");
     assert.ok(count <= 10, `Too many canvases: ${count}`);
     await open(2);
     await wait(
       "document.querySelectorAll('[role=tab]').length === 2 && document.querySelector('.textLayer')?.textContent.includes('Lecture page 1')",
     );
-    await click('Lecture 1.pdf');
+    await evaluate(
+      `Array.from(document.querySelectorAll('[role=tab]')).find(tab => tab.textContent.includes('Lecture 1.pdf')).click()`,
+    );
     await wait(
-      `document.querySelector('[aria-label="PDF 页码"]').value === ${JSON.stringify(page)} && document.querySelector('.textLayer')?.textContent`,
+      `document.querySelector('[aria-label="PDF 页码"]')?.value === ${JSON.stringify(page)} && document.querySelector('.textLayer')?.textContent`,
     );
     // Exercise cancellation while old requests and Worker setup are pending.
     for (let i = 0; i < 20; i++) {
@@ -230,7 +231,7 @@ app
     }
     await open(1);
     await wait(
-      `document.querySelector('.textLayer')?.textContent && document.querySelector('[aria-label="PDF 页码"]').value === ${JSON.stringify(page)}`,
+      `document.querySelector('.textLayer')?.textContent && document.querySelector('[aria-label="PDF 页码"]')?.value === ${JSON.stringify(page)}`,
     );
     assert.equal(await evaluate("document.body.innerText.includes('PDF 打开失败')"), false);
     assert.equal(
@@ -284,8 +285,10 @@ app
       return { ...position, prevented: e.defaultPrevented };
     })()`);
     assert.equal(anchor.prevented, true);
-    await wait("parseInt(document.querySelector('[title=适合宽度]').textContent) > 100");
-    await wait('!window.pdfStableCanvas.isConnected');
+    await wait('parseInt(document.querySelector(\'[title="重置缩放到 100%"]\').textContent) > 100');
+    await wait(
+      `document.querySelector('[data-page-number="${page}"]:not(.loading) .textLayer')?.textContent`,
+    );
     assert.equal(
       await evaluate('window.pdfBlankFrames'),
       0,
@@ -329,7 +332,7 @@ app
       ),
     );
     await wait(
-      `document.querySelector('[aria-label="PDF 页码"]').value === ${JSON.stringify(page)}`,
+      `document.querySelector('[aria-label="PDF 页码"]')?.value === ${JSON.stringify(page)}`,
     );
     await wait(
       `document.querySelector('[data-page-number="${page}"]:not(.loading) .textLayer')?.textContent`,
@@ -344,13 +347,23 @@ app
       });
       await new Promise((r) => setTimeout(r, 400));
       assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
-      assert.equal(await evaluate(`document.querySelector('[aria-label="PDF 页码"]').value`), page);
+      assert.equal(
+        await evaluate(`document.querySelector('[aria-label="PDF 页码"]')?.value`),
+        page,
+      );
       await wait(
         `document.querySelector('[data-page-number="${page}"]:not(.loading) .textLayer')?.textContent`,
       );
       writeFileSync(join(profile, `${width}.png`), (await win.webContents.capturePage()).toPNG());
     }
     assert.deepEqual(errors, []);
+    await win.webContents.debugger.sendCommand('Emulation.setDeviceMetricsOverride', {
+      width: 1440,
+      height: 960,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    await wait(`document.querySelector('[role=treeitem][aria-label="Lecture 2.pdf"]')`);
     failRange = true;
     await open(2);
     await wait("document.body.innerText.includes('PDF 分段读取失败')");

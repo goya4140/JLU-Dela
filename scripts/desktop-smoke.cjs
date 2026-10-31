@@ -196,7 +196,7 @@ async function run(window) {
     }
     const workspace = await js('window.dela.workspace.getState()');
     const exportError = await js(
-      "window.dela.workspace.exportOfficePdf({ type: 'canvas', id: 'file:smoke' }).then(() => '', error => error.message)",
+      "window.dela.workspace.exportOfficePdf({ type: 'workspace', id: '/fixture/slides.pptx' }).then(() => '', error => error.message)",
     );
     assert.match(exportError, /当前平台暂不支持 PPTX 转 PDF/);
     assert.deepEqual(await js('window.dela.workspace.getState()'), workspace);

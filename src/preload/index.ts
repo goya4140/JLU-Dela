@@ -1,7 +1,7 @@
+import { webTabs } from './web-tabs';
 import { contextBridge } from 'electron';
 import { version } from '../../package.json';
 import type { DelaApi } from '../shared/api';
-import { canvas } from './canvas';
 import { jluPlatforms } from './jlu-platforms';
 import { cache } from './cache';
 import { chat } from './chat';
@@ -29,6 +29,7 @@ import { knowledge } from './knowledge';
 import { chaoxing } from './chaoxing';
 
 contextBridge.exposeInMainWorld('dela', {
+  webTabs,
   knowledge,
   chaoxing,
   jluPlatforms,
@@ -51,7 +52,6 @@ contextBridge.exposeInMainWorld('dela', {
   mail,
   timetable,
   shuiyuan,
-  canvas,
   workspace,
   session,
   sidechat,

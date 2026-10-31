@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, renameSync, statSync, unlinkSync } from 'node:fs';
 import { basename, extname } from 'node:path';
 import { getDatabase } from '../database';
-import { canvasFilePath, getSource } from '../canvas/api';
 import { createWorkspaceEntry, workspaceFilePath } from '../workspace/api';
 import { availablePath } from '../storage';
 import { readOfficeExportLink, writeOfficeExportLink, type OfficeExportLink } from './links';
@@ -48,25 +47,15 @@ const powerShellScript = [
 ].join('\n');
 
 interface OfficeSource {
-  kind: 'canvas' | 'workspace';
+  kind: 'workspace';
   id: string;
   path: string;
-  /** 源文件版本：Canvas 用 updatedAt，本地文件用 mtime-size。 */
+  /** 源文件版本：mtime-size。 */
   version: string;
   title: string;
 }
 
 async function resolveSource(ref: ResourceRef): Promise<OfficeSource> {
-  if (ref.type === 'canvas') {
-    const source = getSource(ref.id);
-    return {
-      kind: 'canvas',
-      id: ref.id,
-      path: await canvasFilePath(ref.id),
-      version: source.updatedAt ?? '',
-      title: source.title,
-    };
-  }
   if (ref.type !== 'workspace') throw new Error('仅支持资料文件与我的资料条目');
   const path = await workspaceFilePath(ref.id);
   const stats = statSync(path);
@@ -262,7 +251,7 @@ async function runOfficeExport(
   writeOfficeExportLink(source.kind, source.id, link);
 }
 
-// 同一文件并发导出只跑一次（对齐 Canvas 下载的去重模式）。
+// 同一文件并发导出只跑一次。
 const inFlight = new Map<string, Promise<void>>();
 
 export function exportOfficePdf(
@@ -272,8 +261,7 @@ export function exportOfficePdf(
   if (process.platform !== 'win32')
     return Promise.reject(new Error('当前平台暂不支持 PPTX 转 PDF，请用外部应用打开原文件。'));
   const parsed = resourceRefSchema.parse(ref);
-  if (parsed.type !== 'canvas' && parsed.type !== 'workspace')
-    throw new Error('仅支持资料文件与我的资料条目');
+  if (parsed.type !== 'workspace') throw new Error('仅支持资料文件与我的资料条目');
   const key = `${parsed.type}:${parsed.id}`;
   const existing = inFlight.get(key);
   if (existing) return existing;

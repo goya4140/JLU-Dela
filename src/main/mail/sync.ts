@@ -1,7 +1,7 @@
-// 邮件同步：同步状态广播、按文件夹拉取最近窗口的头信息与预取正文、服务器草稿箱一次性清理，
+// 邮件同步：同步状态广播、按文件夹拉取最近窗口的头信息与预取正文，
 // 以及账号配置/断开（二者都会使进行中的同步失效）。
 import { BrowserWindow } from 'electron';
-import type { ImapFlow, ListResponse } from 'imapflow';
+import type { ImapFlow } from 'imapflow';
 import { z } from 'zod';
 import type { MailAddress, MailConfigureInput, MailResult, MailSyncStatus } from '../../shared/api';
 import { JLU_MAIL_SERVER } from '../../shared/mail';
@@ -22,8 +22,6 @@ import {
   friendlyError,
   getAccountRow,
   orderFolders,
-  readMailSetting,
-  writeMailSetting,
   type AccountRow,
   type FolderRow,
 } from './store';
@@ -220,28 +218,6 @@ async function syncFolder(
   }
 }
 
-// 服务器草稿箱一次性清理（用户已授权真删）：仅在键值不匹配当前账号时执行，
-// 成功（含服务器无草稿文件夹）后写入账号地址；失败抛错且不写键，下次同步重试。
-// 只允许触碰 specialUse 为 \Drafts 的文件夹，绝不影响其他文件夹。
-async function purgeServerDrafts(client: ImapFlow, listed: ListResponse[], address: string) {
-  if (readMailSetting('mail-drafts-purged') === address) return;
-  const drafts = listed.find((folder) => folder.specialUse === '\\Drafts');
-  if (drafts) {
-    const lock = await client.getMailboxLock(drafts.path);
-    try {
-      if (client.mailbox && client.mailbox.exists > 0) {
-        // ImapFlow 的 messageDelete 先标记 \Deleted 再 EXPUNGE，一次调用完成真删。
-        if (!(await client.messageDelete({ all: true }))) {
-          throw new Error(`服务器拒绝清空草稿箱 ${drafts.path}`);
-        }
-      }
-    } finally {
-      lock.release();
-    }
-  }
-  writeMailSetting('mail-drafts-purged', address);
-}
-
 async function runSync(account: AccountRow, password: string): Promise<void> {
   const trace =
     process.env.JLU_MAIL_DEBUG === '1'
@@ -276,11 +252,6 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
       'listed',
       listed.map((folder) => `${folder.path}[${folder.specialUse ?? ''}]`).join(' | '),
     );
-    try {
-      await purgeServerDrafts(client, listed, account.address);
-    } catch {
-      // 服务器草稿箱清理失败不写键（下次同步重试），也不中断其余文件夹同步。
-    }
     // 草稿箱与已删除改为本地功能，服务器 \Drafts / \Trash 不再同步。
     const folders = orderFolders(
       listed.filter(
@@ -371,24 +342,17 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
   }
 }
 
-/** 吉大邮箱地址：学生邮箱在 mails.jlu.edu.cn 子域，教工邮箱是 jlu.edu.cn 本身。 */
-function isJluMailAddress(address: string): boolean {
-  const domain = address.slice(address.lastIndexOf('@') + 1);
-  return domain === 'jlu.edu.cn' || domain.endsWith('.jlu.edu.cn');
-}
-
 export async function configureMailAccount(input: MailConfigureInput): Promise<MailResult> {
   const address = input.address.trim().toLowerCase();
   const password = input.password;
   if (!z.email().safeParse(address).success || password.length === 0) {
     return { ok: false, error: '请输入完整的邮箱地址和密码' };
   }
-  // 不带 server 就是吉大邮箱：只接受校内地址（学生邮箱在 mails 子域）。第三方账号服务器自填，地址不限。
   const server = input.server ?? JLU_MAIL_SERVER;
-  if (!input.server && !isJluMailAddress(address)) {
+  if (!input.server && !address.endsWith('@mails.jlu.edu.cn')) {
     return {
       ok: false,
-      error: '吉大邮箱地址需以 @jlu.edu.cn 或 @mails.jlu.edu.cn 结尾，或改选第三方 IMAP',
+      error: '学生邮箱预设仅支持 @mails.jlu.edu.cn；教工邮箱或其他邮箱请改选第三方 IMAP',
     };
   }
   const db = getDatabase();

@@ -491,3 +491,22 @@ describe('togglePin / 固定区', () => {
 function groupOf(id: string) {
   return { type: 'group', id, tabs: [], active: null };
 }
+
+it('keeps a school webpage in one group and waits for unsaved-page approval before removing the tab', async () => {
+  installLayoutApi(() => null);
+  const close = vi.fn(async () => false);
+  Object.assign(window.dela!, { webTabs: { close } });
+  await state().init(null);
+  state().openTab('web:chaoxing/a/w1');
+  state().splitGroup('primary', 'vertical');
+  expect(groups()[1]?.tabs).toEqual([]);
+  state().openTab('web:chaoxing/a/w1', groups()[1]!.id);
+  expect(groups().filter((group) => group.tabs.includes('web:chaoxing/a/w1'))).toHaveLength(1);
+  state().closeTab('web:chaoxing/a/w1', 'primary');
+  await Promise.resolve();
+  expect(groups()[0]!.tabs).toContain('web:chaoxing/a/w1');
+  close.mockResolvedValue(true);
+  state().closeTab('web:chaoxing/a/w1', 'primary');
+  await Promise.resolve();
+  expect(groups().some((group) => group.tabs.includes('web:chaoxing/a/w1'))).toBe(false);
+});

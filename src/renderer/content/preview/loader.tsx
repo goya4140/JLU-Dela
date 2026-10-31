@@ -8,7 +8,7 @@ export interface LoadedDocument {
   content: DocumentContent;
   /** 水源主题来源：设置时呈现水源来源视图。 */
   shuiyuanTopicId?: number;
-  /** pptx 导出/快速预览的定位引用；Canvas 资料与本地条目各指向其资源。 */
+  /** pptx 导出/快速预览的定位引用；本地条目指向其资源。 */
   officeRef?: ResourceRef;
   /** 本地 Markdown 的相对图片改写为受限资源协议；不传则按原样输出。 */
   resolveImage?: (src: string) => string;
@@ -17,14 +17,14 @@ export interface LoadedDocument {
 }
 
 /**
- * PreviewTab 的内容接入（注入接口）：preview 域不感知条目树/Canvas 状态与读取 IPC，由
- * workspace/canvas 镜像接线。tabKey 形如 preview:{entryId} 或 preview:source:{原 documentKey}
+ * PreviewTab 的内容接入（注入接口）：preview 域不感知条目树状态与读取 IPC，由
+ * workspace 镜像接线。tabKey 形如 preview:{entryId} 或 preview:source:{原 documentKey}
  * （@ 引用型资料）。
  */
 export interface ContentLoader {
   /** 读取 TabKey 对应的文档（重载/导出后重读同一路径）。 */
   loadDocument(tabKey: TabId): Promise<LoadedDocument>;
-  /** 文档内链接分流：站内已同步 Canvas 文件开预览标签，其余交主进程（水源主题回应用内，其余走系统浏览器）。 */
+  /** 文档内链接分流：交主进程（水源主题回应用内，其余走系统浏览器）。 */
   openLink(url: string): void;
   /** 在水源页打开主题（跳转水源视图）。 */
   openShuiyuanTopic(topicId: number, postNumber?: number): void;

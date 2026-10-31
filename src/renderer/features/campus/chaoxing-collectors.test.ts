@@ -33,11 +33,29 @@ it('reads assignment metadata without opening an attempt or collecting answers',
   const result = window.eval(chaoxingWorksScript);
   expect(result).toEqual({
     ready: true,
-    data: [{ id: 'w1', title: '示例作业', status: '未交', timing: '剩余2天' }],
+    data: [
+      {
+        id: 'w1',
+        title: '示例作业',
+        status: '未交',
+        timing: '剩余2天',
+        url: 'https://mooc1.chaoxing.com/mooc-ans/mooc2/work/task?workId=w1&answerId=private&enc=secret',
+        detailTiming: undefined,
+      },
+    ],
   });
-  expect(JSON.stringify(result)).not.toMatch(/private|secret|answerId/);
+  expect(result.data[0].url).toContain('enc=secret');
   document.body.innerHTML = '<div class="bottomList">服务维护</div>';
   expect(() => window.eval(chaoxingWorksScript)).toThrow('Unknown empty');
   document.body.innerHTML = '<div class="bottomList">暂无作业</div>';
   expect(window.eval(chaoxingWorksScript)).toMatchObject({ ready: true, data: [] });
+});
+
+it('reads explicit deadline labels without collecting answer controls or hidden text', async () => {
+  const { chaoxingDetailTimingScript } = await import('../../../shared/chaoxing-collectors');
+  document.body.innerHTML = `<div><span>截止时间：</span><span>2026-11-02 20:00</span></div><textarea>截止时间：2020-01-01 私密作答</textarea><div contenteditable>截止时间：2020-01-01 私密编辑</div><p>Deadline: 2026-11-03 20:00</p><div hidden><p>截止时间：2020-01-01 隐藏</p></div><div style="display:none"><p>截止时间：2020-01-01 隐藏</p></div>`;
+  const result = window.eval(chaoxingDetailTimingScript);
+  expect(result).toContain('2026-11-02 20:00');
+  expect(result).toContain('Deadline: 2026-11-03 20:00');
+  expect(result).not.toMatch(/2020|私密|隐藏/);
 });

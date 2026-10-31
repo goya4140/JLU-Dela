@@ -2,6 +2,8 @@ import { ipcMain } from 'electron';
 import { checkWorkspaceSender } from '../ipc';
 import {
   chaoxingResult,
+  getChaoxingCalendar,
+  syncChaoxingCalendar,
   getChaoxingCourses,
   syncChaoxingCourses,
   getChaoxingFiles,
@@ -11,6 +13,14 @@ import {
   importChaoxingFile,
 } from './api';
 export function registerChaoxingIpc() {
+  ipcMain.handle('cx:calendar:get', (event) => {
+    checkWorkspaceSender(event);
+    return getChaoxingCalendar();
+  });
+  ipcMain.handle('cx:calendar:sync', (event) => {
+    checkWorkspaceSender(event);
+    return syncChaoxingCalendar(event.sender);
+  });
   ipcMain.handle('cx:courses:get', (event) => {
     checkWorkspaceSender(event);
     return getChaoxingCourses();

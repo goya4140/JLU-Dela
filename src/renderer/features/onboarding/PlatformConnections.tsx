@@ -11,7 +11,13 @@ import {
   readPlatformProgress,
 } from './platform-setup';
 
-export function PlatformConnections({ onBusyChange }: { onBusyChange?: (busy: boolean) => void }) {
+export function PlatformConnections({
+  onBusyChange,
+  onConnectMail,
+}: {
+  onBusyChange?: (busy: boolean) => void;
+  onConnectMail?: () => void;
+}) {
   const [progress, setProgress] = useState(emptyPlatformProgress);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -74,7 +80,7 @@ export function PlatformConnections({ onBusyChange }: { onBusyChange?: (busy: bo
       <div className="grid gap-2">
         <h3 className="text-base font-semibold text-ink">连接校园平台</h3>
         <p className="text-13 leading-relaxed text-ink-3">
-          吉大平台先尝试复用校园会话和统一认证，仍需验证时再显示学校页面。学习通需要独立连接。
+          吉大平台先尝试复用校园会话和统一认证，仍需验证时再显示学校页面。学习通独立连接；邮箱需填写邮箱地址与密码。
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -129,7 +135,9 @@ export function PlatformConnections({ onBusyChange }: { onBusyChange?: (busy: bo
                   variant="outline"
                   onClick={() =>
                     service.id === 'mail'
-                      ? useNavigationStore.getState().navigate('mail')
+                      ? onConnectMail
+                        ? onConnectMail()
+                        : useNavigationStore.getState().navigate('mail')
                       : void connect([service.id])
                   }
                 >

@@ -15,7 +15,6 @@ vi.mock('../../documents/runtime', () => ({
   assertDocumentDependency: vi.fn(),
   documentPython: () => 'component/python.exe',
 }));
-vi.mock('../../canvas/api', () => ({}));
 vi.mock('../../workspace/api', () => ({}));
 vi.mock('../../mail/api', () => ({}));
 vi.mock('../../shuiyuan/api', () => ({}));

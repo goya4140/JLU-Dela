@@ -1,7 +1,6 @@
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
-import { canvasTools } from './domain/canvas';
 import { classroomTools } from './domain/classroom';
 import { mailTools } from './domain/mail';
 import { shuiyuanTools } from './domain/shuiyuan';
@@ -22,7 +21,6 @@ import { jluTools } from './domain/jlu';
 const commandDomains = [
   { name: 'knowledge', description: '检索本地课程知识库与来源片段', commands: knowledgeTools },
   { name: 'jlu', description: '查询电子校务、学在吉大与学习通本地缓存', commands: jluTools },
-  { name: 'canvas', description: '查询、同步 Canvas 课程与资料', commands: canvasTools },
   { name: 'classroom', description: '读取与下载课堂视频语音文稿', commands: classroomTools },
   { name: 'mail', description: '检索邮件、读取附件与准备邮件草稿', commands: mailTools },
   { name: 'shuiyuan', description: '查看水源分类、话题、搜索与帖子内容', commands: shuiyuanTools },
@@ -31,7 +29,7 @@ const commandDomains = [
     description: '查询课表与日程，同步课表、创建或删除日程',
     commands: timetableTools,
   },
-  { name: 'todo', description: '查询与管理待办、Canvas 作业', commands: todoTools },
+  { name: 'todo', description: '查询与管理个人待办', commands: todoTools },
   {
     name: 'workspace',
     description: '管理项目、关联校园资料与导入附件；普通文件用 read/write/edit/shell',
@@ -68,13 +66,9 @@ const commands: Record<string, AgentTool> = Object.assign(
 );
 
 const unavailableCampusCommands = new Set([
-  ...Object.keys(canvasTools),
   ...Object.keys(classroomTools),
   ...Object.keys(mailTools),
   ...Object.keys(shuiyuanTools),
-  'link_canvas_source',
-  'query_assignments',
-  'refresh_todos',
 ]);
 
 async function executeDomainCommand(name: string, input: unknown) {

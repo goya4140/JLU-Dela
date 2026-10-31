@@ -1,3 +1,4 @@
+import type { ChaoxingCalendar, ChaoxingCalendarSync } from './chaoxing-calendar';
 export interface ChaoxingCourse {
   id: string;
   name: string;
@@ -29,6 +30,8 @@ export interface ChaoxingWork {
   title: string;
   status: string;
   timing: string;
+  detailTiming?: string;
+  detailSyncedAt?: string;
 }
 export interface ChaoxingWorks {
   courseId: string;
@@ -38,6 +41,8 @@ export interface ChaoxingWorks {
 export type ChaoxingResult<T> =
   { ok: true; data: T } | { ok: false; error: string; reason?: 'auth' };
 export interface ChaoxingApi {
+  calendar(): Promise<ChaoxingCalendar>;
+  syncCalendar(): Promise<ChaoxingCalendarSync>;
   courses(): Promise<ChaoxingCourses | null>;
   syncCourses(): Promise<ChaoxingResult<ChaoxingCourses>>;
   files(courseId: string, folderId?: string): Promise<ChaoxingFolder | null>;

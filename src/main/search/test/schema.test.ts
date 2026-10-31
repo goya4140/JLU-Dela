@@ -1,7 +1,7 @@
 // 全局搜索对着真库跑一遍：这条用例不搭影子 schema，直接用 database.ts 建出来的表。
 // 影子 schema 曾经凭空补过一个 sessions.messages 列，于是 search/index.ts 里写着不存在的列
 // 也能全绿——用户点开 Ctrl+K 才会看到「no such column」。真库才能挡住这一类缺陷。
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -14,7 +14,8 @@ vi.mock('electron', () => ({
 vi.mock('../../todo', () => ({ getTodoState: () => ({ items: [] }) }));
 
 import { closeDatabase, getDatabase } from '../../database';
-import { queryGlobalSearch } from '..';
+import { queryGlobalSearch, queryCourseFiles } from '..';
+import { storageDirectory } from '../../storage';
 
 beforeAll(() => {
   state.root = mkdtempSync(join(tmpdir(), 'dela-search-schema-'));
@@ -25,6 +26,21 @@ afterAll(() => {
 });
 
 describe('global search against the real schema', () => {
+  it('searches imported Chaoxing file names and returns a local preview target', async () => {
+    expect(await queryCourseFiles('测试课件')).toEqual([]);
+    const directory = join(storageDirectory(), 'workspace', '学习通资料', '测试课程');
+    mkdirSync(directory, { recursive: true });
+    const path = join(directory, '测试课件.pdf');
+    writeFileSync(path, '%PDF-1.4 synthetic');
+    expect(await queryCourseFiles('测试课件')).toEqual([
+      expect.objectContaining({
+        kind: 'course-file',
+        title: '测试课件.pdf',
+        target: { page: 'sources', entryId: path },
+      }),
+    ]);
+    expect(await queryCourseFiles('missing')).toEqual([]);
+  });
   it('按标题搜到会话，正文不参与匹配', () => {
     const timestamp = '2026-09-16T12:00:00.000Z';
     getDatabase()

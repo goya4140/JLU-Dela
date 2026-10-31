@@ -52,5 +52,22 @@ export const chaoxingWorksScript = `(() => {
   if(!container) return {ready:false};
   const rows=[...container.querySelectorAll('li[data][role="link"]')];
   if(!rows.length && !/暂无作业|没有作业|未发布作业/.test(document.body.innerText)) throw new Error('Unknown empty work list');
-  return {ready:true,data:rows.map(row=>({id:new URL(row.getAttribute('data'),location.href).searchParams.get('workId'),title:row.querySelector('.right-content .overHidden2')?.textContent.trim(),status:row.querySelector('.status')?.textContent.trim()||'',timing:row.querySelector('.time')?.textContent.trim()||''}))};
+  return {ready:true,data:rows.map(row=>({id:new URL(row.getAttribute('data'),location.href).searchParams.get('workId'),title:row.querySelector('.right-content .overHidden2')?.textContent.trim(),status:row.querySelector('.status')?.textContent.trim()||'',timing:row.querySelector('.time')?.textContent.trim()||'',url:new URL(row.getAttribute('data'),location.href).href,detailTiming:row.querySelector('.time')?.getAttribute('title')?.trim()||undefined}))};
+})()`;
+
+export const chaoxingDetailTimingScript = String.raw`(() => {
+  const lines = [];
+  for (const element of document.querySelectorAll('p, li, label, dd, dt, td, th, span, div')) {
+    if (lines.length >= 10) break;
+    if (element.closest('script, style, textarea, input, [contenteditable], [hidden], [aria-hidden="true"]') || element.querySelector('textarea, input, [contenteditable]')) continue;
+    const text = (element.innerText ?? '').trim();
+    if (text.length > 180 || !/(?:截止时间|截止日期|截止|deadline|due(?:\s+date)?|end\s*(?:time|date))\s*[:：]?\s*20\d{2}[-/.年]/i.test(text)) continue;
+    let visible = true;
+    for (let parent = element; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent);
+      if (style.display === 'none' || style.visibility === 'hidden') { visible = false; break; }
+    }
+    if (visible && !lines.includes(text)) lines.push(text);
+  }
+  return lines.join('\n');
 })()`;

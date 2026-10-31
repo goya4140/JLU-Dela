@@ -1,4 +1,8 @@
 import { ipcMain } from 'electron';
+import { existsSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { storageDirectory } from '../storage';
+import { searchLocalWorkspace } from '../workspace/local-tree';
 import { z } from 'zod';
 import { GLOBAL_SEARCH_PER_KIND_LIMIT, type GlobalSearchResult } from '../../shared/search';
 import { getTodoState } from '../todo';
@@ -29,11 +33,10 @@ type MailRow = {
   snippet: string | null;
   date: string | null;
 };
-type CanvasFileRow = { id: string; title: string; courseName: string | null };
 
 /**
  * Searches only data already stored in Dela's SQLite database. In particular,
- * Canvas files are matched by their cached title and never downloaded here.
+ * No remote course files are downloaded here.
  */
 export function queryGlobalSearch(query: string): GlobalSearchResult[] {
   const db = getDatabase();
@@ -78,20 +81,6 @@ export function queryGlobalSearch(query: string): GlobalSearchResult[] {
           )
           .all(perKindLimit)
   ) as MailRow[];
-  const files = (
-    query
-      ? db
-          .prepare(
-            "SELECT canvas_sources.id, json_extract(canvas_sources.data, '$.title') AS title, json_extract(canvas_courses.data, '$.name') AS courseName FROM canvas_sources LEFT JOIN canvas_courses ON canvas_courses.id=canvas_sources.course_id WHERE json_extract(canvas_sources.data, '$.kind')='file' AND json_extract(canvas_sources.data, '$.title') LIKE ? ESCAPE '!' ORDER BY canvas_sources.id LIMIT ?",
-          )
-          .all(pattern, perKindLimit)
-      : db
-          .prepare(
-            "SELECT canvas_sources.id, json_extract(canvas_sources.data, '$.title') AS title, json_extract(canvas_courses.data, '$.name') AS courseName FROM canvas_sources LEFT JOIN canvas_courses ON canvas_courses.id=canvas_sources.course_id WHERE json_extract(canvas_sources.data, '$.kind')='file' ORDER BY canvas_sources.id LIMIT ?",
-          )
-          .all(perKindLimit)
-  ) as CanvasFileRow[];
-
   const todos = getTodoState()
     .items.filter((item) =>
       `${item.title} ${item.notes} ${item.courseName ?? ''}`
@@ -128,19 +117,29 @@ export function queryGlobalSearch(query: string): GlobalSearchResult[] {
       subtitle: row.senderName || row.senderAddress || row.snippet,
       target: { page: 'mail' as const, messageId: row.id },
     })),
-    ...files.map((row) => ({
-      kind: 'course-file' as const,
-      id: row.id,
-      title: row.title,
-      subtitle: row.courseName,
-      target: { page: 'sources' as const, sourceId: row.id },
-    })),
   ];
 }
 
+export async function queryCourseFiles(query: string): Promise<GlobalSearchResult[]> {
+  const root = join(storageDirectory(), 'workspace', '学习通资料');
+  if (!existsSync(root)) return [];
+  const files = await searchLocalWorkspace(root, query);
+  return files
+    .filter((item) => item.kind === 'file')
+    .slice(0, perKindLimit)
+    .map((item) => ({
+      kind: 'course-file',
+      id: item.id,
+      title: item.name,
+      subtitle: relative(root, item.path ?? item.id),
+      target: { page: 'sources', entryId: item.id },
+    }));
+}
+
 export function registerSearchIpc(): void {
-  ipcMain.handle('search:query', (event, query: unknown) => {
+  ipcMain.handle('search:query', async (event, query: unknown) => {
     checkWorkspaceSender(event);
-    return queryGlobalSearch(querySchema.parse(query));
+    const value = querySchema.parse(query);
+    return [...queryGlobalSearch(value), ...(await queryCourseFiles(value))];
   });
 }

@@ -122,7 +122,7 @@ describe('global search', () => {
     expect(queryGlobalSearch('散热方案').filter((item) => item.kind === 'chat')).toHaveLength(0);
   });
 
-  it('returns cached Canvas filenames only and ignores deleted mail', () => {
+  it('ignores retired Canvas cache and deleted mail', () => {
     insert('INSERT INTO canvas_courses VALUES (?, ?)', 1, JSON.stringify({ name: '信号与系统' }));
     insert(
       'INSERT INTO canvas_sources VALUES (?, ?, ?)',
@@ -149,9 +149,7 @@ describe('global search', () => {
     );
 
     const results = queryGlobalSearch('lecture-notes.pdf');
-    expect(results.filter((item) => item.kind === 'course-file')).toEqual([
-      expect.objectContaining({ id: 'file:1', subtitle: '信号与系统' }),
-    ]);
+    expect(results.filter((item) => item.kind === 'course-file')).toEqual([]);
     expect(results.filter((item) => item.kind === 'mail')).toHaveLength(0);
   });
 

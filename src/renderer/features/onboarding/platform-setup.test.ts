@@ -1,3 +1,4 @@
+import type { MailState } from '../../../shared/mail';
 import { describe, it, expect, vi } from 'vitest';
 import {
   connectPlatforms,
@@ -26,7 +27,18 @@ function fixture() {
       syncCourses: vi.fn(async () => ({ ok: true, data: { syncedAt: date } })),
     },
     mail: {
-      getState: vi.fn(async () => ({ account: null })),
+      getState: vi.fn(async (): Promise<MailState> => ({
+        account: null,
+        sync: {
+          phase: 'idle',
+          folderPath: null,
+          processed: 0,
+          total: null,
+          error: null,
+          startedAt: null,
+          finishedAt: null,
+        },
+      })),
     },
   };
   return { api: api as unknown as SetupApi, mocks: api };
@@ -43,6 +55,25 @@ describe('campus setup', () => {
     expect(mocks.timetable.connect).not.toHaveBeenCalled();
     expect(mocks.timetable.syncNow).not.toHaveBeenCalled();
     expect(mocks.jluPlatforms.syncNotices).not.toHaveBeenCalled();
+  });
+  it('recognizes a configured mailbox before its first synchronization completes', async () => {
+    const { api, mocks } = fixture();
+    mocks.mail.getState.mockResolvedValueOnce({
+      account: { address: 'student@mails.jlu.edu.cn', lastSyncedAt: null },
+      sync: {
+        phase: 'connecting',
+        folderPath: null,
+        processed: 0,
+        total: null,
+        error: null,
+        startedAt: null,
+        finishedAt: null,
+      },
+    });
+    expect((await readPlatformProgress(api)).mail).toEqual({ phase: 'cached', syncedAt: null });
+    expect(await connectPlatform(api, 'mail')).toMatchObject({ ok: false });
+    expect(mocks.timetable.syncNow).not.toHaveBeenCalled();
+    expect(mocks.chaoxing.syncCourses).not.toHaveBeenCalled();
   });
   it('connects JLU platforms in order, reuses a valid session and leaves Chaoxing for a separate action', async () => {
     const { api, mocks } = fixture();

@@ -39,6 +39,13 @@ it('reports pending JLU integrations and rejects upstream campus commands', asyn
   const help = (await run('help')).result as { name: string }[];
   const names = help.map((item) => item.name);
   expect(names).toContain('campus_status');
+  expect(names).toEqual(
+    expect.arrayContaining([
+      'query_chaoxing_courses',
+      'query_chaoxing_files',
+      'query_chaoxing_works',
+    ]),
+  );
   expect(names).toContain('query_todos');
   expect(names).toContain('query_schedule');
   expect(names).toContain('create_entry');
@@ -52,7 +59,9 @@ it('reports pending JLU integrations and rejects upstream campus commands', asyn
     expect(names).not.toContain(command);
     expect(await run(command)).toMatchObject({
       ok: false,
-      error: expect.stringContaining('尚未接入'),
+      error: expect.stringContaining(
+        command === 'search_shuiyuan_topics' ? '尚未接入' : '命令不存在',
+      ),
     });
   }
   expect(await run('campus_status')).toMatchObject({

@@ -124,8 +124,6 @@ export function referenceCandidates(
   return refs;
 }
 
-/** 通用池会话（随聊/资料页）的 cwd 之外并入已下载课件候选：cwd 是随聊私有目录或课件根目录
- *  本身，课件文件不在 workspace 镜像里，按 cwd 过滤永远为空。title 冲突时工作区文件优先。 */
 export function withCourseReferences(
   local: ChatReference[],
   courseFiles: { path: string; title: string }[],
@@ -141,18 +139,16 @@ export function withCourseReferences(
 }
 
 /** useEntries 的分支逻辑（WorkbenchShell 调用）：远端会话用远端索引候选（其文件不在本地
- *  镜像里，referenceCandidates 恒为空）；本机项目会话只用自己的目录候选；通用池
- *  （projectId 为 null）另并入已下载课件。 */
+ *  镜像里，referenceCandidates 恒为空）；本机项目会话只用自己的目录候选；学习通导入资料使用本地文件候选。 */
 export function referenceEntryCandidates(
   entries: WorkspaceEntry[],
   cwd: string | null,
   projectId: string | null,
   remote: string | null | undefined,
   remoteEntries: ChatReference[],
-  courseFiles: { path: string; title: string }[],
+  importedFiles: { path: string; title: string }[],
 ): ChatReference[] {
   if (remote) return remoteEntries;
   const local = referenceCandidates(entries, cwd, projectId);
-  if (projectId !== null) return local;
-  return withCourseReferences(local, courseFiles);
+  return projectId === null ? withCourseReferences(local, importedFiles) : local;
 }

@@ -1,10 +1,11 @@
 // 内容类型注册表：TabKind → { 组件, 图标, 标题解析 }；workbench 引用 content/ 的唯一入口。
 // 标题解析同步读取 workspace/sessions 镜像；镜像变化的即时刷新由装配层（WorkbenchShell）订阅镜像完成。
 import { lazy, type ComponentType } from 'react';
-import { Eye, FileText, GitCompare, MessageSquare, SquareTerminal } from 'lucide-react';
+import { Globe, Eye, FileText, GitCompare, MessageSquare, SquareTerminal } from 'lucide-react';
 import type { TabId, TabKind } from '../../shared/layout';
 import { useSessions } from '../sessions/store';
 import { titleOf as entryTitleOf } from '../workspace/entry-dialogs';
+import { useWebTabs } from '../content/web/store';
 import { reviewTabTitle } from '../content/review/tab-id';
 
 // 内容域懒加载：组件首次渲染时才求值对应模块（TabGroup 渲染处有 Suspense 骨架兜底）。
@@ -23,6 +24,8 @@ const ReviewTab: ComponentType<TabComponentProps> = lazy(() =>
 const TerminalTab: ComponentType<TabComponentProps> = lazy(() =>
   import('../content/terminal/TerminalTab').then((m) => ({ default: m.TerminalTab })),
 );
+
+const WebTab = lazy(() => import('../content/web/WebTab').then((m) => ({ default: m.WebTab })));
 
 /** 内容组件契约：tabId 定位数据，groupId 用于按组隔离的编辑器会话键（TabId+groupId）。 */
 export interface TabComponentProps {
@@ -50,6 +53,11 @@ function chatTitleOf(sessionId: string): string {
 const payloadOf = (tabId: TabId) => tabId.slice(tabId.indexOf(':') + 1);
 
 export const registry: Record<TabKind, TabDescriptor> = {
+  web: {
+    component: WebTab,
+    icon: Globe,
+    title: (tabId) => useWebTabs.getState().states[tabId]?.title ?? '学习通作业',
+  },
   chat: {
     component: ChatTab,
     icon: MessageSquare,

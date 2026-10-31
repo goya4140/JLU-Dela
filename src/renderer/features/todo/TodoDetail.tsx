@@ -24,12 +24,9 @@ const INITIAL_BODY_HEIGHT = 240;
  * 作业描述经清洗后放入沙箱 iframe 渲染。阅读器默认样式禁止文档纵向滚动，
  * 因此高度随内容自适应，滚动交给所在限高滚动区；链接点击转交外部打开。
  */
-function CanvasHtml({ html, onLink }: { html: string; onLink: (url: string) => void }) {
+function AssignmentHtml({ html, onLink }: { html: string; onLink: (url: string) => void }) {
   const rootSize = useRootFontSize();
-  const doc = useMemo(
-    () => sanitizeHtml(html, 'https://oc.sjtu.edu.cn', rootSize),
-    [html, rootSize],
-  );
+  const doc = useMemo(() => sanitizeHtml(html, '', rootSize), [html, rootSize]);
   const [body, setBody] = useState<HTMLElement | null>(null);
   const [height, setHeight] = useState(INITIAL_BODY_HEIGHT);
   useEffect(() => {
@@ -73,6 +70,7 @@ export function TodoDetail({
   onEdit,
   onDelete,
   onOpenLink,
+  onToggleCompleted,
 }: {
   item: TodoItem;
   now: number;
@@ -80,6 +78,7 @@ export function TodoDetail({
   onEdit: () => void;
   onDelete: () => void;
   onOpenLink: (url: string) => void;
+  onToggleCompleted?: () => void;
 }) {
   const personal = item.source === 'personal';
   const done = todoCompleted(item.status);
@@ -106,7 +105,7 @@ export function TodoDetail({
         {personal && item.calendar && (
           <p className="flex items-center gap-1.5">
             <CalendarCheck className="size-3.5 shrink-0" />
-            已写入日历
+            已同时显示在课表页
           </p>
         )}
       </div>
@@ -118,13 +117,18 @@ export function TodoDetail({
         )
       ) : (
         <div className="mt-3 min-h-0 flex-1 overflow-y-auto border-t pt-3 [scrollbar-width:none]">
-          <CanvasHtml html={item.description ?? ''} onLink={onOpenLink} />
+          <AssignmentHtml html={item.description ?? ''} onLink={onOpenLink} />
         </div>
       )}
       {(personal || item.url) && (
         <div className="mt-auto flex items-center justify-end gap-2 pt-4">
           {personal ? (
             <>
+              {onToggleCompleted && (
+                <Button variant="outline" onClick={onToggleCompleted}>
+                  {done ? '重新打开' : '标为完成'}
+                </Button>
+              )}
               <Button variant="ghost" onClick={onDelete}>
                 <Trash2 className="size-4" />
                 删除
@@ -137,7 +141,8 @@ export function TodoDetail({
           ) : (
             item.url && (
               <Button onClick={() => onOpenLink(item.url!)}>
-                <ExternalLink className="size-4" />在 Canvas 中打开
+                <ExternalLink className="size-4" />
+                打开来源页面
               </Button>
             )
           )}

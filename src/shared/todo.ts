@@ -16,12 +16,12 @@ export interface TodoItem {
   /** 仅个人待办：写入日历时的候选色；未选时渲染回退石墨色。 */
   color?: CalendarEventColor;
   courseId?: number;
-  /** Canvas 课程代码；月历与课表共用它生成稳定的课程颜色。 */
+  /** 历史课程代码，用于保持旧日历条目的配色。 */
   courseCode?: string;
   courseName?: string;
   assignmentId?: number;
   url?: string;
-  /** 仅 Canvas 作业：作业描述原始 HTML，随作业同步缓存，renderer 经沙箱 iframe 渲染。 */
+  /** 历史作业描述 HTML，renderer 经沙箱 iframe 渲染。 */
   description?: string;
   submittedAt?: string | null;
   syncedAt?: string;
@@ -64,34 +64,4 @@ export const todoStatusLabels: Record<TodoStatus, string> = {
 
 export function todoCompleted(status: TodoStatus): boolean {
   return ['completed', 'submitted', 'graded', 'excused'].includes(status);
-}
-
-/** 仅按 Canvas 明确返回的提交事实判定；成绩（包括零分）本身不代表完成。 */
-export function canvasTodoStatus(assignment: Record<string, unknown>): TodoStatus {
-  const sub = assignment.submission as Record<string, unknown> | null | undefined;
-  if (!sub || typeof sub !== 'object') return 'unknown';
-  if (sub.excused === true) return 'excused';
-  if (sub.redo_request === true) return 'resubmit';
-  if (
-    sub.submitted_at ||
-    sub.workflow_state === 'submitted' ||
-    sub.workflow_state === 'pending_review'
-  ) {
-    return sub.workflow_state === 'graded' ? 'graded' : 'submitted';
-  }
-  const types = assignment.submission_types;
-  if (
-    Array.isArray(types) &&
-    types.every((type) => type === 'on_paper' || type === 'none') &&
-    types.length
-  ) {
-    return sub.workflow_state === 'graded' && sub.missing !== true ? 'graded' : 'offline';
-  }
-  if (
-    sub.workflow_state === 'unsubmitted' ||
-    sub.missing === true ||
-    sub.workflow_state === 'graded'
-  )
-    return 'pending';
-  return 'unknown';
 }

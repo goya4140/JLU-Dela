@@ -7,7 +7,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { closeDatabase, getDatabase } from '../src/main/database';
 import { invalidateSessions, registerAgentIpc, subscribeChat } from '../src/main/agent';
-import { registerCanvasIpc } from '../src/main/canvas/ipc';
 import { registerMailIpc } from '../src/main/mail/ipc';
 import { registerNotificationsIpc } from '../src/main/notifications';
 import { registerRemoteIpc } from '../src/main/remotes/ipc';
@@ -61,7 +60,6 @@ app
     // 与生产一致：会话订阅与失效钩子由装配层注入。
     registerWorkspaceIpc(subscribeChat, invalidateSessions);
     registerSettingsIpc();
-    registerCanvasIpc();
     registerAgentIpc();
     registerTerminalIpc();
     registerSearchIpc();

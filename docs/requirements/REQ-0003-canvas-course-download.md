@@ -1,9 +1,9 @@
 ---
 id: REQ-0003
 title: Canvas 课程文件批量下载
-status: todo
+status: cancelled
 created: 2026-10-17
-updated: 2026-10-17
+updated: 2026-10-31
 released_in:
 ---
 
@@ -24,4 +24,4 @@ released_in:
 ## 记录
 
 - `2026-10-17` 提出：希望资料页中在线浏览的 Canvas 课程文件支持按课程或文件夹一键下载，允许选择保存目录、保留目录结构，并提供进度和失败重试。
-- TODO: 实现后补充 Commit / PR 与测试结果。
+- `2026-10-31` 取消：吉大版移除 Canvas，课程资料改由学习通接入。

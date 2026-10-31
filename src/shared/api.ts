@@ -1,3 +1,4 @@
+import type { WebTabsApi } from './web-tabs';
 // 聚合出口：领域契约在同目录领域文件，本文件只 re-export，保证全仓既有 import 路径不变。
 // 领域类型变化请直接改对应文件，不在此处添加逻辑。
 import type { BackupApi } from './backup';
@@ -6,7 +7,6 @@ import type { KnowledgeApi } from './knowledge';
 import type { ChaoxingApi } from './chaoxing';
 import type { CacheApi } from './cache';
 import type { CapabilityApi } from './capabilities';
-import type { CanvasApi } from './canvas';
 import type { ChatApi } from './chat';
 import type { PackageApi } from './packages';
 import type { ConsentApi } from './consent';
@@ -41,6 +41,7 @@ import type { WindowApi } from './window';
 import type { WorkspaceApi } from './workspace';
 
 export interface DelaApi {
+  readonly webTabs: WebTabsApi;
   readonly knowledge: KnowledgeApi;
   readonly chaoxing: ChaoxingApi;
   readonly jluPlatforms: JluPlatformsApi;
@@ -65,7 +66,6 @@ export interface DelaApi {
   readonly mail: MailApi;
   readonly timetable: TimetableApi;
   readonly shuiyuan: ShuiyuanApi;
-  readonly canvas: CanvasApi;
   readonly workspace: WorkspaceApi;
   readonly session: SessionApi;
   readonly sidechat: SidechatApi;
@@ -207,15 +207,6 @@ export type {
   TurnChanges,
   UncommittedChanges,
 } from './chat';
-
-export type {
-  CachedCourseFile,
-  CanvasCourse,
-  CanvasExportResult,
-  SourceItem,
-  CanvasState,
-  CanvasApi,
-} from './canvas';
 
 export type {
   ExtensionSessionState,

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { PlatformConnections } from '../PlatformConnections';
+import { MailStep } from './MailStep';
+import { Button } from '../../../components/ui/button';
 import { StepButton } from './step-controls';
 
 export function CampusStep({
@@ -10,6 +12,26 @@ export function CampusStep({
   onBusyChange?: (busy: boolean) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [mailOpen, setMailOpen] = useState(false);
+  const changeBusy = (value: boolean) => {
+    setBusy(value);
+    onBusyChange?.(value);
+  };
+  if (mailOpen)
+    return (
+      <div className="grid gap-7">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="justify-self-start"
+          disabled={busy}
+          onClick={() => setMailOpen(false)}
+        >
+          返回校园连接
+        </Button>
+        <MailStep onDone={() => setMailOpen(false)} onBusyChange={changeBusy} />
+      </div>
+    );
   return (
     <div className="grid gap-7">
       <header className="grid gap-2">
@@ -18,12 +40,7 @@ export function CampusStep({
           按需同步课表、通知与课程。可以先跳过，之后在使用指南继续连接。
         </p>
       </header>
-      <PlatformConnections
-        onBusyChange={(value) => {
-          setBusy(value);
-          onBusyChange?.(value);
-        }}
-      />
+      <PlatformConnections onConnectMail={() => setMailOpen(true)} onBusyChange={changeBusy} />
       <StepButton
         state="idle"
         disabled={busy}

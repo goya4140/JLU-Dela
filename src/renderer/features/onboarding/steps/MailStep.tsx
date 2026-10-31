@@ -5,8 +5,13 @@ import { MailAccountForm } from '../../mail/MailAccountForm';
 import { errorText } from '../../../workspace/store';
 import { StepButton, type StepButtonState } from './step-controls';
 
-/** 向导 · 邮箱步骤：验证 IMAP 登录，成功后后台开始首次同步，按钮转为「下一步」。 */
-export function MailStep({ onDone }: { onDone: () => void }) {
+export function MailStep({
+  onDone,
+  onBusyChange,
+}: {
+  onDone: () => void;
+  onBusyChange?: (busy: boolean) => void;
+}) {
   const [state, setState] = useState<StepButtonState>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +30,7 @@ export function MailStep({ onDone }: { onDone: () => void }) {
     const dela = window.dela;
     if (!dela) return;
     setState('busy');
+    onBusyChange?.(true);
     setError(null);
     try {
       const result = await dela.mail.configure(input);
@@ -39,25 +45,29 @@ export function MailStep({ onDone }: { onDone: () => void }) {
     } catch (cause) {
       setError(errorText(cause));
       setState('idle');
+    } finally {
+      onBusyChange?.(false);
     }
   };
 
   return (
     <div className="grid gap-7">
-      <h2 className="text-2xl font-semibold tracking-tight">连接邮箱</h2>
-      <MailAccountForm
-        error={error}
-        onSubmit={(input) => void submit(input)}
-        submit={
-          <StepButton
-            busyLabel="正在连接…"
-            idleLabel="连接并同步"
-            state={state}
-            successLabel="连接成功，下一步"
-          />
-        }
-        variant="wizard"
-      />
+      <h2 className="text-2xl font-semibold tracking-tight">连接吉大邮箱</h2>
+      <fieldset disabled={state === 'busy'}>
+        <MailAccountForm
+          error={error}
+          onSubmit={(input) => void submit(input)}
+          submit={
+            <StepButton
+              busyLabel="正在连接…"
+              idleLabel="连接并同步"
+              state={state}
+              successLabel="已连接，返回校园连接"
+            />
+          }
+          variant="wizard"
+        />
+      </fieldset>
     </div>
   );
 }

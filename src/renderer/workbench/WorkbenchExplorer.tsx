@@ -1,22 +1,16 @@
-// 工作台目录侧栏（装配层）：项目文件树 + Canvas 资料树 + 归档区。树的展开/筛选/选中态在
+// 工作台目录侧栏（装配层）：项目文件树与归档区。树的展开/筛选/选中态在
 // navigation/store，条目动作经 onAction 交给 EntryDialogs（壳）；折叠/抽屉开合在 explorer-state。
 import { useEffect, useRef, useState } from 'react';
 import {
   Archive,
   ChevronRight,
   ChevronsDownUp,
-  Download,
-  Ellipsis,
   FilePlus2,
   FileInput,
   FolderPlus,
   Globe,
-  GraduationCap,
-  KeyRound,
-  Folder,
   PanelLeft,
   Plus,
-  RefreshCw,
   Search,
   Upload,
 } from 'lucide-react';
@@ -34,14 +28,11 @@ import {
   useAfterMenuClose,
 } from '../components/ui/dropdown-menu';
 import { ProjectFileTree, type EntryAction } from '../navigation/ProjectFileTree';
-import { CanvasExportDialog } from './CanvasExportDialog';
 import type { ExplorerPending } from '../components/ui/explorer';
 import type { WorkspaceEntry } from '../../shared/api';
 import { useRemoteActivity } from '../navigation/remote-activity';
 import { RemoteConnectionTip } from '../navigation/remote-connection-tip';
 import { useRemoteConnections } from '../navigation/remote-connections';
-import { SourcesTree } from '../navigation/SourcesTree';
-import { latestTermOf } from '../../shared/canvas';
 import { ancestorChainOf, useNavigationStore as useTreeState } from '../navigation/store';
 import { useNavigationStore as useAppNavigation } from '../navigation/view';
 import {
@@ -54,7 +45,6 @@ import {
   runEntryWork,
 } from '../workspace/entry-actions';
 import { errorText, useWorkspaceStore } from '../workspace/store';
-import { showToast } from '../app/toasts';
 import { RemotePortsDialog } from '../workspace/remote-ports-dialog';
 import { useExplorerState, useViewportWidth } from './explorer-state';
 import { cn } from '../lib/utils';
@@ -101,14 +91,13 @@ export function WorkbenchExplorer({
 }: {
   projectId: string | null;
   activeDocKey: string | null;
-  onAction: (action: EntryAction | 'link' | 'connect', id: string | null) => void;
+  onAction: (action: EntryAction | 'link', id: string | null) => void;
   onOpenDocument: (key: string) => void;
   onOpenToSide: (key: string) => void;
   /** 行内新建成功后（打开新文件、选中新文件夹等由接线方决定，与弹窗新建同一出口）。 */
   onCreated: (entry: WorkspaceEntry) => void;
 }) {
   const entries = useWorkspaceStore((s) => s.workspace.entries);
-  const canvas = useWorkspaceStore((s) => s.canvas);
   const rootId = entries.some((entry) => entry.id === projectId) ? projectId : null;
   const root = entries.find((e) => e.id === rootId);
   // 打开的若是远程项目，这棵树本轮只读：拖入的落点是远端 POSIX 路径，
@@ -131,12 +120,8 @@ export function WorkbenchExplorer({
   const narrow = useExplorerState((s) => s.narrow);
   const viewportWidth = useViewportWidth();
   const drawerRef = useRef<HTMLElement>(null);
-  const [bySource, setBySource] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
   // 课程资料只在通用（无项目）工作台显示（承接旧资料页），且默认展开；项目工作台不渲染课程资料。
-  const [coursesOpen, setCoursesOpen] = useState(() => projectId === null);
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -263,27 +248,6 @@ export function WorkbenchExplorer({
     else onAction(action, id);
   };
 
-  const refreshCourses = () => {
-    if (syncing || !canvas.connected || !window.dela) return;
-    setSyncing(true);
-    const store = useWorkspaceStore.getState();
-    void (async () => {
-      try {
-        // 先刷新课程列表，否则新学期的课程拿不到；再逐门同步最新学期（顺序执行，避免并发轰炸 Canvas）。
-        store.setCanvas(await window.dela!.canvas.syncCourses());
-        const courses = useWorkspaceStore.getState().canvas.courses;
-        const latest = latestTermOf(courses);
-        for (const course of courses)
-          if (course.term === latest && !course.archived)
-            store.setCanvas(await window.dela!.canvas.syncCourse(course.id));
-      } catch (cause) {
-        showToast({ variant: 'error', title: '同步课程资料失败', description: errorText(cause) });
-      } finally {
-        setSyncing(false);
-      }
-    })();
-  };
-
   // 窄屏抽屉只看 mobileOpen：忽略宽屏折叠残留，否则折叠目录后缩窗会永远打不开目录。
   const visible = narrow ? mobileOpen : !collapsed;
   // 视口钳制：目录渲染宽度不超过视口约 28%（下限 200），窄窗口下给内容区保留可用宽度；
@@ -301,13 +265,13 @@ export function WorkbenchExplorer({
       )}
     />
   );
-  const sourcesOpen = coursesOpen || Boolean(query.trim());
 
   return (
     <>
       {/* 窄屏抽屉遮罩：点外关闭，与主导航抽屉同一交互模型。 */}
       {narrow && mobileOpen && (
         <div
+          data-mobile-drawer="explorer"
           aria-hidden="true"
           className={cn(overlayFade, 'absolute inset-0 z-20 bg-black/30')}
           onMouseDown={() => useExplorerState.getState().setMobileOpen(false)}
@@ -514,103 +478,14 @@ export function WorkbenchExplorer({
                   <p>可从学习通导入课件，也可导入本地文件，按课程整理。</p>
                   <div>
                     <Button
-                      onClick={() => useAppNavigation.getState().navigate('campus')}
+                      onClick={() => useAppNavigation.getState().navigate('chaoxing')}
                       size="sm"
                       variant="outline"
                     >
-                      查看学校平台
+                      打开学习通
                     </Button>
                   </div>
                 </div>
-              )}
-              {projectId === null && canvas.connected && (
-                <>
-                  <div className={eyebrowClass}>同步</div>
-                  <div className={sectionClass}>
-                    <button
-                      aria-expanded={sourcesOpen}
-                      className="flex min-w-0 flex-1 items-center gap-1 text-left transition-colors duration-150 hover:text-ink"
-                      onClick={() => setCoursesOpen((value) => !value)}
-                      type="button"
-                    >
-                      {chevron(sourcesOpen)}
-                      <GraduationCap className="size-4" />
-                      课程资料
-                    </button>
-                    <Button
-                      aria-label="刷新课程资料"
-                      className="hover:bg-hover-2"
-                      disabled={!canvas.connected}
-                      onClick={refreshCourses}
-                      size="icon-xs"
-                      title="刷新课程资料"
-                      variant="ghost"
-                    >
-                      <RefreshCw className={cn(syncing && 'animate-spin')} />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          aria-label="Canvas 操作"
-                          className="hover:bg-hover-2"
-                          size="icon-xs"
-                          title="Canvas 操作"
-                          variant="ghost"
-                        >
-                          <Ellipsis />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuItem onSelect={() => onAction('connect', null)}>
-                          <KeyRound />
-                          {canvas.connected ? '更换 Canvas 令牌' : '连接 Canvas'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            setBySource((value) => !value);
-                            if (!bySource) expand('canvas', true);
-                          }}
-                        >
-                          <Folder />
-                          {bySource ? '按课程分组' : '按来源分组'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={!canvas.connected}
-                          onSelect={() => setExportOpen(true)}
-                        >
-                          <Download />
-                          批量导出课件
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  {sourcesOpen &&
-                    (canvas.connected ? (
-                      <SourcesTree
-                        bySource={bySource}
-                        expanded={expanded}
-                        onArchive={() => setArchiveOpen(true)}
-                        onExpand={expand}
-                        onLink={(id) => onAction('link', id)}
-                        onOpen={onOpenDocument}
-                        onOpenToSide={onOpenToSide}
-                        query={query}
-                        selected={activeDocKey}
-                      />
-                    ) : (
-                      <div className="px-4 py-3 text-xs text-ink-3">
-                        <p>连接 Canvas，查看课程资料。</p>
-                        <Button
-                          className="mt-3"
-                          onClick={() => onAction('connect', null)}
-                          size="sm"
-                          variant="outline"
-                        >
-                          连接 Canvas
-                        </Button>
-                      </div>
-                    ))}
-                </>
               )}
               <div className={eyebrowClass}>文件</div>
               {visible && (
@@ -652,19 +527,6 @@ export function WorkbenchExplorer({
               </button>
               {(archiveOpen || query.trim()) && (
                 <div className="max-h-56 overflow-y-auto pb-1">
-                  {projectId === null && (
-                    <SourcesTree
-                      archived
-                      bySource={bySource}
-                      expanded={expanded}
-                      onExpand={expand}
-                      onLink={(id) => onAction('link', id)}
-                      onOpen={onOpenDocument}
-                      onOpenToSide={onOpenToSide}
-                      query={query}
-                      selected={activeDocKey}
-                    />
-                  )}
                   {visible && (
                     <ProjectFileTree
                       archived
@@ -705,7 +567,6 @@ export function WorkbenchExplorer({
           projectId={portsForProject}
         />
       )}
-      {exportOpen && <CanvasExportDialog onClose={() => setExportOpen(false)} open />}
     </>
   );
 }

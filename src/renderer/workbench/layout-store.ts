@@ -52,7 +52,7 @@ type Store = {
   openTab(tabId: TabId, targetGroupId?: string, options?: { preview?: boolean }): void;
   /** 预览标签转常驻（编辑、双击、拖动）；不是预览标签时无动作。 */
   keepTab(tabId: TabId, groupId?: string): void;
-  closeTab(tabId: TabId, groupId?: string): void;
+  closeTab(tabId: TabId, groupId?: string, webClosed?: boolean): void;
   /** 批量关闭：others = 除锚点外，right = 锚点右侧，all = 整组（含组本身）；固定标签受保护。 */
   closeTabs(groupId: string, mode: 'others' | 'right' | 'all', anchor?: TabId): void;
   /** 固定/取消固定：固定挪入固定区末尾，取消固定落到未固定区开头（VS Code 语义）。 */
@@ -165,7 +165,7 @@ export const useWorkbenchLayout = create<Store>((set, get) => ({
 
   openTab: (tabId, targetGroupId, options) => {
     const { root, focus } = get();
-    if (!targetGroupId) {
+    if (!targetGroupId || tabId.startsWith('web:')) {
       const existing = walkGroups(root).find((group) => group.tabs.includes(tabId));
       if (existing) {
         if (existing.active !== tabId || focus !== existing.id) {
@@ -220,7 +220,20 @@ export const useWorkbenchLayout = create<Store>((set, get) => ({
     schedulePersist();
   },
 
-  closeTab: (tabId, groupId) => {
+  closeTab: (tabId, groupId, webClosed = false) => {
+    if (tabId.startsWith('web:') && !webClosed) {
+      if (!window.dela) return;
+      const target = groupId ?? get().focus;
+      void window.dela.webTabs
+        .close(tabId)
+        .then((closed) => {
+          if (closed) get().closeTab(tabId, target, true);
+        })
+        .catch((cause) =>
+          showToast({ variant: 'error', title: '关闭网页失败', description: errorText(cause) }),
+        );
+      return;
+    }
     const { root, focus, maximized } = get();
     const group = findGroup(root, groupId ?? focus);
     if (!group || !group.tabs.includes(tabId)) return;
@@ -379,6 +392,7 @@ export const useWorkbenchLayout = create<Store>((set, get) => ({
     const { root } = get();
     const group = findGroup(root, groupId);
     if (!group?.active) return;
+    emptyNew ||= group.active.startsWith('web:');
     // 手动分屏像 VS Code 一样把当前聚焦标签带进新组；emptyNew 留空新组
     // （标题栏「新聊天」用它给新会话腾一个干净的分屏）。
     const newGroup: GroupNode = {

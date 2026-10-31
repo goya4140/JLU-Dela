@@ -21,6 +21,7 @@ import {
   projectGitCheckout,
 } from './project';
 import { checkWorkspaceSender } from '../ipc';
+import { openShuiyuanLinkInApp } from '../shuiyuan/links';
 import { registerLayoutIpc } from './layout';
 import { exportOfficePdf } from '../documents/export';
 import { openResourceFile } from '../resources';
@@ -151,6 +152,12 @@ export function registerWorkspaceIpc(
     const state = await getLocalWorkspaceState();
     watchWorkspace(event.sender, state);
     return state;
+  });
+  handle('open-link', async (value) => {
+    const url = new URL(z.string().max(8192).parse(value));
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password)
+      throw new Error('不支持的链接');
+    if (!openShuiyuanLinkInApp(url.href)) await shell.openExternal(url.href);
   });
   handle('list-local', (id) => listLocalDirectory(workspaceEntryIdSchema.nullable().parse(id)));
   handle('local-ancestors', (id) => localEntryAncestors(workspaceEntryIdSchema.parse(id)));
