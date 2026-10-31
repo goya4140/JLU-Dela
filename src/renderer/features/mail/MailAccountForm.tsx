@@ -5,7 +5,7 @@ import { SegmentedControl } from '../../components/ui/beautifului/atoms/Segmente
 import { Input } from '../../components/ui/input';
 import { cn } from '../../lib/utils';
 
-const modes = ['吉大邮箱', '第三方 IMAP'] as const;
+const modes = ['吉大学生邮箱', '第三方 IMAP'] as const;
 
 /** 向导页与邮箱空态共用的连接表单：吉大邮箱走预设，第三方 IMAP 自填服务器参数。 */
 export function MailAccountForm({
@@ -21,7 +21,7 @@ export function MailAccountForm({
   /** wizard：向导画布上的 40px 控件；app：应用内的 32px 控件。 */
   variant?: 'app' | 'wizard';
 }) {
-  const [mode, setMode] = useState<(typeof modes)[number]>('吉大邮箱');
+  const [mode, setMode] = useState<(typeof modes)[number]>('吉大学生邮箱');
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [imapHost, setImapHost] = useState('');
@@ -55,6 +55,11 @@ export function MailAccountForm({
       }}
     >
       <SegmentedControl className="w-full" onChange={setMode} options={modes} value={mode} />
+      {!custom && (
+        <p className="text-xs leading-relaxed text-ink-3">
+          学生邮箱使用 @mails.jlu.edu.cn。教工邮箱及其他邮箱请选择「第三方 IMAP」，填写对应服务器。
+        </p>
+      )}
       <label className="grid gap-2">
         <span className={label}>邮箱地址</span>
         <Input

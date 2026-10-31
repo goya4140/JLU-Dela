@@ -14,11 +14,38 @@ for (const name of ['userData', 'documents', 'home']) app.setPath(name, profile)
 process.argv.push('--terminal-smoke-test');
 const syncedAt = '2026-10-31T02:00:00.000Z';
 const calls = [];
+const mailCalls = [];
+let mailConnected = false;
 let mode = 'success';
 let academicAttempts = 0;
 const originalHandle = ipcMain.handle.bind(ipcMain);
 ipcMain.handle = (channel, handler) =>
   originalHandle(channel, async (...args) => {
+    if (channel === 'mail:get-state')
+      return {
+        account: mailConnected ? { address: 'student@mails.jlu.edu.cn', lastSyncedAt: null } : null,
+        sync: {
+          phase: 'idle',
+          folderPath: null,
+          processed: 0,
+          total: null,
+          error: null,
+          startedAt: null,
+          finishedAt: null,
+        },
+      };
+    if (channel === 'mail:configure') {
+      assert.equal(args[1].address, 'student@mails.jlu.edu.cn');
+      mailCalls.push(channel);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      if (mailCalls.length === 1) return { ok: false, error: '示例邮箱认证失败，可重试' };
+      mailConnected = true;
+      return { ok: true };
+    }
+    if (channel === 'mail:sync') {
+      mailCalls.push(channel);
+      return;
+    }
     if (channel === 'timetable:get-state')
       return { ...(await handler(...args)), lastSyncedAt: syncedAt };
     if (channel === 'jlu:notices:get') return { channel: '179577', page: 1, items: [], syncedAt };
@@ -125,6 +152,15 @@ async function run(window) {
       );
     }
   }
+  await click('打开邮箱');
+  await wait(
+    `!!document.querySelector('input[placeholder="name@mails.jlu.edu.cn"]') && !document.querySelector('[aria-label="校园平台配置"]')`,
+  );
+  assert.ok(await js(`document.body.textContent.includes('教工邮箱')`));
+  await click('设置');
+  await wait('!!document.querySelector("[aria-label=设置分区]")');
+  await click('使用指南');
+  await idle();
   await click('依次连接吉大平台');
   await idle();
   assert.deepEqual(calls, ['timetable:sync', 'jlu:notices:sync', 'jlu:learning:sync']);
@@ -265,12 +301,48 @@ async function run(window) {
   );
   await idle();
   assert.equal(calls.length, beforeReload, 'resuming setup does not automatically connect');
+  await click('打开邮箱');
+  await wait(`document.querySelector('h2')?.textContent==='连接吉大邮箱'`);
+  assert.equal(
+    await js(`!!document.querySelector('#main-nav')`),
+    false,
+    'mail configuration stays inside the first-run wizard',
+  );
+  for (const width of [600, 900, 1280, 1800]) {
+    window.setSize(width, 850);
+    await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+    assert.ok(
+      await js('document.documentElement.scrollWidth<=document.documentElement.clientWidth'),
+      'mail form width ' + width,
+    );
+  }
+  await js(
+    `(()=>{for(const [selector,value] of [['input[type=email]','student@mails.jlu.edu.cn'],['input[type=password]','fixture-password']]){const node=document.querySelector(selector);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(node,value);node.dispatchEvent(new Event('input',{bubbles:true}));}})()`,
+  );
+  await js(`document.querySelector('form').requestSubmit()`);
+  await wait(
+    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='跳过'&&b.disabled)`,
+  );
+  await wait(`document.body.textContent.includes('示例邮箱认证失败，可重试')`);
+  assert.equal(mailConnected, false);
+  await js(`document.querySelector('form').requestSubmit()`);
+  await wait(`document.body.textContent.includes('已连接，返回校园连接')`);
+  await click('已连接，返回校园连接');
+  await idle();
+  assert.ok(
+    await js(
+      `document.querySelector('[data-platform=mail]').textContent.includes('已连接，可收发邮件')`,
+    ),
+  );
+  assert.deepEqual(mailCalls, ['mail:configure', 'mail:configure', 'mail:sync']);
+  assert.equal(await js(`localStorage.getItem('dela.onboarding.completed')`), null);
+
   await click('跳过');
   await wait('document.body.textContent.includes("完成配置")');
   await click('完成配置');
   await wait('!!document.querySelector("[aria-label=使用指南正文]")');
   assert.equal(await js('localStorage.getItem("dela.onboarding.completed")'), '1');
   console.log(
-    'Setup guide smoke passed: local-only status, ordered JLU connection, separate Chaoxing, network errors preserve cache, interrupted authentication stops batch, recovery retries, revisit, four viewport widths, first-run steps, model skip, resume and completion opening the guide. Synthetic IPC fixtures and consent record in an isolated profile only; no school or model requests.',
+    'Setup guide smoke passed: local-only status, ordered JLU connection, separate Chaoxing, network errors preserve cache, interrupted authentication stops batch, recovery retries, revisit, four viewport widths, first-run steps, inline mail configuration, failed login retry, busy navigation protection, connected mail before first sync, model skip, resume and completion opening the guide. Synthetic IPC fixtures and consent record in an isolated profile only; no school or model requests.',
   );
 }

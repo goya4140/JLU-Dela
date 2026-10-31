@@ -74,17 +74,18 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-| 命令                   | 用途                                  |
-| ---------------------- | ------------------------------------- |
-| `pnpm check`           | 格式、lint、类型检查、构建与单元测试  |
-| `pnpm smoke`           | Electron 基础冒烟                     |
-| `pnpm smoke:timetable` | 课表读取、认证恢复与失败保留缓存      |
-| `pnpm smoke:platforms` | 通知、视频、字幕、笔记与 AI 草稿      |
-| `pnpm smoke:chaoxing`  | 独立会话、课程、目录、作业与资料导入  |
-| `pnpm smoke:knowledge` | 原位课程资料、PDF 检索、引用与笔记    |
-| `pnpm smoke:setup`     | 首次引导、配置恢复与多平台顺序连接    |
-| `pnpm smoke:web`       | 本机网页端与桌面学习数据共用          |
-| `pnpm package:mac`     | 构建 Apple Silicon 开发预览 DMG / ZIP |
+| 命令                        | 用途                                  |
+| --------------------------- | ------------------------------------- |
+| `pnpm check`                | 格式、lint、类型检查、构建与单元测试  |
+| `pnpm smoke`                | Electron 基础冒烟                     |
+| `pnpm smoke:timetable`      | 课表读取、认证恢复与失败保留缓存      |
+| `pnpm smoke:platforms`      | 通知、视频、字幕、笔记与 AI 草稿      |
+| `pnpm smoke:chaoxing`       | 独立会话、课程、目录、作业与资料导入  |
+| `pnpm smoke:study-calendar` | 学习日历聚合、作业时间与读取范围      |
+| `pnpm smoke:knowledge`      | 原位课程资料、PDF 检索、引用与笔记    |
+| `pnpm smoke:setup`          | 首次引导、配置恢复与多平台顺序连接    |
+| `pnpm smoke:web`            | 本机网页端与桌面学习数据共用          |
+| `pnpm package:mac`          | 构建 Apple Silicon 开发预览 DMG / ZIP |
 
 自动化检查使用人工数据，不访问真实校园账号。主分支推送运行 macOS CI，安装包工作流由维护者按需运行。
 
@@ -100,7 +101,7 @@ pnpm dev
 - 原位知识库：继续使用你连接的目录。
 - 技能目录：`~/.jlu-dela/skills/`。
 
-Markdown / TXT 正文检索限 2 MB 以内文件；PDF 文字在本机手动提取，每份限 40 MB、300 页，源文件变动后需重新提取。校园会话可在退出重开后尝试复用，有效期仍由平台决定；应用不保存学校密码。
+Markdown / TXT 正文检索限 2 MB 以内文件；PDF 文字在本机手动提取，每份限 40 MB、300 页，源文件变动后需重新提取。校园会话可在退出重开后尝试复用，有效期仍由平台决定；校园网页接入不保存学校密码；邮箱凭据需单独配置并加密保存在本机。
 
 内部 `window.dela` API、`dela` 命令和部分存量模块继续沿用。未适配的校园模块不表示已支持吉大。架构与接入范围见 [开发文档](docs/DEVELOPMENT.md) 和 [吉大接入计划](docs/jlu-integration.md)。
 

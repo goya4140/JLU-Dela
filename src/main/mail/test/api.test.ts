@@ -329,61 +329,41 @@ describe('mail local trash and folder sync', () => {
     expect(getMailState().account?.address).toBe('reader@example.com');
   });
 
-  it('runSync purges server drafts once, skips \\Drafts/\\Trash, and cascades stale local rows', async () => {
-    imapHarness.folders = [
-      asFolder('INBOX', '\\Inbox'),
-      asFolder('Drafts', '\\Drafts'),
-      asFolder('Trash', '\\Trash'),
-    ];
-    imapHarness.status = (path) =>
-      path === 'Drafts'
-        ? { messages: 4 }
-        : { messages: 0, unseen: 0, uidValidity: '1', uidNext: 1 };
-    // 已缓存文件夹被服务器标记为草稿箱后，也应清理本地记录。
-    const draftsFolderId = insertFolder(db, 'Drafts', '\\Drafts');
-    insertMessage(db, draftsFolderId, 10);
-
-    startMailSync();
-    await waitForSync();
-    expect(syncStatus.phase).toBe('idle');
-
-    expect(imapHarness.deletions).toEqual([{ all: true }]);
-    expect(imapHarness.lockedPaths).toEqual(['Drafts', 'INBOX']);
-    expect(setting(db, 'mail-drafts-purged')).toBe('reader@example.com');
-    expect(folderPaths(db)).toEqual(['INBOX']);
-    expect(
-      db.prepare('SELECT COUNT(*) AS c FROM mail_messages WHERE folder_id = ?').get(draftsFolderId),
-    ).toEqual({ c: 0 });
-
-    startMailSync();
-    await waitForSync();
-    expect(imapHarness.deletions).toHaveLength(1);
-  });
-
-  it('failed draft purge leaves the key unset so the next sync retries', async () => {
-    imapHarness.folders = [asFolder('INBOX', '\\Inbox'), asFolder('Drafts', '\\Drafts')];
-    imapHarness.status = (path) =>
-      path === 'Drafts'
-        ? { messages: 2 }
-        : { messages: 0, unseen: 0, uidValidity: '1', uidNext: 1 };
-    imapHarness.messageDeleteResult = false;
-
-    startMailSync();
-    await waitForSync();
-    expect(syncStatus.phase).toBe('idle');
-    expect(imapHarness.deletions).toHaveLength(1);
-    expect(setting(db, 'mail-drafts-purged')).toBeUndefined();
-    expect(folderPaths(db)).toEqual(['INBOX']);
-  });
-
-  it('marks the account purged even when the server has no drafts folder', async () => {
-    imapHarness.folders = [asFolder('INBOX', '\\Inbox')];
-
-    startMailSync();
-    await waitForSync();
-    expect(imapHarness.deletions).toHaveLength(0);
-    expect(setting(db, 'mail-drafts-purged')).toBe('reader@example.com');
-  });
+  it.each([null, 'reader@example.com'])(
+    'leaves server drafts untouched regardless of the legacy purge marker (%s)',
+    async (marker) => {
+      imapHarness.folders = [
+        asFolder('INBOX', '\\Inbox'),
+        asFolder('Drafts', '\\Drafts'),
+        asFolder('Trash', '\\Trash'),
+      ];
+      imapHarness.status = (path) =>
+        path === 'Drafts'
+          ? { messages: 4 }
+          : { messages: 0, unseen: 0, uidValidity: '1', uidNext: 1 };
+      if (marker)
+        db.prepare('INSERT INTO workspace_settings VALUES (?, ?)').run(
+          'mail-drafts-purged',
+          marker,
+        );
+      const draftsFolderId = insertFolder(db, 'Drafts', '\\Drafts');
+      insertMessage(db, draftsFolderId, 10);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        startMailSync();
+        await waitForSync();
+        expect(syncStatus.phase).toBe('idle');
+        expect(imapHarness.deletions).toEqual([]);
+        expect(imapHarness.lockedPaths).not.toContain('Drafts');
+        expect(setting(db, 'mail-drafts-purged')).toBe(marker ?? undefined);
+      }
+      expect(folderPaths(db)).toEqual(['INBOX']);
+      expect(
+        db
+          .prepare('SELECT COUNT(*) AS c FROM mail_messages WHERE folder_id = ?')
+          .get(draftsFolderId),
+      ).toEqual({ c: 0 });
+    },
+  );
 
   it('keeps deleted_at on re-synced messages and counts unread from the local table', async () => {
     imapHarness.folders = [asFolder('INBOX', '\\Inbox')];
@@ -687,21 +667,18 @@ describe('mail server settings', () => {
     });
   });
 
-  it('keeps the campus-only guard for the preset path and accepts any address with explicit servers', async () => {
-    expect(await configureMailAccount({ address: 'me@example.com', password: 'pw' })).toEqual({
-      ok: false,
-      error: '吉大邮箱地址需以 @jlu.edu.cn 或 @mails.jlu.edu.cn 结尾，或改选第三方 IMAP',
-    });
-    expect(imapHarness.options).toHaveLength(0);
-    expect(await configureMailAccount({ address: 'Me@JLU.edu.cn', password: 'pw' })).toEqual({
-      ok: true,
-    });
-    expect(imapHarness.options.at(-1)).toMatchObject({
-      host: JLU_MAIL_SERVER.imapHost,
-      port: JLU_MAIL_SERVER.imapPort,
-      auth: { user: 'me@jlu.edu.cn' },
-    });
-    // 学生邮箱在 mails 子域，同样走预设，登录名就是完整地址。
+  it.each(['me@example.com', 'Me@JLU.edu.cn', 'me@other.jlu.edu.cn'])(
+    'rejects %s before opening a connection to the student preset',
+    async (address) => {
+      expect(await configureMailAccount({ address, password: 'pw' })).toEqual({
+        ok: false,
+        error: '学生邮箱预设仅支持 @mails.jlu.edu.cn；教工邮箱或其他邮箱请改选第三方 IMAP',
+      });
+      expect(imapHarness.options).toHaveLength(0);
+    },
+  );
+
+  it('uses the student preset for normalized student addresses', async () => {
     expect(await configureMailAccount({ address: 'Me@mails.jlu.edu.cn', password: 'pw' })).toEqual({
       ok: true,
     });
@@ -710,5 +687,22 @@ describe('mail server settings', () => {
       port: JLU_MAIL_SERVER.imapPort,
       auth: { user: 'me@mails.jlu.edu.cn' },
     });
+  });
+
+  it('allows teacher addresses with explicitly configured servers', async () => {
+    const server = {
+      imapHost: 'imap.example.test',
+      imapPort: 993,
+      smtpHost: 'smtp.example.test',
+      smtpPort: 465,
+    };
+    expect(
+      await configureMailAccount({ address: 'Teacher@jlu.edu.cn', password: 'pw', server }),
+    ).toEqual({ ok: true });
+    expect(imapHarness.options.at(-1)).toMatchObject({
+      host: server.imapHost,
+      auth: { user: 'teacher@jlu.edu.cn' },
+    });
+    expect(storedMailServer()).toEqual(server);
   });
 });
