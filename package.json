@@ -49,6 +49,8 @@
     "smoke:platforms": "electron scripts/platforms-smoke.cjs",
     "smoke:chaoxing": "electron scripts/chaoxing-smoke.cjs",
     "smoke:knowledge": "electron scripts/knowledge-smoke.cjs",
+    "build:pages": "vite build --config config/vite.pages.config.ts",
+    "smoke:pages": "electron scripts/pages-smoke.cjs",
     "build:web": "pnpm build && vite build --config config/vite.web-host.config.ts",
     "web": "pnpm build:web && node scripts/web.ts",
     "smoke:web": "electron scripts/web-smoke.cjs",

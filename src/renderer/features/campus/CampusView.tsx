@@ -18,7 +18,14 @@ const serviceActions: Record<
 export function CampusView({
   title = '吉大校园',
   serviceIds,
+  onNavigate = (view: 'timetable' | 'notifications' | 'chaoxing' | 'classroom' | 'mail') =>
+    useNavigationStore.getState().navigate(view),
+  onOpenGuide = () => useNavigationStore.getState().openSettings('guide'),
+  onOpenSources = () => useNavigationStore.getState().openProject(''),
 }: {
+  onNavigate?: (view: 'timetable' | 'notifications' | 'chaoxing' | 'classroom' | 'mail') => void;
+  onOpenGuide?: () => void;
+  onOpenSources?: () => void;
   title?: string;
   serviceIds?: JluServiceId[];
 }) {
@@ -33,11 +40,7 @@ export function CampusView({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => useNavigationStore.getState().openSettings('guide')}
-            >
+            <Button size="sm" variant="outline" onClick={onOpenGuide}>
               使用指南与连接配置
             </Button>
           </div>
@@ -56,12 +59,7 @@ export function CampusView({
               </div>
               <p className="text-13 text-ink-3">{service.description}</p>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    useNavigationStore.getState().navigate(serviceActions[service.id].view)
-                  }
-                >
+                <Button size="sm" onClick={() => onNavigate(serviceActions[service.id].view)}>
                   {serviceActions[service.id].label}
                 </Button>
                 <Button asChild size="sm" variant="outline">
@@ -81,7 +79,7 @@ export function CampusView({
             一起阅读和整理资料。
           </p>
           <div>
-            <Button onClick={() => useNavigationStore.getState().openProject('')} size="sm">
+            <Button onClick={onOpenSources} size="sm">
               <FolderOpen className="size-4" aria-hidden="true" />
               打开课程资料
             </Button>

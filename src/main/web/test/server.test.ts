@@ -38,6 +38,29 @@ async function connect() {
   expect(response.status).toBe(200);
   return response.headers.get('set-cookie')!.split(';')[0]!;
 }
+it('validates personal todo mutations without accepting source or local paths', async () => {
+  const cookie = await connect();
+  const calls = invoke.mock.calls.length;
+  for (const input of [
+    { title: '' },
+    { title: 'test', source: 'canvas' },
+    { title: 'test', path: '/private/file' },
+  ]) {
+    expect((await post('/api/invoke', { method: 'todo.save', args: [input] }, cookie)).status).toBe(
+      400,
+    );
+  }
+  expect(invoke.mock.calls).toHaveLength(calls);
+  expect(
+    (
+      await post(
+        '/api/invoke',
+        { method: 'todo.save', args: [{ title: '网页待办', completed: false }] },
+        cookie,
+      )
+    ).status,
+  ).toBe(200);
+});
 it('serves the web UI but requires pairing for personal data', async () => {
   expect(await (await fetch(service.origin)).text()).toContain('Web fixture');
   expect((await post('/api/invoke', { method: 'schedule.state', args: [] })).status).toBe(401);

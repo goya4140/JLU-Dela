@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, RefreshCw } from 'lucide-react';
-import type { TimetableLesson, TimetableState, TodoItem } from '../../../shared/api';
+import type { DelaApi, TimetableLesson, TimetableState, TodoItem } from '../../../shared/api';
 import { chaoxingWorkTime } from '../../../shared/chaoxing-calendar';
 import type { ChaoxingCalendar, ChaoxingCalendarSync } from '../../../shared/chaoxing-calendar';
 import { Button } from '../../components/ui/button';
@@ -21,6 +21,10 @@ import { studyEntries, type StudyEntry } from './study-calendar';
 import { TodoSheet } from './TodoSheet';
 
 const sourceLabels = { course: '课程', assignment: '作业', personal: '个人待办' } as const;
+export type StudyCalendarApi = {
+  timetable: Pick<DelaApi['timetable'], 'getState' | 'listLessons'>;
+  chaoxing: Pick<DelaApi['chaoxing'], 'calendar' | 'syncCalendar'>;
+};
 type View = 'month' | 'week' | 'list';
 
 export function StudyCalendar({
@@ -28,7 +32,14 @@ export function StudyCalendar({
   now,
   onOpenTodo,
   onCreateTodo,
+  api = window.dela,
+  onOpenTimetable = () => useNavigationStore.getState().navigate('timetable'),
+  onOpenWork = (courseId: string, workId: string) =>
+    useNavigationStore.getState().openWork(courseId, workId),
 }: {
+  api?: StudyCalendarApi;
+  onOpenTimetable?: () => void;
+  onOpenWork?: ((courseId: string, workId: string) => void) | null;
   todos: readonly TodoItem[];
   now: number;
   onOpenTodo: (id: string) => void;
@@ -52,7 +63,6 @@ export function StudyCalendar({
   const undatedSection = useRef<HTMLElement>(null);
   const [expandedDays, setExpandedDays] = useState<string[]>([]);
   const load = useCallback(async () => {
-    const api = window.dela;
     if (!api) return;
     await Promise.allSettled([
       api.timetable
@@ -73,7 +83,7 @@ export function StudyCalendar({
             .catch((error) => setWorkError(errorText(error)))
         : Promise.resolve(),
     ]);
-  }, []);
+  }, [api]);
   useEffect(() => {
     let active = true;
     void load().finally(() => {
@@ -85,11 +95,11 @@ export function StudyCalendar({
   }, [load]);
 
   async function refreshWorks() {
-    if (!window.dela?.chaoxing || syncing) return;
+    if (!api?.chaoxing || syncing) return;
     setSyncing(true);
     setWorkError(null);
     try {
-      const result = await window.dela.chaoxing.syncCalendar();
+      const result = await api.chaoxing.syncCalendar();
       setAssignments(result.data);
       setFailures(result.failures);
     } catch (error) {
@@ -191,13 +201,13 @@ export function StudyCalendar({
           <Button
             size="sm"
             variant="ghost"
-            disabled={syncing || !window.dela?.chaoxing?.syncCalendar}
+            disabled={syncing || !api?.chaoxing?.syncCalendar}
             onClick={() => void refreshWorks()}
           >
             <RefreshCw className={cn('size-4', syncing && 'animate-spin')} />
             {syncing ? '逐门读取作业…' : '刷新学习通作业'}
           </Button>
-          <Button size="sm" disabled={!window.dela?.todo} onClick={onCreateTodo}>
+          <Button size="sm" disabled={!onCreateTodo} onClick={onCreateTodo}>
             <Plus className="size-4" />
             新建待办
           </Button>
@@ -261,11 +271,7 @@ export function StudyCalendar({
                 ? `更新于 ${new Date(academic.state.lastSyncedAt).toLocaleString('zh-CN')}`
                 : '尚未同步'}
             </span>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => useNavigationStore.getState().navigate('timetable')}
-            >
+            <Button size="sm" variant="ghost" onClick={onOpenTimetable}>
               查看或同步课表
             </Button>
           </div>
@@ -415,10 +421,7 @@ export function StudyCalendar({
                   .filter(Boolean)
                   .join(' · ')}
               </p>
-              <Button
-                variant="outline"
-                onClick={() => useNavigationStore.getState().navigate('timetable')}
-              >
+              <Button variant="outline" onClick={onOpenTimetable}>
                 查看课表
               </Button>
             </div>
@@ -437,12 +440,13 @@ export function StudyCalendar({
               </p>
               <Button
                 variant="outline"
+                disabled={!onOpenWork}
                 onClick={() => {
-                  useNavigationStore.getState().openWork(selected.work.courseId, selected.work.id);
+                  onOpenWork?.(selected.work.courseId, selected.work.id);
                   setSelected(null);
                 }}
               >
-                在工作台打开作业
+                {onOpenWork ? '在工作台打开作业' : '作业原网页请在桌面端打开'}
               </Button>
             </div>
           )}

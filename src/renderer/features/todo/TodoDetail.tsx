@@ -71,7 +71,9 @@ export function TodoDetail({
   onDelete,
   onOpenLink,
   onToggleCompleted,
+  busy = false,
 }: {
+  busy?: boolean;
   item: TodoItem;
   now: number;
   onClose: () => void;
@@ -125,15 +127,15 @@ export function TodoDetail({
           {personal ? (
             <>
               {onToggleCompleted && (
-                <Button variant="outline" onClick={onToggleCompleted}>
+                <Button disabled={busy} variant="outline" onClick={onToggleCompleted}>
                   {done ? '重新打开' : '标为完成'}
                 </Button>
               )}
-              <Button variant="ghost" onClick={onDelete}>
+              <Button disabled={busy} variant="ghost" onClick={onDelete}>
                 <Trash2 className="size-4" />
                 删除
               </Button>
-              <Button onClick={onEdit}>
+              <Button disabled={busy} onClick={onEdit}>
                 <Pencil className="size-4" />
                 编辑
               </Button>

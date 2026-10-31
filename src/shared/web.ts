@@ -1,4 +1,11 @@
 export const webMethods = {
+  'todo.state': ['todo', 'getState'],
+  'todo.save': ['todo', 'save'],
+  'todo.remove': ['todo', 'remove'],
+  'todo.read': ['todo', 'markRead'],
+  'todo.refresh': ['todo', 'refresh'],
+  'chaoxing.calendar': ['chaoxing', 'calendar'],
+  'chaoxing.syncCalendar': ['chaoxing', 'syncCalendar'],
   'appearance.theme': ['settings', 'getTheme'],
   'appearance.fontSize': ['settings', 'getFontSize'],
   'appearance.zoom': ['settings', 'getZoom'],

@@ -8,6 +8,7 @@ import {
   Settings,
   X,
   CircleCheck,
+  SquareCheckBig,
 } from 'lucide-react';
 import { appFrame, appMain, chromeIconButton, navIcon, navRow } from '../navigation/nav-styles';
 import { navEntries } from '../navigation/entries';
@@ -17,6 +18,8 @@ import { cn } from '../lib/utils';
 
 export type WebPage =
   | 'home'
+  | 'todo'
+  | 'mail'
   | 'campus'
   | 'timetable'
   | 'classroom'
@@ -55,7 +58,7 @@ export function WebShell({
     onNavigate(next);
     setMobileOpen(false);
   }
-  const entries = navEntries.filter((entry) => entry.id !== 'mail' && entry.id !== 'shuiyuan');
+  const entries = navEntries.filter((entry) => entry.id !== 'shuiyuan');
   return (
     <div
       className={appFrame}
@@ -123,7 +126,9 @@ export function WebShell({
             </>
           )}
         </div>
-        <span className="px-2 text-xs text-ink-3">网页端</span>
+        <span className="px-2 text-xs text-ink-3">
+          {import.meta.env.VITE_DELA_DEMO === 'true' ? '交互演示 · 全部为示例数据' : '网页端'}
+        </span>
       </header>
       {narrow && mobileOpen && (
         <button
@@ -145,6 +150,15 @@ export function WebShell({
       >
         <div className="flex h-11 shrink-0 items-center justify-between px-2">
           <span className="text-13 font-semibold tracking-tight">JLU Dela</span>
+          <button
+            aria-label="学习日历"
+            title="学习日历"
+            className={chromeIconButton}
+            onClick={() => navigate('todo')}
+            disabled={!connected}
+          >
+            <SquareCheckBig className="size-4" />
+          </button>
           {narrow && (
             <button
               aria-label="关闭侧边栏"
@@ -182,8 +196,22 @@ export function WebShell({
         <div className="min-h-0 flex-1" />
         <p role="status" className="flex items-center gap-2 px-2 py-3 text-xs text-ink-3">
           <CircleCheck className="size-3.5" />
-          {connected ? '已连接本机 Dela' : '等待本机连接'}
+          {import.meta.env.VITE_DELA_DEMO === 'true'
+            ? '公开演示 · 刷新后重置'
+            : connected
+              ? '已连接本机 Dela'
+              : '等待本机连接'}
         </p>
+        {import.meta.env.VITE_DELA_DEMO === 'true' && (
+          <a
+            className={navRow(false)}
+            href="https://github.com/goya4140/JLU-Dela/releases"
+            target="_blank"
+            rel="noreferrer"
+          >
+            下载桌面端
+          </a>
+        )}
         <button
           aria-current={page === 'settings' ? 'page' : undefined}
           className={navRow(page === 'settings')}

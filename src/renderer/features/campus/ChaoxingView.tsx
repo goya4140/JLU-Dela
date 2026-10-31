@@ -17,14 +17,27 @@ import { errorText } from '../../workspace/store';
 
 export type ChaoxingPageApi = Omit<ChaoxingApi, 'importFile' | 'calendar' | 'syncCalendar'> &
   Partial<Pick<ChaoxingApi, 'importFile'>>;
-export function ChaoxingView({ api = window.dela?.chaoxing }: { api?: ChaoxingPageApi } = {}) {
+export function ChaoxingView({
+  api = window.dela?.chaoxing,
+  onOpenWork = (courseId: string, workId: string) =>
+    useNavigationStore.getState().openWork(courseId, workId),
+}: {
+  api?: ChaoxingPageApi;
+  onOpenWork?: ((courseId: string, workId: string) => void) | null;
+} = {}) {
   return api ? (
-    <ChaoxingPage api={api} />
+    <ChaoxingPage api={api} onOpenWork={onOpenWork} />
   ) : (
     <DesktopOnlyNotice title="学习通" description="请在桌面应用中登录并同步课程资料与作业。" />
   );
 }
-function ChaoxingPage({ api }: { api: ChaoxingPageApi }) {
+function ChaoxingPage({
+  api,
+  onOpenWork,
+}: {
+  api: ChaoxingPageApi;
+  onOpenWork: ((courseId: string, workId: string) => void) | null;
+}) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
@@ -334,11 +347,10 @@ function ChaoxingPage({ api }: { api: ChaoxingPageApi }) {
                         size="sm"
                         variant="outline"
                         className="justify-self-start"
-                        onClick={() =>
-                          course && useNavigationStore.getState().openWork(course.id, row.id)
-                        }
+                        disabled={!onOpenWork}
+                        onClick={() => course && onOpenWork?.(course.id, row.id)}
                       >
-                        在工作台打开作业
+                        {onOpenWork ? '在工作台打开作业' : '作业原网页请在桌面端打开'}
                       </Button>
                     ) : (
                       <p className="text-xs text-ink-3">请在桌面 App 中打开作业原网页。</p>

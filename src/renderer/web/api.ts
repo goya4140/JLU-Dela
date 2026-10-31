@@ -1,5 +1,6 @@
 import type { WebMethod } from '../../shared/web';
 export async function connectWeb() {
+  if (import.meta.env.VITE_DELA_DEMO === 'true') return;
   const token = new URLSearchParams(location.hash.slice(1)).get('connect');
   if (!token) return;
   const response = await fetch('/api/connect', {
@@ -12,6 +13,10 @@ export async function connectWeb() {
   history.replaceState(null, '', location.pathname);
 }
 export async function webCall<T>(method: WebMethod, args: unknown[] = []): Promise<T> {
+  if (import.meta.env.VITE_DELA_DEMO === 'true') {
+    const { demoCall } = await import('./demo');
+    return structuredClone(await demoCall(method, args)) as T;
+  }
   const response = await fetch('/api/invoke', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

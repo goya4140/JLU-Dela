@@ -1,14 +1,22 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { GraduationCap } from 'lucide-react';
+import { TodoView } from '../features/todo/TodoView';
+import { CampusView } from '../features/campus/CampusView';
+import { ToastHost } from '../app/toasts';
 import { LearningView } from '../features/campus/LearningView';
 import { ChaoxingView } from '../features/campus/ChaoxingView';
 import { SchoolNoticesView } from '../features/campus/SchoolNoticesView';
 import { DesktopOnlyNotice } from '../components/ui/desktop-only-notice';
-import { navEntries } from '../navigation/entries';
 import { Button } from '../components/ui/button';
 import { connectWeb, webCall } from './api';
-import { appearanceApi, learningApi, chaoxingApi, noticesApi } from './platforms';
+import {
+  appearanceApi,
+  learningApi,
+  chaoxingApi,
+  noticesApi,
+  todoApi,
+  calendarApi,
+} from './platforms';
 import { useAppearance } from '../app/theme';
 import { WebShell, type WebPage } from './WebShell';
 import { WebTimetable } from './WebTimetable';
@@ -83,9 +91,21 @@ function WebApp() {
       ) : (
         <>
           <WebAppearance />
+          <ToastHost />
           {page === 'home' && <WebChat draft={draft} onDraft={setDraft} />}
           {page === 'timetable' && <WebTimetable />}
-          {page === 'chaoxing' && <ChaoxingView api={chaoxingApi} />}
+          {page === 'chaoxing' && <ChaoxingView api={chaoxingApi} onOpenWork={null} />}
+          {page === 'todo' && (
+            <TodoView
+              api={todoApi}
+              calendarApi={calendarApi}
+              onOpenTimetable={() => navigate('timetable')}
+              onOpenWork={null}
+              onOpenLink={(url) => {
+                if (/^https?:\/\//.test(url)) window.open(url, '_blank', 'noopener,noreferrer');
+              }}
+            />
+          )}
           {page === 'notifications' && <SchoolNoticesView api={noticesApi} />}
           {page === 'classroom' && (
             <LearningView
@@ -106,33 +126,17 @@ function WebApp() {
             />
           )}
           {page === 'campus' && (
-            <div className="min-h-0 flex-1 overflow-y-auto bg-surface">
-              <div className="mx-auto grid w-full max-w-4xl gap-6 px-6 py-8 md:px-10">
-                <header>
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="size-5 text-ink-3" />
-                    <h1 className="text-xl font-semibold">吉大校园</h1>
-                  </div>
-                  <p className="mt-1 text-xs text-ink-3">课程、资料与学校通知</p>
-                </header>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {navEntries
-                    .filter((entry) =>
-                      ['timetable', 'classroom', 'chaoxing', 'notifications'].includes(entry.id),
-                    )
-                    .map(({ id, label, icon: Icon }) => (
-                      <button
-                        key={id}
-                        className="grid min-w-0 gap-3 rounded-xl bg-field p-5 text-left hover:bg-hover"
-                        onClick={() => navigate(id as WebPage)}
-                      >
-                        <Icon className="size-5 text-ink-3" />
-                        <h2 className="text-base font-semibold">{label}</h2>
-                      </button>
-                    ))}
-                </div>
-              </div>
-            </div>
+            <CampusView
+              onNavigate={navigate}
+              onOpenGuide={() => navigate('settings')}
+              onOpenSources={() => navigate('sources')}
+            />
+          )}
+          {page === 'mail' && (
+            <DesktopOnlyNotice
+              title="吉大邮箱"
+              description="邮箱账户与邮件暂时请在本机 Dela 中管理。"
+            />
           )}
           {(page === 'knowledge' || page === 'sources') && (
             <DesktopOnlyNotice

@@ -11,6 +11,25 @@ import { webMethods, type WebMethod } from '../../shared/web';
 const bodySchema = z.object({ method: z.string(), args: z.array(z.unknown()).max(4) }).strict();
 const ids = z.string().min(1).max(200);
 export function webArguments(method: WebMethod, args: unknown[]): unknown[] {
+  if (method === 'todo.read' || method === 'todo.remove') return z.tuple([ids]).parse(args);
+  if (method === 'todo.save')
+    return z
+      .tuple([
+        z
+          .object({
+            id: ids.optional(),
+            title: z.string().trim().min(1).max(200),
+            notes: z.string().max(20000).optional(),
+            dueAt: z.string().datetime({ offset: true }).nullable().optional(),
+            completed: z.boolean().optional(),
+            calendar: z.boolean().optional(),
+            color: z
+              .enum(['rose', 'peach', 'sand', 'sage', 'teal', 'blue', 'lilac', 'slate'])
+              .optional(),
+          })
+          .strict(),
+      ])
+      .parse(args);
   if (method === 'learning.saveNote')
     return z
       .tuple([z.string().regex(/^[a-f0-9]{48}$/), z.string().max(200000), z.string().length(64)])

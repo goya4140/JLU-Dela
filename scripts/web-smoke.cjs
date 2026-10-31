@@ -12,6 +12,7 @@ app.whenReady().then(async () => {
   let savedNote = '# 示例学习笔记',
     revision = 'a'.repeat(64);
   let appearance = { theme: 'light', fontSize: 16, zoom: 1 };
+  let personal = [];
   const syncedAt = new Date().toISOString();
   const monday = new Date();
   monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
@@ -70,6 +71,44 @@ app.whenReady().then(async () => {
       });
     },
     invoke: async (method, args) => {
+      if (method === 'todo.state' || method === 'todo.refresh' || method === 'todo.read')
+        return { items: personal, connected: false, syncing: false, syncedAt: null, error: null };
+      if (method === 'todo.save') {
+        const input = args[0];
+        personal = [
+          {
+            id: 'personal-fixture',
+            source: 'personal',
+            title: input.title,
+            notes: input.notes || '',
+            dueAt: input.dueAt || null,
+            status: input.completed ? 'completed' : 'pending',
+            calendar: input.calendar || false,
+            readAt: syncedAt,
+          },
+        ];
+        return { items: personal, connected: false, syncing: false, syncedAt: null, error: null };
+      }
+      if (method === 'chaoxing.calendar' || method === 'chaoxing.syncCalendar') {
+        const data = {
+          courses: [{ id: '1:2', name: '示例课程', syncedAt }],
+          coursesSyncedAt: syncedAt,
+          works: [
+            {
+              id: 'calendar-work',
+              courseId: '1:2',
+              courseName: '示例课程',
+              title: '示例日历作业',
+              timing: '剩余两天',
+              status: '待交',
+              deadline: null,
+              syncedAt,
+            },
+          ],
+        };
+        return method.endsWith('syncCalendar') ? { data, failures: [] } : data;
+      }
+
       if (method === 'appearance.theme') return appearance.theme;
       if (method === 'appearance.fontSize') return appearance.fontSize;
       if (method === 'appearance.zoom') return appearance.zoom;
@@ -199,7 +238,16 @@ app.whenReady().then(async () => {
   });
   window.setMinimumSize(360, 500);
   window.webContents.setBackgroundThrottling(false);
-  const js = (source) => window.webContents.executeJavaScript(source);
+  const js = (source) =>
+    window.webContents.executeJavaScript(source).catch(async (error) => {
+      throw new Error(
+        error.message +
+          '\n' +
+          source +
+          '\n' +
+          (await window.webContents.executeJavaScript('document.body.innerText')),
+      );
+    });
   const wait = async (source) => {
     const end = Date.now() + 15000;
     while (Date.now() < end) {
@@ -277,6 +325,38 @@ app.whenReady().then(async () => {
       `document.documentElement.classList.contains('light')&&document.documentElement.style.fontSize==='16px'`,
     );
     await capture('home');
+    await navigate('学习日历');
+    await wait(`document.body.textContent.includes('示例日历作业')`);
+    await click('列表');
+    await capture('study-calendar');
+    await click('新建待办');
+    await js(
+      `(()=>{const input=document.querySelector('input[placeholder="例如：准备小组展示"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'网页个人待办');input.dispatchEvent(new Event('input',{bubbles:true}));})()`,
+    );
+    await js(`document.querySelector('form').requestSubmit()`);
+    await wait(
+      `document.body.textContent.includes('网页个人待办')&&!document.querySelector('form')`,
+    );
+    assert.equal(personal[0]?.title, '网页个人待办');
+    await js(
+      `Array.from(document.querySelectorAll('button')).find(b=>b.getAttribute('aria-label')?.startsWith('个人待办：网页个人待办')).click()`,
+    );
+    await click('标为完成');
+    await wait(`document.body.textContent.includes('重新打开')`);
+    assert.equal(personal[0].status, 'completed');
+    await click('重新打开');
+    await wait(`document.body.textContent.includes('标为完成')`);
+    await click('编辑');
+    await wait(`!!document.querySelector('form')`);
+    await js(
+      `(()=>{const input=document.querySelector('input[placeholder="例如：准备小组展示"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'修改后的网页待办');input.dispatchEvent(new Event('input',{bubbles:true}));})()`,
+    );
+    await js(`document.querySelector('form').requestSubmit()`);
+    await wait(
+      `!document.querySelector('form')&&document.body.textContent.includes('修改后的网页待办')`,
+    );
+    assert.equal(personal[0].title, '修改后的网页待办');
+
     await navigate('课表');
     await wait(`document.body.textContent.includes('示例课表课程')`);
     await capture('timetable');
@@ -365,7 +445,7 @@ app.whenReady().then(async () => {
     assert.equal(await js(`typeof window.dela`), 'undefined');
     assert.equal(window.webContents.getLastWebPreferences().preload, undefined);
     console.log(
-      'Web smoke passed: shared desktop course/notice views, week/month calendar, navigation drawer, video, Markdown notes, dirty-note guard, inline AI quote and four viewport widths. Synthetic data; no school or model requests.',
+      'Web smoke passed: shared desktop learning calendar and todo editing, course/notice views, week/month calendar, navigation drawer, video, Markdown notes, dirty-note guard, inline AI quote and four viewport widths. Synthetic data; no school or model requests.',
     );
     window.destroy();
     service.server.close();

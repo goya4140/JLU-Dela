@@ -1,7 +1,13 @@
-import { StudyCalendar } from './StudyCalendar';
+import { StudyCalendar, type StudyCalendarApi } from './StudyCalendar';
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
-import type { CalendarEventColor, TodoItem, TodoSaveInput, TodoState } from '../../../shared/api';
+import type {
+  CalendarEventColor,
+  TodoItem,
+  TodoSaveInput,
+  TodoState,
+  TodoApi,
+} from '../../../shared/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Switch } from '@/components/ui/beautifului/atoms/Switch';
@@ -169,7 +175,22 @@ function TodoComposer({
   );
 }
 
-export function TodoView({ request }: { request?: { id: string } }) {
+export type TodoPageApi = Omit<TodoApi, 'onUpdate'> & Partial<Pick<TodoApi, 'onUpdate'>>;
+export function TodoView({
+  request,
+  api = window.dela?.todo,
+  calendarApi,
+  onOpenTimetable,
+  onOpenWork,
+  onOpenLink,
+}: {
+  request?: { id: string };
+  api?: TodoPageApi;
+  calendarApi?: StudyCalendarApi;
+  onOpenTimetable?: () => void;
+  onOpenWork?: ((courseId: string, workId: string) => void) | null;
+  onOpenLink?: (url: string) => void;
+}) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
@@ -182,11 +203,10 @@ export function TodoView({ request }: { request?: { id: string } }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   useEffect(() => {
-    const api = window.dela?.todo;
     if (!api) return;
     let active = true;
     let updated = false;
-    const off = api.onUpdate((value) => {
+    const off = api.onUpdate?.((value) => {
       updated = true;
       if (active) setState(value);
     });
@@ -200,25 +220,25 @@ export function TodoView({ request }: { request?: { id: string } }) {
       });
     return () => {
       active = false;
-      off();
+      off?.();
     };
-  }, []);
+  }, [api]);
   useEffect(() => {
     if (!request) return;
     setCreating(false);
     setEditingId(null);
     setDetailId(request.id);
-    void window.dela?.todo.markRead(request.id).catch((reason: unknown) => {
+    void api?.markRead(request.id).catch((reason: unknown) => {
       showToast({ variant: 'error', title: '标记已读失败', description: errorText(reason) });
     });
-  }, [request]);
+  }, [request, api]);
   const run = async (
     operation: () => Promise<TodoState>,
     options?: { after?: () => void; failTitle?: string },
   ) => {
     setBusy(true);
     try {
-      await operation();
+      setState(await operation());
       options?.after?.();
     } catch (reason) {
       showToast({
@@ -234,7 +254,7 @@ export function TodoView({ request }: { request?: { id: string } }) {
   const editing = state?.items.find((item) => item.id === editingId);
   const openItem = (id: string) => {
     setDetailId(id);
-    void run(() => window.dela!.todo.markRead(id), { failTitle: '标记已读失败' });
+    void run(() => api!.markRead(id), { failTitle: '标记已读失败' });
   };
   return (
     <div className="relative mx-auto flex h-full w-full max-w-6xl flex-col overflow-hidden px-6 py-6 max-md:px-4">
@@ -244,6 +264,9 @@ export function TodoView({ request }: { request?: { id: string } }) {
         </p>
       )}
       <StudyCalendar
+        api={calendarApi}
+        onOpenTimetable={onOpenTimetable}
+        onOpenWork={onOpenWork}
         now={now}
         todos={state?.items ?? []}
         onOpenTodo={openItem}
@@ -255,6 +278,7 @@ export function TodoView({ request }: { request?: { id: string } }) {
       />
       {detail && (
         <TodoDetail
+          busy={busy}
           item={detail}
           now={now}
           onClose={() => setDetailId(null)}
@@ -263,14 +287,14 @@ export function TodoView({ request }: { request?: { id: string } }) {
             setEditingId(detail.id);
           }}
           onDelete={() =>
-            void run(() => window.dela!.todo.remove(detail.id), {
+            void run(() => api!.remove(detail.id), {
               failTitle: '删除待办失败',
             })
           }
           onToggleCompleted={() => {
             if (!busy)
               void run(() =>
-                window.dela!.todo.save({
+                api!.save({
                   id: detail.id,
                   title: detail.title,
                   completed: detail.status !== 'completed',
@@ -278,7 +302,9 @@ export function TodoView({ request }: { request?: { id: string } }) {
               );
           }}
           onOpenLink={(url) =>
-            void window.dela?.workspace.openLink(url).catch((reason: unknown) =>
+            void (
+              onOpenLink ? Promise.resolve(onOpenLink(url)) : window.dela?.workspace.openLink(url)
+            )?.catch((reason: unknown) =>
               showToast({
                 variant: 'error',
                 title: '打开链接失败',
@@ -300,14 +326,14 @@ export function TodoView({ request }: { request?: { id: string } }) {
           onDelete={
             editing
               ? () =>
-                  void run(() => window.dela!.todo.remove(editing.id), {
+                  void run(() => api!.remove(editing.id), {
                     after: () => setEditingId(null),
                     failTitle: '删除待办失败',
                   })
               : undefined
           }
           onSave={(input) =>
-            void run(() => window.dela!.todo.save(input), {
+            void run(() => api!.save(input), {
               after: () => {
                 setCreating(false);
                 setEditingId(null);

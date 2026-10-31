@@ -16,6 +16,7 @@
   <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-mac-arm64.dmg"><strong>↓ 下载 macOS DMG</strong></a> ·
   <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-win-x64-setup.exe"><strong>↓ 下载 Windows 安装包</strong></a> ·
   <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.9">全部下载 / 校验值</a> ·
+  <a href="https://goya4140.github.io/JLU-Dela/">网页交互演示</a> ·
   <a href="docs/install-macos.md">安装说明</a> ·
   <a href="docs/user-guide.md">使用指南</a> ·
   <a href="https://github.com/goya4140/JLU-Dela/issues">反馈</a>
