@@ -44,6 +44,15 @@ ipcMain.handle = (channel, handler) =>
     }
     if (channel === 'mail:sync') {
       mailCalls.push(channel);
+      args[0].sender.send('mail:sync-status', {
+        phase: 'idle',
+        folderPath: null,
+        processed: 0,
+        total: null,
+        error: null,
+        startedAt: syncedAt,
+        finishedAt: syncedAt,
+      });
       return;
     }
     if (channel === 'timetable:get-state')
@@ -342,7 +351,13 @@ async function run(window) {
   await click('完成配置');
   await wait('!!document.querySelector("[aria-label=使用指南正文]")');
   assert.equal(await js('localStorage.getItem("dela.onboarding.completed")'), '1');
+  await click('打开邮箱');
+  await wait(`document.querySelector('[aria-label="同步邮件"]')?.title.includes('上次同步')`);
+  assert.equal(
+    await js(`document.querySelector('[aria-label="同步邮件"]').title.includes('尚未同步')`),
+    false,
+  );
   console.log(
-    'Setup guide smoke passed: local-only status, ordered JLU connection, separate Chaoxing, network errors preserve cache, interrupted authentication stops batch, recovery retries, revisit, four viewport widths, first-run steps, inline mail configuration, failed login retry, busy navigation protection, connected mail before first sync, model skip, resume and completion opening the guide. Synthetic IPC fixtures and consent record in an isolated profile only; no school or model requests.',
+    'Setup guide smoke passed: local-only status, ordered JLU connection, separate Chaoxing, network errors preserve cache, interrupted authentication stops batch, recovery retries, revisit, four viewport widths, first-run steps, inline mail configuration, failed login retry, busy navigation protection, connected mail before first sync, model skip, resume and completion opening the guide and mail completion timestamps. Synthetic IPC fixtures and consent record in an isolated profile only; no school or model requests.',
   );
 }

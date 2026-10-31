@@ -417,7 +417,18 @@ function DesktopMailView({
           showToast({ variant: 'error', title: '邮箱加载失败', description: errorText(reason) });
       });
     const unsubscribe = dela.mail.onSyncStatus((status) => {
-      setState((prev) => (prev ? { ...prev, sync: status } : prev));
+      setState((prev) =>
+        prev
+          ? {
+              ...prev,
+              sync: status,
+              account:
+                prev.account && status.phase === 'idle' && status.finishedAt
+                  ? { ...prev.account, lastSyncedAt: status.finishedAt }
+                  : prev.account,
+            }
+          : prev,
+      );
       if (status.phase === 'idle' && status.finishedAt) void refreshAll();
     });
     return () => {
