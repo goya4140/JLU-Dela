@@ -73,6 +73,6 @@ pnpm dev
 
 ## 来源与许可
 
-基于上游提交 [`ad571996817bfb345fcbb372a7f2edff1080d885`](https://github.com/Chang-Yo/Dela/commit/ad571996817bfb345fcbb372a7f2edff1080d885) 初始化，保留 Git 历史及 [GPL-3.0-or-later](LICENSE) 许可。Dela 的代码、图标和其他素材归其原作者所有，当前界面暂沿用 Dela 标识并注明来源。
+基于上游提交 [`ad571996817bfb345fcbb372a7f2edff1080d885`](https://github.com/Chang-Yo/Dela/commit/ad571996817bfb345fcbb372a7f2edff1080d885) 初始化，保留 Git 历史及 [GPL-3.0-or-later](LICENSE) 许可。保留的上游代码、图标和其他素材归其原作者所有。当前应用采用原创折纸天鹅图标，保留上游来源说明。
 
 [贡献指南](CONTRIBUTING.md) · [问题反馈](https://github.com/goya4140/JLU-Dela/issues) · [使用说明](docs/terms.md) · [隐私说明](docs/privacy.md)

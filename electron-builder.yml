@@ -2,7 +2,7 @@ appId: io.github.goya4140.jlu-dela
 productName: JLU Dela
 executableName: JLU-Dela
 artifactName: '${productName}-${version}-${os}-${arch}.${ext}'
-icon: assets/Dela_white_bg.png
+icon: assets/JLU-Dela-white.png
 asar: true
 directories:
   output: dist
@@ -11,8 +11,8 @@ files:
   - out/preload/**/*
   - out/renderer/**/*
   - package.json
-  - assets/Dela_white_bg.png
-  - assets/Dela_black_bg.png
+  - assets/JLU-Dela-white.png
+  - assets/JLU-Dela-black.png
   # 渲染层依赖已移入 devDependencies，由 Vite 打进 out/；
   # 下面只兜底排除依赖收集中漏进产物或带全平台 prebuild 的部分。
   # esbuild 是 Vite 的构建期工具，electron-builder 的 pnpm 依赖收集会漏收它。
@@ -73,7 +73,7 @@ win:
       arch:
         - x64
 mac:
-  icon: out/main/icons/Dela_white_bg.png
+  icon: out/main/icons/JLU-Dela-white.png
   category: public.app-category.productivity
   # 吉大版使用本仓库的 GitHub Releases；正式自动更新待签名与公证后验证。
   publish:
