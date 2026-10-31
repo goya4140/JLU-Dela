@@ -6,6 +6,9 @@ import { mkdirSync } from 'node:fs';
 let database: Database.Database | null = null;
 
 const schema: string[] = [
+  `CREATE TABLE IF NOT EXISTS knowledge_roots (id TEXT PRIMARY KEY, name TEXT NOT NULL, path TEXT NOT NULL UNIQUE)`,
+  `CREATE TABLE IF NOT EXISTS knowledge_courses (id TEXT PRIMARY KEY, root_id TEXT NOT NULL REFERENCES knowledge_roots(id), name TEXT NOT NULL, relative_path TEXT NOT NULL, session_id TEXT, UNIQUE(root_id,relative_path))`,
+  `CREATE TABLE IF NOT EXISTS knowledge_documents (course_id TEXT NOT NULL REFERENCES knowledge_courses(id), path TEXT NOT NULL, revision TEXT NOT NULL, pages TEXT NOT NULL, PRIMARY KEY(course_id,path))`,
   // 邮箱缓存（账户/文件夹/近端邮件窗口）。
   `CREATE TABLE IF NOT EXISTS mail_accounts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

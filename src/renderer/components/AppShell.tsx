@@ -762,6 +762,7 @@ export function AppShell({
               view === 'timetable' ||
               view === 'classroom' ||
               view === 'chaoxing' ||
+              view === 'knowledge' ||
               view === 'shuiyuan'
                 ? view
                 : null

@@ -22,6 +22,7 @@ import { runMigrations } from './migrations';
 import { registerMailIpc, hasMailComposer } from './mail/ipc';
 import { registerTimetableIpc } from './timetable/ipc';
 import { registerJluPlatformsIpc } from './jlu/ipc';
+import { registerKnowledgeIpc } from './knowledge/ipc';
 import { registerChaoxingIpc } from './chaoxing/ipc';
 import { registerVsjtuIpc } from './vsjtu/ipc';
 import { attachContextMenu, checkWorkspaceSender } from './ipc';
@@ -228,6 +229,7 @@ app
     registerTimetableIpc();
     registerJluPlatformsIpc();
     registerChaoxingIpc();
+    registerKnowledgeIpc();
     registerVsjtuIpc();
     registerCanvasIpc();
     registerShuiyuanIpc();

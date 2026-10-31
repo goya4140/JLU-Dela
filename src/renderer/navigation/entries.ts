@@ -20,6 +20,7 @@ export type NavEntryId =
   | 'timetable'
   | 'classroom'
   | 'chaoxing'
+  | 'knowledge'
   | 'shuiyuan'
   | 'campus'
   | 'notifications';
@@ -30,6 +31,7 @@ export const navEntries: Array<{
   icon: typeof Mail | typeof ShuiyuanIcon;
 }> = [
   { id: 'campus', label: '吉大校园', icon: GraduationCap },
+  { id: 'knowledge', label: '知识库', icon: BookOpen },
   { id: 'sources', label: '课程资料', icon: FolderOpen },
   { id: 'timetable', label: '课表', icon: CalendarDays },
   { id: 'classroom', label: '学在吉大', icon: MonitorPlay },

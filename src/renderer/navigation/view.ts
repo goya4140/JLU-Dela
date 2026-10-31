@@ -19,6 +19,7 @@ export type AppView =
   | 'timetable'
   | 'classroom'
   | 'chaoxing'
+  | 'knowledge'
   | 'shuiyuan'
   | 'todo'
   | 'notifications'

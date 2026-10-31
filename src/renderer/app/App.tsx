@@ -38,6 +38,7 @@ import { errorText, useWorkspaceStore } from '../workspace/store';
 import { showToast } from './toasts';
 import { useNavigationStore, type MobileDrawer } from '../navigation/view';
 import { useNotifications } from './notifications';
+import { KnowledgeView } from '../features/knowledge/KnowledgeView';
 import { ChaoxingView } from '../features/campus/ChaoxingView';
 import { useAppearance } from './theme';
 import { WorkbenchShell } from '../workbench/WorkbenchShell';
@@ -346,6 +347,7 @@ export default function App() {
                   {view === 'shuiyuan' && <ShuiyuanView />}
                   {view === 'classroom' && <LearningView />}
                   {view === 'chaoxing' && <ChaoxingView />}
+                  {view === 'knowledge' && <KnowledgeView />}
                   {view === 'todo' && <TodoView request={todoRequest ?? undefined} />}
                   {view === 'notifications' && <SchoolNoticesView />}
                   {view === 'settings' && (

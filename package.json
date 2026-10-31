@@ -1,6 +1,6 @@
 {
   "name": "jlu-dela",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0-alpha.6",
   "private": true,
   "description": "A local-first Jilin University undergraduate workspace, forked from Dela",
   "author": "JLU Dela contributors; upstream Dela contributors",
@@ -46,7 +46,8 @@
     "smoke:jlu": "electron scripts/jlu-smoke.cjs",
     "smoke:timetable": "electron scripts/timetable-smoke.cjs",
     "smoke:platforms": "electron scripts/platforms-smoke.cjs",
-    "smoke:chaoxing": "electron scripts/chaoxing-smoke.cjs"
+    "smoke:chaoxing": "electron scripts/chaoxing-smoke.cjs",
+    "smoke:knowledge": "electron scripts/knowledge-smoke.cjs"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.1.0",

@@ -15,10 +15,12 @@ import { tool } from './domain/shared';
 import type { AgentTool } from './domain/shared';
 import { assertShuiyuanEnabled, experimentEnabled } from '../settings/prefs';
 import { jluServices } from '../../shared/jlu';
+import { knowledgeTools } from './domain/knowledge';
 import { jluTools } from './domain/jlu';
 
 // 这些是 shell 的业务命令，不常驻模型工具表；复用应用已有的缓存、登录与操作边界。
 const commandDomains = [
+  { name: 'knowledge', description: '检索本地课程知识库与来源片段', commands: knowledgeTools },
   { name: 'jlu', description: '查询电子校务、学在吉大与学习通本地缓存', commands: jluTools },
   { name: 'canvas', description: '查询、同步 Canvas 课程与资料', commands: canvasTools },
   { name: 'classroom', description: '读取与下载课堂视频语音文稿', commands: classroomTools },

@@ -2,10 +2,11 @@
 
 面向吉林大学本科生的本地学习工作台，基于 [Chang-Yo/Dela](https://github.com/Chang-Yo/Dela) 的公开 Fork。非吉林大学官方产品。
 
-**当前版本：`0.1.0-alpha.5`，优先 macOS Apple Silicon。**
+**当前版本：`0.1.0-alpha.6`，优先 macOS Apple Silicon。**
 
 ## 现在能做什么
 
+- 「知识库」提供本地课程试点：原位连接文件夹、登记课程、阅读资料、检索 Markdown/TXT 正文和手动提取的 PDF 正文；PDF 命中可定位页码，引用进入 AI 草稿，新笔记保存为课程内的 Markdown。
 - 继承 Dela 的本地项目、资料导入与预览、笔记、终端和 Agent 工作台；模型服务需要自行配置。
 - 「课表」已实现吉大教务接入预览：本人在独立学校登录窗口完成认证后，读取个人课表、校历、节次与调停课信息，存入本地缓存并供周/月日历和 Agent 查询。
 - 已用本人登录后的真实会话验证课表同步，以及彻底退出重开后的再次联网同步。自动化检查使用人工数据；其他账号、系统重启和长期会话过期尚未验收。
@@ -31,7 +32,10 @@ pnpm dev
 | `pnpm smoke:timetable` | 人工数据验证登录、同步、日历与失败保留缓存    |
 | `pnpm smoke:platforms` | 人工数据验证通知、视频、字幕、笔记与 AI 草稿  |
 | `pnpm smoke:chaoxing`  | 人工数据验证独立会话、目录、作业与文件导入    |
+| `pnpm smoke:knowledge` | 人工数据验证原位课程、PDF 检索、引用与笔记    |
 | `pnpm package:mac`     | 构建 Apple Silicon 开发预览 DMG / ZIP，不发布 |
+
+知识库目前按文件名、Markdown/TXT（≤ 2 MB）正文和已提取的 PDF 文本做直接匹配，不含语义检索、双链、OCR 或 Office 正文索引。PDF 提取在本机执行，每份限 40 MB、300 页；原文件更新后旧 PDF 索引失效。连接与索引不调用模型；点击发送才使用你配置的模型。
 
 开发预览包未配置 Developer ID 签名与公证，暂不作为正式发行版。Intel Mac 尚未验证。推送和 PR 自动运行 macOS CI；需要安装包时，手动运行 Actions 的 **macOS development packages**，从对应运行的 Artifacts 下载。该工作流不自动发布 GitHub Release。
 
