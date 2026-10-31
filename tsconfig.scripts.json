@@ -3,6 +3,7 @@
   "compilerOptions": { "lib": ["ES2023"], "types": ["node"] },
   "include": [
     "scripts/build-helper.ts",
+    "scripts/capture-showcase.ts",
     "scripts/dev.ts",
     "scripts/web.ts",
     "scripts/document-runtime-smoke.ts",

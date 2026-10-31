@@ -73,6 +73,7 @@ win:
       arch:
         - x64
 mac:
+  artifactName: 'JLU-Dela-${version}-mac-${arch}.${ext}'
   icon: out/main/icons/JLU-Dela-white.png
   category: public.app-category.productivity
   # 吉大版使用本仓库的 GitHub Releases；正式自动更新待签名与公证后验证。

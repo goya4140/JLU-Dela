@@ -1,6 +1,6 @@
 {
   "name": "jlu-dela",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "private": true,
   "description": "A local-first study workspace for Jilin University undergraduates",
   "author": "JLU Dela contributors; upstream Dela contributors",
@@ -33,6 +33,7 @@
     "package:dir": "node scripts/prepare-runtime.ts && pnpm build && electron-builder --dir --publish never",
     "package:dist": "node scripts/prepare-runtime.ts && pnpm build && electron-builder --publish never",
     "smoke": "electron . --smoke-test",
+    "demo:capture": "node scripts/run-ts-smoke.ts capture-showcase",
     "smoke:runtime": "node scripts/run-ts-smoke.ts runtime-smoke",
     "smoke:desktop": "electron scripts/desktop-smoke.cjs",
     "smoke:workspace": "node scripts/run-ts-smoke.ts workspace-smoke",

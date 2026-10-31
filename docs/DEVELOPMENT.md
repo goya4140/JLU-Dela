@@ -331,15 +331,11 @@ pnpm test
 
 ### 发布
 
-推 `v*` tag 触发 `release.yml`：`prepare` 解析 tag 的 SHA 并校验，Windows 与 Mac 并行构建验证，**双方都成功才**上传到草稿 Release 并公开；任一平台失败或等待环境批准都会阻塞发布。含预发布后缀的版本自动标记 prerelease。
+从 main 的已验收提交创建 `v` + `package.json` 版本号的 tag，触发 `release.yml`。当前只发布 macOS Apple Silicon：完成源码检查、业务冒烟、DMG / ZIP 完整性、归档内应用启动及打包后业务验证，才允许发布 GitHub Release。
 
-发布保留两平台测试与产物验证，静态检查只在 Mac 的 `check` 中执行一次。`CI required` 会按路径跳过任务，因此不能用其成功结果替代全部发布检查。
+构建任务只有仓库读取权限；独立发布任务拥有 Releases 写权限，先上传到草稿，再公开全部附件。已公开版本不覆盖安装包，变更须升版。手动运行工作流只生成 Actions 构建产物，不公开 Release。
 
-- tag 必须等于 `v` + `package.json` 版本。
-- 发版前把 `CHANGELOG.md` 的 `## Unreleased` 改成 `## <版本> - <发布日>`。更新内容弹窗只认 `## X.Y.Z - 日期` 分节，留在 `Unreleased` 下的条目会被静默跳过，弹窗不出现。
-- 正式版必须提供 `latest.yml`，包内必须有 `resources/app-update.yml`。
-- **重跑已有 tag**：上传用 `--clobber` 覆盖同名产物。正式分发后不要覆盖重建安装包——CDN 缓存可能与新元数据不一致；程序变更应升版发新 tag。
-- Mac 签名需要在 Environments 里建 `macos-release` 并配置 Developer ID 证书与 Apple 公证凭据。
+发布前为 CHANGELOG 新增对应版本条目。下载附件包括 DMG、ZIP、SHA256SUMS 与 source-commit.txt；主页使用固定版本下载链接。开发预览包尚未做 Developer ID 签名和公证，自动更新未验收，安装方式见 [macOS 安装说明](install-macos.md)。
 
 ## 16. 平台基线
 

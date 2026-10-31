@@ -1,116 +1,140 @@
 <p align="center">
-  <img src="assets/JLU-Dela-white.png" width="96" alt="JLU Dela 折纸天鹅标识" />
+  <img src="assets/JLU-Dela-white.png" width="80" alt="JLU Dela 折纸天鹅标识" />
 </p>
 
 <h1 align="center">JLU Dela</h1>
-
-<p align="center">把课表、课程资料、课堂回放和笔记放在一起。</p>
-<p align="center">面向吉林大学本科生的本地学习工作台 · macOS Apple Silicon 开发预览</p>
+<p align="center"><strong>你的课表、作业、课堂与笔记，一个工作台。</strong></p>
+<p align="center">面向吉林大学本科生 · 本地优先 · macOS Apple Silicon</p>
 
 <p align="center">
-  <a href="docs/user-guide.md">使用指南</a> ·
-  <a href="#开始使用">开始使用</a> ·
-  <a href="CHANGELOG.md">更新日志</a> ·
-  <a href="https://github.com/goya4140/JLU-Dela/issues">反馈问题</a>
+  <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.8"><img alt="开发预览 v0.1.0-alpha.8" src="https://img.shields.io/badge/preview-v0.1.0--alpha.8-8dd8c3?style=flat-square" /></a>
+  <a href="https://github.com/goya4140/JLU-Dela/actions/workflows/ci.yml"><img alt="macOS CI" src="https://github.com/goya4140/JLU-Dela/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
+  <a href="LICENSE"><img alt="GPL-3.0-or-later" src="https://img.shields.io/badge/license-GPL--3.0--or--later-aac5f5?style=flat-square" /></a>
 </p>
+
+<p align="center">
+  <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.8/JLU-Dela-0.1.0-alpha.8-mac-arm64.dmg"><strong>↓ 下载 macOS DMG</strong></a> ·
+  <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.8">Release / ZIP</a> ·
+  <a href="docs/install-macos.md">安装说明</a> ·
+  <a href="docs/user-guide.md">使用指南</a> ·
+  <a href="https://github.com/goya4140/JLU-Dela/issues">反馈</a>
+</p>
+
+![JLU Dela：把一学期，装进工作台](docs/demos/hero.svg)
+
+> **开发预览 · 非吉林大学官方产品。** 当前下载面向 macOS 13+、M 系列芯片，尚未做 Developer ID 签名和公证；Intel Mac 未验证。安装前请查看[说明](docs/install-macos.md)。
+
+## 从「今天学什么」开始
+
+课表、学习通作业和个人待办汇入同一份学习日历。按周安排、按月浏览，或切换列表逐项查看。明确的截止时间显示倒计时；只有相对时间的作业保留同步快照，避免把旧提示误当实时状态。
+
+![学习日历：课程、作业和个人待办的周视图](docs/demos/calendar.png)
+
+## 原网页在左，自己的思考在旁边
+
+从作业卡片直达工作台内的学习通原网页，复用学习通登录。作答和提交交给平台，分屏留给笔记与对话；选中文字后提问，先形成草稿，再由你确认发送。
+
+![作业原网页与 AI 提问草稿并排展示](docs/demos/assignment-workbench.png)
 
 ## 一边看课，一边整理
 
-在应用内播放学在吉大回放，查找字幕、记录笔记，再把当前片段带进 AI 对话草稿。
+在应用内播放学在吉大回放，查找学校字幕、跳转到对应片段，边看边记。把字幕引用放进 AI 草稿，让问题保留课堂上下文。
 
-![回放学习演示：在笔记与字幕引用草稿之间切换](docs/demos/study-flow.gif)
+![回放学习演示：笔记与字幕引用草稿之间切换](docs/demos/study-flow.gif)
 
-> 展示的是应用真实界面，课程、通知、文件和字幕均为人工示例；视频为替代素材，不含真实账号或教学录像。AI 引用先进入草稿，点击发送才调用你配置的模型。
+## 从资料，到自己的知识库
 
-## 你的课程知识库
+已有文件夹可以直接连接，按课程阅读、搜索和创建 Markdown 笔记。材料留在原来的位置，笔记也写进自己的课程目录。
 
-连接已有文件夹，按课程阅读和整理。搜索 Markdown / TXT 正文，手动提取 PDF 文字并定位页码；新笔记以 Markdown 保存在课程目录里。
+![本地课程知识库与 Markdown 阅读](docs/demos/knowledge.png)
 
-![本地课程资料与 Markdown 阅读](docs/demos/knowledge.png)
+文件名及 Markdown / TXT 正文可直接检索；PDF 可手动提取文字、搜索并定位页码。目前尚无双链、语义检索、OCR 或 Office 正文索引。
 
-连接时保留文件原位；编辑和新建笔记会实际写入文件。目前提供关键词检索，尚未提供双链、语义检索、OCR 或 Office 正文索引。
+## 校园信息，也在这里
 
-## 校园信息，集中查看
+| 学习通资料                                       | 课表                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| ![学习通资料目录与导入](docs/demos/chaoxing.png) | ![教务课表周视图](docs/demos/timetable.png)                  |
+| 按需导入学校允许下载的文件，在工作台阅读与引用。 | 复用教务学期、教学周和节次，查看课程与调停课。               |
+| **学校通知**                                     | **吉大邮箱**                                                 |
+| ![电子校务通知](docs/demos/notices.png)          | ![吉大邮箱合成演示](docs/demos/mail.png)                     |
+| 阅读通知正文，查看附件入口；同步失败保留旧缓存。 | 本机收取、检索和阅读邮件，凭据加密保存；同步保留服务器草稿。 |
 
-| 课表                                               | 学习通资料                                               |
-| -------------------------------------------------- | -------------------------------------------------------- |
-| ![吉大教务课表周视图](docs/demos/timetable.png)    | ![学习通资料文件夹与导入入口](docs/demos/chaoxing.png)   |
-| 按学期和教学周查看课程，兼顾调停课与自建事件。     | 查看课程、资料目录和作业状态，按需导入允许下载的文件。   |
-| **学校通知**                                       | **回放与 AI 草稿**                                       |
-| ![电子校务通知列表与正文](docs/demos/notices.png)  | ![引用回放字幕进入 AI 对话草稿](docs/demos/study-ai.png) |
-| 按页读取电子校务通知，缓存正文并打开学校附件入口。 | 搜索学校字幕、跳转播放位置，引用片段后补充问题。         |
+<details>
+<summary>查看各平台的接入范围</summary>
 
-| 来源                                                                   | 已提供的能力                                       |
-| ---------------------------------------------------------------------- | -------------------------------------------------- |
-| [教务系统](https://iedu.jlu.edu.cn/jwapp/sys/emaphome/portal/index.do) | 本科课表、校历、节次、调停课信息                   |
-| [电子校务](https://oa.jlu.edu.cn/defaultroot/login.jsp?access=oa)      | 通知列表、分页、正文与附件入口                     |
-| [学在吉大](https://ilearntec.jlu.edu.cn/studycenter-web/index#/)       | 学期、课程、回放、多画面、学校字幕、笔记与播放进度 |
-| [学习通](https://i.chaoxing.com/base)                                  | 当前课程、普通资料目录、作业状态与文件导入         |
-| [学生邮箱](https://mails.jlu.edu.cn/)                                  | 本机 IMAP/SMTP 收发与检索；教工邮箱改用第三方 IMAP |
+| 来源                                                                   | 已提供的能力                                         |
+| ---------------------------------------------------------------------- | ---------------------------------------------------- |
+| [教务系统](https://iedu.jlu.edu.cn/jwapp/sys/emaphome/portal/index.do) | 本科课表、校历、节次与调停课                         |
+| [电子校务](https://oa.jlu.edu.cn/defaultroot/login.jsp?access=oa)      | 通知列表、分页、正文与附件入口                       |
+| [学在吉大](https://ilearntec.jlu.edu.cn/studycenter-web/index#/)       | 课程回放、多画面、学校字幕、笔记与播放进度           |
+| [学习通](https://i.chaoxing.com/base)                                  | 课程与普通资料目录、文件导入、作业时间及工作台原网页 |
+| [学生邮箱](https://mails.jlu.edu.cn/)                                  | 本机 IMAP/SMTP 收发与检索；教工邮箱使用自定义服务器  |
 
-校园接入均为预览版本，已在本人会话下验证主要流程；其他账号、长期过期和网站改版仍需持续验证。成绩、培养方案、选课和作业提交尚未接入。特殊「教师课件」入口暂不支持；列表及作业时间提示以本次同步范围和时间为准。
+成绩、培养方案和选课尚未接入。学习通特殊「教师课件」暂未适配；作业提交由原网页处理。数据窗口和缓存时间会在功能页显示，不能据此认定已覆盖平台全部内容。
 
-## 开始使用
+</details>
 
-**当前代码版本：`0.1.0-alpha.7`。非吉林大学官方产品。**
+所有截图均来自应用界面。课程、邮件、作业、通知、文件和字幕是合成示例；作业网页与演示视频使用替代内容，不含真实账号、教学录像或私人邮件。
 
-开发预览安装包可通过 [macOS development packages](https://github.com/goya4140/JLU-Dela/actions/workflows/release.yml) 工作流构建，在对应运行的 Artifacts 下载。预览包尚未配置 Developer ID 签名与公证；Intel Mac 尚未验证。
+## 三步开始
 
-首次启动会依次引导你阅读使用须知、配置模型、连接校园平台和选择可选组件。模型与平台配置都可以跳过，未完成的向导会在下次启动继续。已在使用的用户可直接打开 **设置 → 使用指南**。
+1. **安装**：下载 [DMG](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.8/JLU-Dela-0.1.0-alpha.8-mac-arm64.dmg)，拖入 Applications 并启动。
+2. **连接**：按向导连接需要的平台。教务、电子校务与学在吉大尝试复用校园认证；学习通独立登录，邮箱单独配置。
+3. **学习**：同步课表，连接课程资料文件夹，或打开回放。只使用校园与本地功能，可以跳过模型配置。
 
-![使用指南与校园平台连接入口](docs/demos/setup.png)
+使用 AI 时再配置自己的模型服务。资料引用先进入草稿，发送后相关内容才会交给所选服务；费用与数据处理方式由该服务决定。校园连接失败会保留旧数据，不会把网络错误一律当作登录失效。
 
-点击「依次连接吉大平台」，应用先尝试已有校园会话及统一认证，仍需验证时再显示学校页面；是否能免去重复登录由学校决定。学习通使用独立会话，需单独连接。网络或接口错误会保留旧缓存，不会一律当作登录失效。
-
-本地阅读和校园同步不要求配置模型。使用 AI 时填写模型服务的 API Key，资料、对话及工具结果可能进入所选模型服务；API Key 与校园密码不同。详见 [使用指南与须知](docs/user-guide.md)。
+[安装与校验](docs/install-macos.md) · [使用须知与配置](docs/user-guide.md) · [更新日志](CHANGELOG.md) · [隐私说明](docs/privacy.md)
 
 <details>
 <summary>本地开发与验证</summary>
 
-使用 [`.node-version`](.node-version) 指定的 Node.js，以及 [`package.json`](package.json) 指定的 pnpm。
+使用 [.node-version](.node-version) 和 [package.json](package.json) 指定的 Node.js / pnpm。
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-| 命令                        | 用途                                                                                 |
-| --------------------------- | ------------------------------------------------------------------------------------ |
-| `pnpm check`                | 格式、lint、类型检查、构建与单元测试                                                 |
-| `pnpm smoke`                | Electron 基础冒烟                                                                    |
-| `pnpm smoke:timetable`      | 课表读取、认证恢复与失败保留缓存                                                     |
-| `pnpm smoke:platforms`      | 通知、视频、字幕、笔记与 AI 草稿                                                     |
-| `pnpm smoke:chaoxing`       | 独立会话、课程、目录、作业与资料导入                                                 |
-| `pnpm smoke:study-calendar` | 学习日历聚合、作业时间与读取范围                                                     |
-| `pnpm smoke:knowledge`      | 原位课程资料、PDF 检索、引用与笔记                                                   |
-| `pnpm smoke:setup`          | 首次引导、配置恢复与多平台顺序连接                                                   |
-| `pnpm smoke:web`            | 本机网页端与桌面学习数据共用                                                         |
-| `pnpm package:mac`          | 构建 Apple Silicon 开发预览 DMG / ZIP                                                |
-| `pnpm package:dir`          | 构建 Windows 可运行目录（直接双击运行）                                              |
-| `pnpm package:dist`         | 构建 Windows NSIS 安装包（需镜像，见 [Windows 打包与测试](docs/windows-testing.md)） |
+| 命令                        | 用途                                        |
+| --------------------------- | ------------------------------------------- |
+| `pnpm check`                | 格式、lint、类型检查、构建与单元测试        |
+| `pnpm smoke`                | Electron 启动、SQLite、preload 隔离与运行时 |
+| `pnpm smoke:timetable`      | 课表读取、认证恢复与缓存保留                |
+| `pnpm smoke:platforms`      | 通知、回放、字幕、笔记与 AI 草稿            |
+| `pnpm smoke:chaoxing`       | 课程、资料导入与原生作业网页                |
+| `pnpm smoke:study-calendar` | 课表、作业与个人待办聚合                    |
+| `pnpm smoke:knowledge`      | 原位资料、PDF 检索、引用与笔记              |
+| `pnpm smoke:setup`          | 首次引导、邮箱配置与连接恢复                |
+| `pnpm smoke:web`            | 本机网页端与桌面学习数据共用                |
+| `pnpm demo:capture`         | 在隔离环境中生成新版合成演示截图            |
+| `pnpm package:mac`          | 构建 Apple Silicon DMG / ZIP                |
+| `pnpm package:dir`          | 构建 Windows 可运行目录                     |
+| `pnpm package:dist`         | 构建 Windows NSIS 安装包                    |
 
-自动化检查使用人工数据，不访问真实校园账号。主分支推送运行 macOS CI，安装包工作流由维护者按需运行。Windows 侧步骤、已知问题与验收清单见 [Windows 打包与测试](docs/windows-testing.md)。
+主分支与 PR 运行 macOS CI；发布 tag 触发安装包验证和 Release 发布，详见[开发文档](docs/DEVELOPMENT.md)。自动化使用合成数据，不访问真实校园账号。
 
-本机网页预览通过 `pnpm web` 启动，连接本机工作台，共用已接入的校园内容、笔记和 AI 会话；仅监听本机，不支持公网或多用户部署，详见 [网页端说明](docs/web.md)。
+Windows 打包步骤、已知问题及合作者的验收记录见 [Windows 打包与测试](docs/windows-testing.md)；本次 Release 仅提供 macOS 安装包。
+
+`pnpm web` 提供共用本机学习数据的浏览器预览，仅监听本机；不是公网多用户服务，见[网页端说明](docs/web.md)。
 
 </details>
 
 <details>
-<summary>数据位置与当前范围</summary>
+<summary>本机数据与当前限制</summary>
 
-- 应用状态与会话：`~/Library/Application Support/JLU-Dela/`。
-- 默认资料目录：`~/Documents/JLU-Dela/`，可在设置中更改。
-- 原位知识库：继续使用你连接的目录。
-- 技能目录：`~/.jlu-dela/skills/`。
-
-Markdown / TXT 正文检索限 2 MB 以内文件；PDF 文字在本机手动提取，每份限 40 MB、300 页，源文件变动后需重新提取。校园会话可在退出重开后尝试复用，有效期仍由平台决定；校园网页接入不保存学校密码；邮箱凭据需单独配置并加密保存在本机。
-
-内部 `window.dela` API、`dela` 命令和部分存量模块继续沿用。未适配的校园模块不表示已支持吉大。架构与接入范围见 [开发文档](docs/DEVELOPMENT.md) 和 [吉大接入计划](docs/jlu-integration.md)。
+- 应用状态、校园会话与加密邮箱凭据：`~/Library/Application Support/JLU-Dela/`。
+- 默认资料：`~/Documents/JLU-Dela/`；原位知识库继续使用你选择的目录。
+- Markdown / TXT 正文检索限 2 MB；PDF 文字提取限每份 40 MB、300 页，源文件变动后需重新提取。
+- 校园网页接入不保存学校密码，邮箱凭据单独配置并加密保存在本机。会话有效期由学校决定，退出重开不保证永久免登录。
+- AI 不等于离线推理；发送的问题、资料和工具结果可能进入所选模型服务。
+- 当前为开发预览，不承诺全部账号、课程页面、网络环境或自动更新均已适配。
 
 </details>
 
 ## 致谢与许可
 
-JLU Dela 在 [Dela](https://github.com/Chang-Yo/Dela) 的工作台基础上，持续开发吉林大学校园接入与课程学习功能。保留原项目历史和版权声明，遵循 [GPL-3.0-or-later](LICENSE)；当前应用采用原创折纸天鹅标识。感谢原作者与贡献者。
+JLU Dela 基于 [Dela](https://github.com/Chang-Yo/Dela) 的工作台持续开发吉林大学校园接入与学习功能，保留原项目历史和版权声明，遵循 [GPL-3.0-or-later](LICENSE)。当前使用原创折纸天鹅标识。感谢原作者、贡献者与参与测试的同学。
 
 [贡献指南](CONTRIBUTING.md) · [使用条款](docs/terms.md) · [隐私说明](docs/privacy.md)

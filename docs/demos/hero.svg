@@ -1,0 +1,67 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1280"
+  height="460"
+  viewBox="0 0 1280 460"
+  role="img"
+  aria-labelledby="title desc"
+>
+  <title id="title">JLU Dela · 把一学期，装进工作台</title>
+  <desc id="desc">学习日历、课程资料、课堂回放与学习笔记，在一个本地工作台中连接。</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1">
+      <stop stop-color="#10161e" />
+      <stop offset="1" stop-color="#111113" />
+    </linearGradient>
+    <linearGradient id="accent">
+      <stop stop-color="#9de2d0" />
+      <stop offset="1" stop-color="#9bbbf4" />
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop stop-color="#458b7d" stop-opacity=".25" />
+      <stop offset="1" stop-color="#458b7d" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="460" rx="24" fill="url(#bg)" />
+  <ellipse cx="990" cy="170" rx="400" ry="320" fill="url(#glow)" />
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans CJK SC',Arial,sans-serif">
+    <text x="60" y="73" fill="#9de2d0" font-size="14" letter-spacing="3" font-weight="600">
+      JLU DELA / YOUR LOCAL STUDY WORKSPACE
+    </text>
+    <text x="58" y="167" fill="#f4f5f7" font-size="55" font-weight="700">把一学期，</text>
+    <text x="58" y="236" fill="url(#accent)" font-size="55" font-weight="700">装进工作台。</text>
+    <text x="60" y="295" fill="#b5bdc8" font-size="19">课表与作业有安排，材料与思考有归处。</text>
+    <g font-size="13" fill="#d4d9e1">
+      <rect x="60" y="336" width="108" height="34" rx="17" fill="#273039" />
+      <text x="80" y="358">macOS · M 系列</text>
+      <rect x="180" y="336" width="94" height="34" rx="17" fill="#273039" />
+      <text x="202" y="358">本地优先</text>
+      <rect x="286" y="336" width="116" height="34" rx="17" fill="#273039" />
+      <text x="308" y="358">AI 辅助学习</text>
+    </g>
+    <g transform="translate(678 75)">
+      <rect width="540" height="312" rx="18" fill="#20252d" stroke="#3a424d" />
+      <circle cx="23" cy="22" r="4" fill="#7c8795" />
+      <circle cx="39" cy="22" r="4" fill="#7c8795" />
+      <circle cx="55" cy="22" r="4" fill="#7c8795" />
+      <text x="88" y="28" fill="#c2cad6" font-size="12">从今天的安排，到属于自己的知识</text>
+      <rect x="22" y="54" width="211" height="105" rx="10" fill="#303c44" />
+      <text x="38" y="81" fill="#a4dfd2" font-size="12">01 / PLAN</text>
+      <text x="38" y="111" fill="#f4f5f7" font-size="21" font-weight="600">学习日历</text>
+      <text x="38" y="138" fill="#bac5d0" font-size="13">课表 · 作业 · 个人待办</text>
+      <rect x="254" y="54" width="264" height="105" rx="10" fill="#2b3546" />
+      <text x="270" y="81" fill="#abc8fb" font-size="12">02 / LEARN</text>
+      <text x="270" y="111" fill="#f4f5f7" font-size="21" font-weight="600">课程学习</text>
+      <text x="270" y="138" fill="#bac5d0" font-size="13">回放 · 字幕 · 作业原网页</text>
+      <path d="M233 106h21M386 159v25M128 159v25" stroke="#718295" stroke-width="2" />
+      <rect x="22" y="184" width="496" height="106" rx="10" fill="#272d36" />
+      <text x="38" y="212" fill="#b8b3e3" font-size="12">03 / MAKE IT YOURS</text>
+      <text x="38" y="242" fill="#f4f5f7" font-size="21" font-weight="600">
+        材料 → 笔记 → 提问 → 理解
+      </text>
+      <text x="38" y="270" fill="#bac5d0" font-size="13">原位整理文件，选中文字进入 AI 草稿</text>
+    </g>
+    <text x="60" y="423" fill="#7e8a99" font-size="12">面向吉林大学本科生的非官方学习工作台</text>
+    <text x="1144" y="423" fill="#7e8a99" font-size="12">工作流示意</text>
+  </g>
+</svg>
