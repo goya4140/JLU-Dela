@@ -4,7 +4,7 @@ import { BrowserWindow } from 'electron';
 import type { ImapFlow, ListResponse } from 'imapflow';
 import { z } from 'zod';
 import type { MailAddress, MailConfigureInput, MailResult, MailSyncStatus } from '../../shared/api';
-import { SJTU_MAIL_SERVER } from '../../shared/mail';
+import { JLU_MAIL_SERVER } from '../../shared/mail';
 import { getDatabase } from '../database';
 import { clearMailCredentials, loadMailCredentials, saveMailCredentials } from '../credentials';
 import {
@@ -325,10 +325,10 @@ export async function configureMailAccount(input: MailConfigureInput): Promise<M
   if (!z.email().safeParse(address).success || password.length === 0) {
     return { ok: false, error: '请输入完整的邮箱地址和密码' };
   }
-  // 不带 server 就是交大邮箱：只接受校内地址。第三方账号服务器自填，地址不限。
-  const server = input.server ?? SJTU_MAIL_SERVER;
-  if (!input.server && !address.endsWith('@sjtu.edu.cn')) {
-    return { ok: false, error: '交大邮箱地址需以 @sjtu.edu.cn 结尾，或改选第三方 IMAP' };
+  // 不带 server 就是吉大邮箱：只接受校内地址。第三方账号服务器自填，地址不限。
+  const server = input.server ?? JLU_MAIL_SERVER;
+  if (!input.server && !address.endsWith('@jlu.edu.cn')) {
+    return { ok: false, error: '吉林大学邮箱地址需以 @jlu.edu.cn 结尾，或改选第三方 IMAP' };
   }
   const db = getDatabase();
   const client = connectImap(address, password, server);

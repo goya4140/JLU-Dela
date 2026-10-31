@@ -24,7 +24,7 @@ import {
 import { getDatabase } from '../../database';
 import { loadMailCredentials } from '../../credentials';
 import { storedMailServer } from '../server';
-import { SJTU_MAIL_SERVER } from '../../../shared/mail';
+import { JLU_MAIL_SERVER } from '../../../shared/mail';
 
 vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: () => [] },
@@ -213,7 +213,7 @@ function createMailDb(): Database.Database {
   `);
   db.prepare(
     'INSERT INTO mail_accounts (address, imap_host, imap_port, created_at) VALUES (?, ?, ?, ?)',
-  ).run('reader@example.com', 'mail.sjtu.edu.cn', 993, '2026-09-13T00:00:00.000Z');
+  ).run('reader@example.com', 'mail.jlu.edu.cn', 993, '2026-09-13T00:00:00.000Z');
   return db;
 }
 
@@ -581,10 +581,10 @@ describe('mail server settings', () => {
     imapHarness.options = [];
   });
 
-  it('falls back to the SJTU preset when the account has no SMTP columns filled', () => {
-    expect(storedMailServer()).toEqual(SJTU_MAIL_SERVER);
+  it('falls back to the JLU preset when the account has no SMTP columns filled', () => {
+    expect(storedMailServer()).toEqual(JLU_MAIL_SERVER);
     db.prepare('UPDATE mail_accounts SET smtp_host = NULL, smtp_port = NULL').run();
-    expect(storedMailServer()).toEqual(SJTU_MAIL_SERVER);
+    expect(storedMailServer()).toEqual(JLU_MAIL_SERVER);
   });
 
   it('connects a third-party account to its own servers and keeps them for sending', async () => {
@@ -597,7 +597,7 @@ describe('mail server settings', () => {
     expect(
       await configureMailAccount({ address: 'me@example.com', password: 'pw', server }),
     ).toEqual({ ok: true });
-    // 连接用的就是用户填的服务器，而不是交大预设。
+    // 连接用的就是用户填的服务器，而不是吉大预设。
     expect(imapHarness.options.at(-1)).toMatchObject({
       host: 'imap.example.com',
       port: 143,
@@ -615,16 +615,16 @@ describe('mail server settings', () => {
   it('keeps the campus-only guard for the preset path and accepts any address with explicit servers', async () => {
     expect(await configureMailAccount({ address: 'me@example.com', password: 'pw' })).toEqual({
       ok: false,
-      error: '交大邮箱地址需以 @sjtu.edu.cn 结尾，或改选第三方 IMAP',
+      error: '吉林大学邮箱地址需以 @jlu.edu.cn 结尾，或改选第三方 IMAP',
     });
     expect(imapHarness.options).toHaveLength(0);
-    expect(await configureMailAccount({ address: 'Me@SJTU.edu.cn', password: 'pw' })).toEqual({
+    expect(await configureMailAccount({ address: 'Me@JLU.edu.cn', password: 'pw' })).toEqual({
       ok: true,
     });
     expect(imapHarness.options.at(-1)).toMatchObject({
-      host: SJTU_MAIL_SERVER.imapHost,
-      port: SJTU_MAIL_SERVER.imapPort,
-      auth: { user: 'me@sjtu.edu.cn' },
+      host: JLU_MAIL_SERVER.imapHost,
+      port: JLU_MAIL_SERVER.imapPort,
+      auth: { user: 'me@jlu.edu.cn' },
     });
   });
 });

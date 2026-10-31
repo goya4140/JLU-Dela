@@ -5,9 +5,9 @@ import { SegmentedControl } from '../../components/ui/beautifului/atoms/Segmente
 import { Input } from '../../components/ui/input';
 import { cn } from '../../lib/utils';
 
-const modes = ['交大邮箱', '第三方 IMAP'] as const;
+const modes = ['吉大邮箱', '第三方 IMAP'] as const;
 
-/** 向导页与邮箱空态共用的连接表单：交大邮箱走预设，第三方 IMAP 自填服务器参数。 */
+/** 向导页与邮箱空态共用的连接表单：吉大邮箱走预设，第三方 IMAP 自填服务器参数。 */
 export function MailAccountForm({
   error,
   onSubmit,
@@ -21,7 +21,7 @@ export function MailAccountForm({
   /** wizard：向导画布上的 40px 控件；app：应用内的 32px 控件。 */
   variant?: 'app' | 'wizard';
 }) {
-  const [mode, setMode] = useState<(typeof modes)[number]>('交大邮箱');
+  const [mode, setMode] = useState<(typeof modes)[number]>('吉大邮箱');
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [imapHost, setImapHost] = useState('');
@@ -61,7 +61,7 @@ export function MailAccountForm({
           autoComplete="off"
           className={field}
           onChange={(event) => setAddress(event.target.value)}
-          placeholder={custom ? 'name@example.com' : 'name@sjtu.edu.cn'}
+          placeholder={custom ? 'name@example.com' : 'name@jlu.edu.cn'}
           required
           type="email"
           value={address}
@@ -73,7 +73,7 @@ export function MailAccountForm({
           autoComplete="current-password"
           className={field}
           onChange={(event) => setPassword(event.target.value)}
-          placeholder={custom ? '邮箱密码或授权码' : 'jAccount 密码'}
+          placeholder={custom ? '邮箱密码或授权码' : '吉大邮箱密码'}
           required
           type="password"
           value={password}
