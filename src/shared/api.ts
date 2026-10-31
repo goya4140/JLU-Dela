@@ -1,6 +1,9 @@
 // 聚合出口：领域契约在同目录领域文件，本文件只 re-export，保证全仓既有 import 路径不变。
 // 领域类型变化请直接改对应文件，不在此处添加逻辑。
 import type { BackupApi } from './backup';
+import type { JluPlatformsApi } from './jlu-platforms';
+import type { KnowledgeApi } from './knowledge';
+import type { ChaoxingApi } from './chaoxing';
 import type { CacheApi } from './cache';
 import type { CapabilityApi } from './capabilities';
 import type { CanvasApi } from './canvas';
@@ -13,7 +16,7 @@ import type { MailApi } from './mail';
 import type { NotificationsApi } from './notifications';
 import type { RemoteApi } from './remotes';
 import type { SearchApi } from './search';
-import type { SessionApi } from './session';
+import type { SessionApi, SidechatApi } from './session';
 import type { SettingsApi } from './settings';
 import type { VsjtuApi } from './vsjtu';
 export type {
@@ -38,6 +41,9 @@ import type { WindowApi } from './window';
 import type { WorkspaceApi } from './workspace';
 
 export interface DelaApi {
+  readonly knowledge: KnowledgeApi;
+  readonly chaoxing: ChaoxingApi;
+  readonly jluPlatforms: JluPlatformsApi;
   readonly platform: string;
   readonly vsjtu: VsjtuApi;
   capability: CapabilityApi;
@@ -62,6 +68,7 @@ export interface DelaApi {
   readonly canvas: CanvasApi;
   readonly workspace: WorkspaceApi;
   readonly session: SessionApi;
+  readonly sidechat: SidechatApi;
   readonly remotes: RemoteApi;
   readonly layout: LayoutApi;
   readonly search: SearchApi;
@@ -248,6 +255,8 @@ export type {
   ContextUsageView,
   WorkspaceChat,
   SessionApi,
+  SidechatApi,
+  SidechatView,
   RunEvent,
   RunStatus,
   ChatStreamEvent,

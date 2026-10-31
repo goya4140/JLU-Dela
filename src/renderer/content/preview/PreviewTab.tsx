@@ -52,7 +52,15 @@ const scrollMemory = new Map<string, number>();
 
 /** 文件预览标签内容：按 DocumentContent.format 分流到各预览器。文档加载经注入的
  *  ContentLoader，本域不感知条目树与读取 IPC。 */
-export function PreviewTab({ tabId, groupId }: { tabId: TabId; groupId: string }) {
+export function PreviewTab({
+  tabId,
+  groupId,
+  initialScroll,
+}: {
+  tabId: TabId;
+  groupId: string;
+  initialScroll?: number;
+}) {
   const loader = useContentLoader();
   const [doc, setDoc] = useState<LoadedDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +69,7 @@ export function PreviewTab({ tabId, groupId }: { tabId: TabId; groupId: string }
   const docRef = useRef<LoadedDocument | null>(null);
   docRef.current = doc;
   const scrollKey = `${tabId}:${groupId}`;
-  const scroll = scrollMemory.get(scrollKey) ?? 0;
+  const scroll = initialScroll ?? scrollMemory.get(scrollKey) ?? 0;
   const onScroll = (top: number) => scrollMemory.set(scrollKey, top);
 
   const load = () => {

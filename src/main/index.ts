@@ -21,10 +21,14 @@ import { closeDatabase, getDatabase, SCHEMA_VERSION } from './database';
 import { runMigrations } from './migrations';
 import { registerMailIpc, hasMailComposer } from './mail/ipc';
 import { registerTimetableIpc } from './timetable/ipc';
+import { registerJluPlatformsIpc } from './jlu/ipc';
+import { registerKnowledgeIpc } from './knowledge/ipc';
+import { registerChaoxingIpc } from './chaoxing/ipc';
 import { registerVsjtuIpc } from './vsjtu/ipc';
-import { attachContextMenu, checkWorkspaceSender } from './ipc';
+import { attachContextMenu, checkWorkspaceSender, isSameRendererNavigation } from './ipc';
 import type { TrayAction } from '../shared/window';
 import { registerCanvasIpc, refreshCanvasTrees } from './canvas/ipc';
+import { runCanvasCacheCleanup } from './canvas/api';
 import { registerShuiyuanIpc } from './shuiyuan/ipc';
 import { openShuiyuanLinkInApp } from './shuiyuan/links';
 import { registerPreviewProtocol, registerPreviewScheme } from './workspace/preview';
@@ -215,7 +219,7 @@ app
     applyTheme(savedTheme());
     if (process.platform === 'darwin') {
       app.dock?.setIcon(
-        nativeImage.createFromPath(join(__dirname, 'icons', `Dela_${savedIcon()}_bg.png`)),
+        nativeImage.createFromPath(join(__dirname, 'icons', `JLU-Dela-${savedIcon()}.png`)),
       );
     }
     registerSettingsIpc();
@@ -224,6 +228,9 @@ app
     registerCacheIpc();
     registerMailIpc();
     registerTimetableIpc();
+    registerJluPlatformsIpc();
+    registerChaoxingIpc();
+    registerKnowledgeIpc();
     registerVsjtuIpc();
     registerCanvasIpc();
     registerShuiyuanIpc();
@@ -239,6 +246,9 @@ app
     // 回收未被任何会话引用的内联图片（上次运行遗留的草稿图片等）。
     gcChatMedia();
     if (!smokeTest) {
+      void runCanvasCacheCleanup().catch((error: unknown) =>
+        console.error('Canvas cache cleanup failed', error),
+      );
       const refresh = () => {
         void refreshNotifications().catch((error: unknown) =>
           console.error('Notification refresh failed', error),
@@ -311,7 +321,7 @@ async function createWindow(): Promise<void> {
     show: !smokeTest && !startHidden,
     backgroundColor: '#f7f7f8',
     icon: nativeImage.createFromPath(
-      join(app.getAppPath(), 'assets', `Dela_${savedIcon()}_bg.png`),
+      join(app.getAppPath(), 'assets', `JLU-Dela-${savedIcon()}.png`),
     ),
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     titleBarOverlay: process.platform === 'darwin',
@@ -340,6 +350,7 @@ async function createWindow(): Promise<void> {
     return { action: 'deny' };
   });
   window.webContents.on('will-navigate', (event, url) => {
+    if (isSameRendererNavigation(window.webContents.getURL(), url)) return;
     event.preventDefault();
     if (!openShuiyuanLinkInApp(url)) openExternalUrl(url);
   });
@@ -402,7 +413,7 @@ async function createWindow(): Promise<void> {
 
   if (smokeTest && !terminalSmokeTest) {
     for (const name of ['white', 'black']) {
-      const iconPath = join(app.getAppPath(), 'assets', `Dela_${name}_bg.png`);
+      const iconPath = join(app.getAppPath(), 'assets', `JLU-Dela-${name}.png`);
       if (nativeImage.createFromPath(iconPath).isEmpty()) {
         throw new Error(`Application icon failed to load: ${iconPath}`);
       }
@@ -459,7 +470,7 @@ function showMainWindow(window: BrowserWindow): void {
 function createTray(window: BrowserWindow): void {
   tray?.destroy();
   const icon = nativeImage
-    .createFromPath(join(app.getAppPath(), 'assets', `Dela_${savedIcon()}_bg.png`))
+    .createFromPath(join(app.getAppPath(), 'assets', `JLU-Dela-${savedIcon()}.png`))
     .resize({ width: 16, height: 16 });
   tray = new Tray(icon);
   tray.setToolTip(product.name);

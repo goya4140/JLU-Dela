@@ -74,6 +74,16 @@ export default defineConfig({
       },
     },
   ],
-  build: { target: 'chrome152', outDir: '../../out/renderer', emptyOutDir: true },
+  build: {
+    target: 'chrome152',
+    outDir: '../../out/renderer',
+    emptyOutDir: true,
+    rolldownOptions: {
+      input: {
+        desktop: resolve('src/renderer/index.html'),
+        web: resolve('src/renderer/web/index.html'),
+      },
+    },
+  },
   server: { host: '127.0.0.1', port: 5173, strictPort: true },
 });

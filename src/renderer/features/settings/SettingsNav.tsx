@@ -1,8 +1,10 @@
 import {
   Archive,
+  BookOpen,
   Blocks,
   Bot,
   Cloud,
+  HardDrive,
   Info,
   Keyboard,
   LayoutGrid,
@@ -26,10 +28,12 @@ export type { SettingsSectionId };
 
 /** 分区目录：group 为侧栏分组标题（设置内只有一层分类，分组仅作视觉归拢）。 */
 const sections: Array<{ id: SettingsSectionId; group: string; icon: LucideIcon }> = [
+  { id: 'guide', group: '基本', icon: BookOpen },
   { id: 'general', group: '基本', icon: SlidersHorizontal },
   { id: 'appearance', group: '基本', icon: Palette },
   { id: 'shortcuts', group: '基本', icon: Keyboard },
   { id: 'workspace', group: '数据', icon: LayoutGrid },
+  { id: 'canvas-cache', group: '数据', icon: HardDrive },
   { id: 'archived', group: '数据', icon: Archive },
   { id: 'connections', group: '数据', icon: Plug },
   { id: 'remotes', group: '数据', icon: Cloud },

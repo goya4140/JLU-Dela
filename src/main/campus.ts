@@ -1,97 +1,17 @@
-import {
-  app,
-  BrowserWindow,
-  net,
-  safeStorage,
-  session,
-  type Cookie,
-  type Session,
-  type WebContents,
-} from 'electron';
-import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { BrowserWindow, net, type Session, type WebContents } from 'electron';
 import { setTimeout as delay } from 'node:timers/promises';
 import { attachContextMenu } from './ipc';
+import { createCampusSessionStore } from './campus-session';
 
-export const CAMPUS_PARTITION = 'persist:dela-campus';
-let ready: Promise<Session> | undefined;
-let persistenceError: Error | undefined;
-
-function snapshotPath(): string {
-  return join(app.getPath('userData'), 'campus-session.bin');
-}
-
-function campusCookie(cookie: Cookie): boolean {
-  const domain = cookie.domain?.replace(/^\./, '') ?? '';
-  return domain === 'sjtu.edu.cn' || domain.endsWith('.sjtu.edu.cn');
-}
-
-function cookieKey(cookie: Cookie): string {
-  return JSON.stringify([cookie.domain, cookie.path, cookie.name]);
-}
-
-// Chromium 保存持久 Cookie；额外加密保存 session Cookie，不人为延长服务端有效期。
-export function getCampusSession(): Promise<Session> {
-  ready ??= (async () => {
-    const campus = session.fromPartition(CAMPUS_PARTITION);
-    const cookies = new Map<string, Cookie>();
-    for (const cookie of await campus.cookies.get({})) cookies.set(cookieKey(cookie), cookie);
-    const path = snapshotPath();
-    if (existsSync(path)) {
-      if (!safeStorage.isEncryptionAvailable()) throw new Error('当前系统不支持校园会话解密');
-      const saved = JSON.parse(safeStorage.decryptString(readFileSync(path))) as Cookie[];
-      for (const cookie of saved) {
-        if (!campusCookie(cookie) || !cookie.session || cookies.has(cookieKey(cookie))) continue;
-        await campus.cookies.set({
-          url: `http${cookie.secure ? 's' : ''}://${cookie.domain!.replace(/^\./, '')}${cookie.path || '/'}`,
-          name: cookie.name,
-          value: cookie.value,
-          domain: cookie.hostOnly ? undefined : cookie.domain,
-          path: cookie.path,
-          secure: cookie.secure,
-          httpOnly: cookie.httpOnly,
-          sameSite: cookie.sameSite,
-        });
-        cookies.set(cookieKey(cookie), cookie);
-      }
-    }
-    campus.cookies.on('changed', (_event, cookie, _cause, removed) => {
-      if (!campusCookie(cookie)) return;
-      if (removed) cookies.delete(cookieKey(cookie));
-      else cookies.set(cookieKey(cookie), cookie);
-      try {
-        const saved = [...cookies.values()].filter((value) => value.session && campusCookie(value));
-        if (saved.length === 0) rmSync(path, { force: true });
-        else {
-          if (!safeStorage.isEncryptionAvailable()) throw new Error('当前系统不支持校园会话加密');
-          writeFileSync(`${path}.tmp`, safeStorage.encryptString(JSON.stringify(saved)));
-          renameSync(`${path}.tmp`, path);
-        }
-        persistenceError = undefined;
-      } catch {
-        persistenceError = new Error('校园登录会话保存失败，请检查本机存储后重新登录');
-      }
-    });
-    return campus;
-  })();
-  return ready;
-}
-
-export async function flushCampusSession(): Promise<void> {
-  const campus = await getCampusSession();
-  await campus.cookies.flushStore();
-  campus.flushStorageData();
-  if (persistenceError) throw persistenceError;
-}
-
-export async function clearCampusSession(): Promise<void> {
-  const campus = await getCampusSession();
-  await campus.clearStorageData();
-  await campus.cookies.flushStore();
-  rmSync(snapshotPath(), { force: true });
-  rmSync(`${snapshotPath()}.tmp`, { force: true });
-  persistenceError = undefined;
-}
+export const CAMPUS_PARTITION = 'persist:jlu-campus';
+const campusStore = createCampusSessionStore({
+  partition: CAMPUS_PARTITION,
+  filename: 'campus-session.bin',
+  domain: 'jlu.edu.cn',
+});
+export const getCampusSession = campusStore.get;
+export const flushCampusSession = campusStore.flush;
+export const clearCampusSession = campusStore.clear;
 
 export interface CampusRequestOptions {
   /** 用户可见的服务名，拼进超时、断网等报错文案。 */
@@ -100,6 +20,8 @@ export interface CampusRequestOptions {
   loginError: string;
   /** 接口另用此状态码表示未登录（交大视频身份接口返回 500）。 */
   loginStatus?: number;
+  authStatuses?: readonly number[];
+  authRedirect?: (url: string) => boolean;
   method?: 'GET' | 'POST';
   headers?: Record<string, string>;
   body?: string;
@@ -110,7 +32,7 @@ export class CampusAuthError extends Error {}
 
 /**
  * 直接消费 Chromium 响应：Electron session.fetch 在内部构造 Response 时可能抛出未捕获的
- * 状态码异常。重定向一律视为登录失效；超时、断网与 408/5xx 失败的 `cause` 为 'transient'，
+ * 状态码异常。调用方可限定认证状态码和登录跳转；超时、断网与 408/5xx 失败的 `cause` 为 'transient'，
  * 由调用方决定是否重试。
  */
 export function campusRequest(
@@ -140,20 +62,35 @@ export function campusRequest(
       15000,
     );
     request.on('error', () => fail(new Error(`无法连接${options.service}，请检查网络`), true));
-    request.on('redirect', () => fail(new CampusAuthError(options.loginError)));
+    request.on('redirect', (_status, _method, target: string) => {
+      fail(
+        !options.authRedirect || options.authRedirect(target)
+          ? new CampusAuthError(options.loginError)
+          : new Error(`${options.service}返回了非登录跳转，请检查学校服务或校园网/VPN`),
+      );
+    });
     request.on('response', (response) => {
       const status = response.statusCode;
       if (!Number.isInteger(status) || status < 200 || status > 599) {
-        fail(new Error(`${options.service}返回了无效状态，请稍后重试或重新登录`));
+        fail(new Error(`${options.service}返回了无效状态，请稍后重试`));
         return;
       }
-      if (
-        status === 401 ||
-        status === 403 ||
-        status === options.loginStatus ||
-        (status >= 300 && status < 400)
-      ) {
+      if ((options.authStatuses ?? [401, 403, options.loginStatus]).includes(status)) {
         fail(new CampusAuthError(options.loginError));
+        return;
+      }
+      if (status >= 300 && status < 400) {
+        const location = response.headers?.location?.[0];
+        fail(
+          !options.authRedirect ||
+            (location && options.authRedirect(URL.parse(location, url)?.href ?? ''))
+            ? new CampusAuthError(options.loginError)
+            : new Error(`${options.service}返回了非登录跳转，请检查学校服务或校园网/VPN`),
+        );
+        return;
+      }
+      if (status === 403) {
+        fail(new Error(`${options.service}拒绝访问（403），请确认账号权限或校园网/VPN`));
         return;
       }
       if (status !== 200) {
@@ -184,7 +121,7 @@ export function campusRequest(
 export interface CampusLoginOptions {
   readonly sender: WebContents;
   readonly title: string;
-  /** 登录窗加载的入口地址（校园域内会触发 jAccount SSO）。 */
+  /** 登录窗加载的入口地址（校园域内会触发学校统一身份认证）。 */
   readonly url: string;
   /** 导航 URL 是否已到达目标校园域（登录页自身不算）。 */
   readonly reached: (url: string) => boolean;
@@ -194,7 +131,7 @@ export interface CampusLoginOptions {
    * 入口页本身就在目标域时（课堂视频）：首次导航必然尚未登录，
    * 探测失败不关窗；页内导航及定时重探覆盖 SPA 与异步登录完成。
    */
-  readonly retryProbe?: boolean;
+  readonly retryProbe?: boolean | ((error: unknown) => boolean);
 }
 
 export function createCampusLoginWindow(sender: WebContents, title: string): BrowserWindow {
@@ -275,7 +212,10 @@ export async function openCampusLoginWindow(
           await options.probe();
           finish({ ok: true });
         } catch (error) {
-          if (options.retryProbe) {
+          if (
+            options.retryProbe &&
+            (typeof options.retryProbe !== 'function' || options.retryProbe(error))
+          ) {
             checking = false;
             return;
           }

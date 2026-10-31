@@ -58,11 +58,10 @@ it('reports pending JLU integrations and rejects upstream campus commands', asyn
   expect(await run('campus_status')).toMatchObject({
     ok: true,
     result: {
-      synced: false,
       services: expect.arrayContaining([
-        expect.objectContaining({ id: 'academic', integration: 'pending' }),
-        expect.objectContaining({ id: 'notices', integration: 'pending' }),
-        expect.objectContaining({ id: 'learning', integration: 'pending' }),
+        expect.objectContaining({ id: 'academic', integration: 'preview' }),
+        expect.objectContaining({ id: 'notices', integration: 'preview' }),
+        expect.objectContaining({ id: 'learning', integration: 'preview' }),
       ]),
     },
   });

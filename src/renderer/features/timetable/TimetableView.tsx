@@ -33,6 +33,8 @@ import {
 import { cn } from '../../lib/utils';
 import { showToast } from '../../app/toasts';
 import { errorText } from '../../workspace/store';
+import { platformFailureHelp } from '../onboarding/platform-failure-help';
+import { jluServices } from '../../../shared/jlu';
 
 type CalendarMode = 'week' | 'month';
 
@@ -44,8 +46,8 @@ export function TimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
   if (!window.dela) {
     return (
       <DesktopOnlyNotice
-        description="教学信息服务网的登录会话和本地课表缓存不会暴露给浏览器。"
-        title="课表仅在 Dela 桌面端可用"
+        description="吉大教务的登录会话与课表缓存保存在桌面应用中。"
+        title="课表仅在 JLU Dela 桌面端可用"
       />
     );
   }
@@ -59,6 +61,7 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
   const [semester, setSemester] = useState<string | null>(null);
+  const [requestedSemester, setRequestedSemester] = useState<string>();
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [month, setMonth] = useState(() => startOfDay(new Date()));
   const [mode, setMode] = useState<CalendarMode>('week');
@@ -179,8 +182,9 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
     const found = [...new Set(lessons.flatMap((lesson) => lesson.weekNumbers))].sort(
       (a, b) => a - b,
     );
-    return found.length ? found : Array.from({ length: 18 }, (_, index) => index + 1);
-  }, [lessons]);
+    const count = Math.max(state?.totalWeeks ?? 0, found.at(-1) ?? 0);
+    return count ? Array.from({ length: count }, (_, index) => index + 1) : [1];
+  }, [lessons, state?.totalWeeks]);
   const weekLessons = useMemo(
     () => lessons.filter((lesson) => activeInWeek(lesson, selectedWeek)),
     [lessons, selectedWeek],
@@ -190,12 +194,12 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
     setBusy(true);
     setError(null);
     try {
-      const failure = await connectAndSyncTimetable(semester ?? undefined);
+      const failure = await connectAndSyncTimetable(requestedSemester);
       if (failure) {
-        showToast({ variant: 'error', title: '登录同步失败', description: failure });
+        setError(failure);
         return;
       }
-      await loadSemester(semester ?? undefined);
+      await loadSemester(requestedSemester);
     } finally {
       setBusy(false);
     }
@@ -205,21 +209,17 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
     setBusy(true);
     setError(null);
     try {
-      const result = await timetable.syncNow(semester ?? undefined);
+      const result = await timetable.syncNow(requestedSemester);
       if (!result.ok) {
         // 会话过期是唯一需要登录介入的同步失败：直接转入登录并同步流程。
         if (result.reason === 'auth') {
           await connectAndSync();
           return;
         }
-        showToast({
-          variant: 'error',
-          title: '同步课表失败',
-          description: result.error ?? '同步失败',
-        });
+        setError(result.error ?? '同步失败');
         return;
       }
-      await loadSemester(semester ?? undefined);
+      await loadSemester(requestedSemester);
     } finally {
       setBusy(false);
     }
@@ -238,6 +238,7 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
     return <div className="grid h-full place-items-center text-13 text-ink-3">正在读取课表…</div>;
   }
 
+  const failureHelp = error ? platformFailureHelp({ error }) : null;
   const weekEnd = addDays(visibleWeekStart, 6);
   const headerTitle =
     mode === 'week'
@@ -327,6 +328,7 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Select
             onValueChange={(value) => {
+              setRequestedSemester(value);
               setError(null);
               void loadSemester(value).catch((reason: unknown) => setError(errorText(reason)));
             }}
@@ -373,18 +375,48 @@ function DesktopTimetableView({ onOpenTodo }: { onOpenTodo?: (todoId: string) =>
         </div>
       </header>
 
-      {error ? (
-        <p
-          className="mx-4 mt-3 break-words rounded-card border border-line border-destructive/30 bg-red-tint px-3 py-2 text-xs text-red"
-          role="alert"
+      {failureHelp && (
+        <section
+          aria-label="课表同步处理建议"
+          className="mx-4 mt-3 grid shrink-0 gap-2 rounded-card bg-field p-3 text-13"
         >
-          {error}
-        </p>
-      ) : null}
+          <h2 className="font-medium text-ink">{failureHelp.title}</h2>
+          <ol className="grid list-decimal gap-1.5 pl-4 leading-relaxed text-ink-2">
+            {failureHelp.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+          <div className="flex flex-wrap gap-2">
+            {failureHelp.checkWebsite && (
+              <Button asChild size="sm" variant="outline">
+                <a href={jluServices[0].url} target="_blank" rel="noreferrer">
+                  在浏览器检查教务
+                </a>
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setError(null)}>
+              收起提示
+            </Button>
+          </div>
+          <p role="alert" className="break-words text-red">
+            错误详情：{error}
+          </p>
+        </section>
+      )}
 
+      {state.warnings?.length ? (
+        <div className="px-4 py-2 text-xs text-ink-3" role="status">
+          {state.warnings.map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
+        </div>
+      ) : null}
       {!state.lastSyncedAt ? (
         <div className="grid flex-1 place-items-center p-6">
-          <TimetableConnectCard semester={semester} onSuccess={() => void loadSemester(semester)} />
+          <TimetableConnectCard
+            semester={requestedSemester}
+            onSuccess={() => void loadSemester(requestedSemester)}
+          />
         </div>
       ) : mode === 'week' ? (
         <WeekCalendar

@@ -2,7 +2,17 @@
 
 > 吉大版说明：本文保留上游架构供代码维护参考。吉大服务状态、macOS 构建与发布以根目录 README 和 [吉大接入计划](jlu-integration.md) 为准。文中交大校园接口不代表已经适配吉大。
 
+吉大课表沿用学校窗口登录、主进程请求和本地缓存的分层。节次时间与校历取自吉大教务，GUI 与 Agent 共用同一份数据；完整响应解析失败时保留旧缓存。已通过模拟链路和本人会话下的同步、退出重开验证；系统重启与长期过期恢复仍待验证，接口依据见 [课表接入记录](jlu-integration.md#课表接口依据与验证状态)。
+
+课表的后台 SSO 恢复有明确的认证证据和等待上限；只有学校登录页要求人工认证才触发界面登录。普通网络、权限或协议错误不改变本地登录状态，也不清空课表。其他校园模块的认证行为保持原状。
+
+电子校务和学在吉大使用校园分区内的固定页面采集器。浏览器完成学校认证链，主进程校验并缓存规范化通知、学期、课程和回放目录，GUI 与 Agent 读取同一份缓存。学校页面不加载应用 preload，采集结果不包含密码或 Cookie。录像源地址仅在主进程内存中保留，主界面通过临时代理播放，并复用笔记与对话组件；范围与实测状态见 [平台接入记录](jlu-integration.md#电子校务与学在吉大接入记录)。
+
 面向想构建、修改和发布 Dela 的贡献者。本文是**唯一的**开发与架构文档。
+
+学习通适配位于 `src/main/chaoxing/`，沿用固定页面采集器与规范化缓存，使用独立超星会话。共同的持久会话机制位于 `src/main/campus-session.ts`；各平台仍自行限定域名和认证证据，避免把不同平台视为同一登录状态。
+
+本地知识库领域位于 `src/main/knowledge/`、`src/shared/knowledge.ts` 和 `src/renderer/features/knowledge/`。原始文件继续保留在用户目录；课程关联、会话与可重建的 PDF 文本索引保存在应用数据库。阅读、编辑与对话复用已有组件，首版以课程范围和可核对的来源为边界。
 
 本文档不是详细的技术细节，而是为不同的开发场景提供一份尽可能准确的导航。
 
@@ -18,6 +28,7 @@
 
 - 使用者视角：[README.md](../README.md)
 - 协作方式：[CONTRIBUTING.md](../CONTRIBUTING.md)
+- 需求索引：[requirements/README.md](requirements/README.md)
 - 按版本分节的变更记录：[CHANGELOG.md](../CHANGELOG.md)
 - 日常编码约束：[AGENTS.md](../AGENTS.md)
 - 远端 helper 的协议与端点表：[helper/README.md](../helper/README.md)
@@ -207,6 +218,10 @@ Git Bash + node-pty + xterm.js，与 Agent 的 bash 同源（同一份 dela 桥�
 - `scripts/` 全部为 TypeScript（Node 原生执行，仓库不再有 `.mjs`），纳入 `pnpm typecheck`。
 
 边界约定：renderer 不导入 main、不访问凭据和数据库；不引入 Manager/Service/Factory 等抽象层级，出现真实重复前不做提取；打包白名单只含 `out/**/*`、`package.json` 与品牌图——文档、凭据与 `.tools/` 都不进安装包。
+
+### 10.1 需求管理
+
+`docs/requirements/` 只记录团队成员明确要求登记的需求，采用「需求、验收、记录」三段式；描述缺少“做什么、为什么、怎样算完成”时由 Agent 先追问再整理。直接交给 Agent 实现的改动不自动建立需求文件，完成后记入 `CHANGELOG.md`；GitHub Issue 只是收集和讨论入口。具体格式和状态见 [需求索引](requirements/README.md)，Agent 行为边界见 `AGENTS.md`。
 
 ## 11. 工具链与启动
 

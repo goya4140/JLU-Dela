@@ -1,8 +1,8 @@
 {
   "name": "jlu-dela",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.7",
   "private": true,
-  "description": "A local-first Jilin University undergraduate workspace, forked from Dela",
+  "description": "A local-first study workspace for Jilin University undergraduates",
   "author": "JLU Dela contributors; upstream Dela contributors",
   "license": "GPL-3.0-or-later",
   "type": "module",
@@ -43,7 +43,15 @@
     "smoke:packages": "electron scripts/packages-smoke.cjs",
     "prepare:runtime": "node scripts/prepare-runtime.ts",
     "package:mac": "node scripts/prepare-runtime.ts && pnpm build && electron-builder --mac --arm64 --publish never",
-    "smoke:jlu": "electron scripts/jlu-smoke.cjs"
+    "smoke:jlu": "electron scripts/jlu-smoke.cjs",
+    "smoke:timetable": "electron scripts/timetable-smoke.cjs",
+    "smoke:platforms": "electron scripts/platforms-smoke.cjs",
+    "smoke:chaoxing": "electron scripts/chaoxing-smoke.cjs",
+    "smoke:knowledge": "electron scripts/knowledge-smoke.cjs",
+    "build:web": "pnpm build && vite build --config vite.web-host.config.ts",
+    "web": "pnpm build:web && node scripts/web.ts",
+    "smoke:web": "electron scripts/web-smoke.cjs",
+    "smoke:setup": "electron scripts/setup-guide-smoke.cjs"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.1.0",

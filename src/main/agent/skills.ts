@@ -101,7 +101,7 @@ export function readDisabledSkills(): Set<string> {
 
 /** 吉大尚未接入的上游校园 Skill 不发布到本机，也不注入 Agent。 */
 function featureHiddenSkills(): Set<string> {
-  return new Set(['canvas', 'classroom', 'mail', 'shuiyuan', 'todo', 'curriculum']);
+  return new Set(['canvas', 'classroom', 'mail', 'shuiyuan', 'todo']);
 }
 
 /** 注入 Pi 的禁用名单：用户禁用的 + 随功能关闭隐藏的（后者不写回用户名单）。 */

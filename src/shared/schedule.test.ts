@@ -13,6 +13,8 @@ const lesson: TimetableLesson = {
   classroom: '教室',
   weekday: 1,
   startPeriod: 1,
+  startMinute: 8 * 60,
+  endMinute: 9 * 60 + 40,
   endPeriod: 2,
   periodsText: '1-2',
   weeksText: '1,3',
@@ -45,7 +47,7 @@ describe('campus lesson dates', () => {
     const result = lessonOccurrences(
       [
         { ...lesson, weekNumbers: [] },
-        { ...lesson, endPeriod: 20 },
+        { ...lesson, endPeriod: 20, endMinute: null },
       ],
       '2026-09-14',
       '2026-09-01T00:00:00Z',

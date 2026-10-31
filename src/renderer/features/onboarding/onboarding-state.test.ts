@@ -31,6 +31,14 @@ describe('首次启动引导', () => {
     expect(state.onboardingCompleted()).toBe(true);
   });
 
+  it('条款已接受但配置未完成时，重启继续保留的步骤', async () => {
+    const state = await import('./onboarding-state');
+    state.saveConsent();
+    state.saveWizardStep(2);
+    expect(state.onboardingCompleted()).toBe(false);
+    expect(state.readWizardStep()).toBe(2);
+  });
+
   it('冒烟跳过且不写任何引导标记', async () => {
     window.location.search = '?smoke-test=1';
     const state = await import('./onboarding-state');

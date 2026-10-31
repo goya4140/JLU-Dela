@@ -1,5 +1,5 @@
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import { copyFile } from 'node:fs/promises';
+import { copyFile, mkdir } from 'node:fs/promises';
 import { z } from 'zod';
 import { broadcastTodos, refreshTodos } from '../todo';
 import { clearCanvasToken, loadCanvasToken } from '../credentials';
@@ -16,6 +16,12 @@ import {
   getSource,
   cachedFile,
   cachedCourseFiles,
+  canvasCacheDirectory,
+  canvasCacheStats,
+  getCanvasCachePins,
+  updateCanvasCachePolicy,
+  setCanvasCachePin,
+  clearCanvasCache,
   readCanvasSource,
   archiveCanvasCourse,
 } from './api';
@@ -55,11 +61,60 @@ export function registerCanvasIpc() {
     const file = await cachedFile(source);
     await copyFile(file.path, filePath);
   });
+  handle('reveal', async (id) => {
+    const source = getSource(z.string().parse(id));
+    if (source.kind !== 'file') throw new Error('资料不是文件');
+    shell.showItemInFolder((await cachedFile(source)).path);
+  });
   handle('open-link', async (value) => {
     const url = new URL(z.string().max(8192).parse(value));
     if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password)
       throw new Error('不支持的链接');
     if (!openShuiyuanLinkInApp(url.href)) await shell.openExternal(url.href);
+  });
+  handle('cache-stats', canvasCacheStats);
+  handle('cache-pins', getCanvasCachePins);
+  handle('update-cache-policy', (policy) =>
+    updateCanvasCachePolicy(
+      z
+        .object({
+          enabled: z.boolean(),
+          maxBytes: z
+            .number()
+            .finite()
+            .min(100 * 1024 ** 2),
+          keepCurrentTerm: z.boolean(),
+        })
+        .parse(policy),
+    ),
+  );
+  handle('set-cache-pin', (scope, pinned) =>
+    setCanvasCachePin(
+      z
+        .discriminatedUnion('kind', [
+          z.object({ kind: z.literal('file'), fileId: z.number().int().positive() }),
+          z.object({ kind: z.literal('course'), courseId: z.number().int().positive() }),
+        ])
+        .parse(scope),
+      z.boolean().parse(pinned),
+    ),
+  );
+  handle('clear-cache', (scope) =>
+    clearCanvasCache(
+      z
+        .discriminatedUnion('kind', [
+          z.object({ kind: z.literal('all') }),
+          z.object({ kind: z.literal('term'), term: z.string().min(1).max(200) }),
+          z.object({ kind: z.literal('course'), courseId: z.number().int().positive() }),
+        ])
+        .parse(scope),
+    ),
+  );
+  handle('open-cache-directory', async () => {
+    const directory = canvasCacheDirectory();
+    await mkdir(directory, { recursive: true });
+    const error = await shell.openPath(directory);
+    if (error) throw new Error(`无法打开缓存目录：${error}`);
   });
   handle('cached-files', () => cachedCourseFiles());
   handle('export-course-files', async (ids) => {

@@ -6,6 +6,9 @@ import { mkdirSync } from 'node:fs';
 let database: Database.Database | null = null;
 
 const schema: string[] = [
+  `CREATE TABLE IF NOT EXISTS knowledge_roots (id TEXT PRIMARY KEY, name TEXT NOT NULL, path TEXT NOT NULL UNIQUE)`,
+  `CREATE TABLE IF NOT EXISTS knowledge_courses (id TEXT PRIMARY KEY, root_id TEXT NOT NULL REFERENCES knowledge_roots(id), name TEXT NOT NULL, relative_path TEXT NOT NULL, session_id TEXT, UNIQUE(root_id,relative_path))`,
+  `CREATE TABLE IF NOT EXISTS knowledge_documents (course_id TEXT NOT NULL REFERENCES knowledge_courses(id), path TEXT NOT NULL, revision TEXT NOT NULL, pages TEXT NOT NULL, PRIMARY KEY(course_id,path))`,
   // 邮箱缓存（账户/文件夹/近端邮件窗口）。
   `CREATE TABLE IF NOT EXISTS mail_accounts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,6 +100,7 @@ const schema: string[] = [
     items TEXT NOT NULL DEFAULT '[]'
   )`,
   `CREATE TABLE IF NOT EXISTS canvas_sources (id TEXT PRIMARY KEY, course_id INTEGER NOT NULL, data TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS jlu_platform_cache (key TEXT PRIMARY KEY, data TEXT NOT NULL)`,
   // 工作区：条目身份以路径为主，只有项目与来源引用建行；笔记不落库。
   // 远程连接：项目条目经 remote_id 指向这里，local_path 存远程绝对路径（POSIX）。
   // Dela 不保存任何 SSH 凭据：密钥、端口与跳板由 ssh 自己按 ~/.ssh/config 解析。
@@ -121,6 +125,16 @@ const schema: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS workspace_parent ON workspace_entries(parent_id)`,
   `CREATE TABLE IF NOT EXISTS workspace_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS canvas_cache_usage (
+    cache_key TEXT PRIMARY KEY,
+    file_id INTEGER NOT NULL,
+    last_used_at INTEGER NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS canvas_cache_pins (
+    kind TEXT NOT NULL CHECK(kind IN ('file', 'course')),
+    item_id INTEGER NOT NULL,
+    PRIMARY KEY(kind, item_id)
+  )`,
   `INSERT OR IGNORE INTO workspace_entries (id, parent_id, name, kind, source_id, local_path, updated_at)
     VALUES ('00000000-0000-4000-8000-000000000001', NULL, '归档', 'folder', NULL, NULL, '2026-10-07T00:00:00.000Z')`,
   // 水源来源引用：仅在用户把帖子添加到项目时写入一行，不是同步缓存。
@@ -192,7 +206,7 @@ const createConsentRecords = `CREATE TABLE IF NOT EXISTS consent_records (
   accepted_at TEXT NOT NULL
 )`;
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export function getDatabase(): Database.Database {
   if (database) return database;

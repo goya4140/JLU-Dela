@@ -2,6 +2,7 @@ import { contextBridge } from 'electron';
 import { version } from '../../package.json';
 import type { DelaApi } from '../shared/api';
 import { canvas } from './canvas';
+import { jluPlatforms } from './jlu-platforms';
 import { cache } from './cache';
 import { chat } from './chat';
 import { consent } from './consent';
@@ -14,7 +15,7 @@ import { notifications } from './notifications';
 import { packages } from './packages';
 import { remotes } from './remotes';
 import { search } from './search';
-import { session } from './session';
+import { session, sidechat } from './session';
 import { settings } from './settings';
 import { shuiyuan } from './shuiyuan';
 import { timetable } from './timetable';
@@ -24,8 +25,13 @@ import { update } from './update';
 import { windowApi } from './window';
 import { workspace } from './workspace';
 import { vsjtu } from './vsjtu';
+import { knowledge } from './knowledge';
+import { chaoxing } from './chaoxing';
 
 contextBridge.exposeInMainWorld('dela', {
+  knowledge,
+  chaoxing,
+  jluPlatforms,
   platform: process.platform,
   vsjtu,
   version,
@@ -48,6 +54,7 @@ contextBridge.exposeInMainWorld('dela', {
   canvas,
   workspace,
   session,
+  sidechat,
   layout,
   capability,
   packages,

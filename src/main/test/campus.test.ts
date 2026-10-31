@@ -129,7 +129,7 @@ describe.each(['darwin', 'win32'])('校园窗口平台边界（%s）', (platform
     expect(options.frame).not.toBe(false);
     expect(options.closable).not.toBe(false);
     expect(options.webPreferences).toEqual({
-      partition: 'persist:dela-campus',
+      partition: 'persist:jlu-campus',
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -321,6 +321,25 @@ describe('openCampusLoginWindow', () => {
     expect(loginWindow.closeCalled).toBe(true);
   });
 
+  it('JLU stops retrying on an incompatible response instead of waiting indefinitely', async () => {
+    const pending = openCampusLoginWindow({
+      sender,
+      title: '登录吉大教务',
+      url: 'https://iedu.jlu.edu.cn/jwapp/sys/wdkb/*default/index.do',
+      reached: () => true,
+      retryProbe: (error) => error instanceof CampusAuthError,
+      probe: vi.fn().mockRejectedValue(new Error('课表字段已变化')),
+    });
+    await flush();
+    asWindow().webContents.emit(
+      'did-navigate',
+      {},
+      'https://iedu.jlu.edu.cn/jwapp/sys/wdkb/*default/index.do',
+    );
+    await expect(pending).resolves.toEqual({ ok: false, error: '课表字段已变化' });
+    expect(asWindow().closeCalled).toBe(true);
+  });
+
   it('用户直接关闭窗口按未完成登录收场', async () => {
     vi.useFakeTimers();
     const pending = openCampusLoginWindow({
@@ -398,6 +417,31 @@ describe('campusRequest', () => {
     expect((caught as Error).message).toBe('无法连接课表，请检查网络');
     expect((caught as Error).cause).toBe('transient');
     expect(request.abort).toHaveBeenCalledOnce();
+  });
+
+  it('lets JLU distinguish authentication redirects from forbidden and unrelated redirects', async () => {
+    const jlu = {
+      ...options,
+      authStatuses: [401],
+      authRedirect: (target: string) => target === 'https://cas.jlu.edu.cn/tpass/login',
+    };
+    mockRequest(403);
+    const forbidden = await campusRequest({} as Session, url, jlu).catch((error: unknown) => error);
+    expect(forbidden).toBeInstanceOf(Error);
+    expect(forbidden).not.toBeInstanceOf(CampusAuthError);
+    expect((forbidden as Error).message).toContain('403');
+    for (const [target, authenticated] of [
+      ['https://cas.jlu.edu.cn/tpass/login', true],
+      ['https://iedu.jlu.edu.cn/maintenance', false],
+      ['https://unrelated.example/login', false],
+    ] as const) {
+      const request = mockRequest('redirect');
+      request.end.mockImplementation(() => {
+        queueMicrotask(() => request.emit('redirect', 302, 'GET', target, {}));
+      });
+      const error = await campusRequest({} as Session, url, jlu).catch((error: unknown) => error);
+      expect(error instanceof CampusAuthError).toBe(authenticated);
+    }
   });
 
   it('408/5xx 标记可重试，其余状态不标记', async () => {

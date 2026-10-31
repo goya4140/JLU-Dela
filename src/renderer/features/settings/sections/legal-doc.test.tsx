@@ -47,7 +47,7 @@ it('renders JLU preview scope and preserves the upstream license link', async ()
     '使用条款',
   ]);
   expect(container.textContent).toContain('非官方适配项目');
-  expect(container.textContent).toContain('同步仍待接入');
+  expect(container.textContent).toContain('目录同步不代表已取得课件或视频');
   expect(
     container.querySelector('a[href="https://github.com/goya4140/JLU-Dela/blob/main/LICENSE"]'),
   ).not.toBeNull();
@@ -62,6 +62,7 @@ it('renders the isolated JLU data paths and describes model transmission', async
   expect(container.textContent).toContain('~/Library/Application Support/JLU-Dela/');
   expect(container.textContent).toContain('~/.jlu-dela/skills/');
   expect(container.textContent).toContain('不代表模型推理离线');
-  expect(container.textContent).toContain('当前仅在系统浏览器中打开');
+  expect(container.textContent).toContain('persist:jlu-campus');
+  expect(container.textContent).toContain('不把账号、Cookie 或验证码发给模型');
   expectBoldAllRendered(privacy);
 });

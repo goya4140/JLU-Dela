@@ -102,7 +102,7 @@ export async function handleVsjtuMediaRequest(request: Request): Promise<Respons
       const stream = entry.streams.find((value) => value.view === view);
       if (!stream) return new Response(null, { status: 404 });
       try {
-        response = await fetchUp(stream.url, request);
+        response = await fetchCampusMedia(stream.url, request);
       } catch (error) {
         if (request.signal.aborted || attempt === 1) throw error;
         await delay(250, undefined, { signal: request.signal });
@@ -151,7 +151,11 @@ export async function handleVsjtuMediaRequest(request: Request): Promise<Respons
   }
 }
 
-async function fetchUp(target: string, request: Request): Promise<Response> {
+export async function fetchCampusMedia(
+  target: string,
+  request: Request,
+  credentials: 'include' | 'omit' = 'omit',
+): Promise<Response> {
   const campus = await getCampusSession();
   const controller = new AbortController();
   const signal = AbortSignal.any([request.signal, controller.signal]);
@@ -170,7 +174,7 @@ async function fetchUp(target: string, request: Request): Promise<Response> {
   try {
     response = await campus.fetch(target, {
       method: request.method,
-      credentials: 'omit',
+      credentials,
       cache: 'no-store',
       redirect: 'error',
       headers,

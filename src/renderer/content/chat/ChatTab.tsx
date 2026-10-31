@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { GitCompare, History, SquarePen } from 'lucide-react';
+import { GitCompare, History, MessageCircleQuestion, SquarePen } from 'lucide-react';
 import type { TabId } from '../../../shared/layout';
 import type { ChatComment, WorkspaceChat } from '../../../shared/api';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import { errorText, useWorkspaceStore } from '../../workspace/store';
 import { openTarget } from '../../workbench/open-target';
 import { showToast } from '../../app/toasts';
 import { reviewTabId } from '../review/tab-id';
+import { SidechatPanel } from './SidechatPanel';
+import { openSidechat, useSidechats } from './sidechat-store';
 
 /** 解析 chat:{sessionId} 标签键；无效载荷返回 null。 */
 export function parseChatTabId(tabId: string): string | null {
@@ -27,7 +29,14 @@ export function parseChatTabId(tabId: string): string | null {
 
 /** 会话作为标签内容。会话身份来自 tabId（chat:{sessionId}），项目归属来自会话快照；
  *  引用候选与邮件草稿弹窗经 ChatTabSourceProvider 注入。 */
-export function ChatTab({ tabId }: { tabId: TabId; groupId: string }) {
+export function ChatTab({
+  tabId,
+  embedded = false,
+}: {
+  tabId: TabId;
+  groupId: string;
+  embedded?: boolean;
+}) {
   const sessionId = parseChatTabId(tabId);
   const source = useChatTabSource();
   const projectId = useSessions((state) =>
@@ -46,6 +55,7 @@ export function ChatTab({ tabId }: { tabId: TabId; groupId: string }) {
     <ChatSessionView
       key={sessionId}
       active={sessionId}
+      embedded={embedded}
       mailDialog={source?.mailDialog}
       onOpenSource={source?.onOpenSource}
       onSaveNote={source?.onSaveNote}
@@ -137,6 +147,7 @@ const ChatSessionView = memo(function ChatSessionView({
   mailDialog,
   onOpenSource,
   onSaveNote,
+  embedded,
 }: {
   active: string;
   projectId: string | null;
@@ -144,6 +155,7 @@ const ChatSessionView = memo(function ChatSessionView({
   mailDialog?: MailDraftDialog;
   onOpenSource?: (key: string) => void;
   onSaveNote?: (text: string) => void;
+  embedded: boolean;
 }) {
   // 「新对话」按钮与 /new 命令同一个动作：首页里开一个新随聊，工作台里（项目或资料）就地在焦点组开。
   const startNewChat = useCallback(() => {
@@ -152,8 +164,13 @@ const ChatSessionView = memo(function ChatSessionView({
     else void useNavigationStore.getState().newChat(projectId);
   }, [projectId]);
   const chatState = useChat(active, referenceSource, startNewChat);
-  const { chat, busy, editLast } = chatState;
+  const { chat, busy, editLast, fork } = chatState;
   const [sessionsOpen, setSessionsOpen] = useState(false);
+  const sidechatOpen = useSidechats((state) => Boolean(state.views[active]));
+  const sidechatFromQuote = useCallback(
+    (quote: string) => void openSidechat(active, { quote }),
+    [active],
+  );
   // 工作区改动入口的可见性：轻探测会话目录是否为可审阅的 Git 仓库
   // （非仓库、缺 Git、远程项目都不显示，随聊无项目目录同样不显示）。
   const [reviewReady, setReviewReady] = useState(false);
@@ -192,11 +209,14 @@ const ChatSessionView = memo(function ChatSessionView({
   );
 
   return (
-    <div aria-label="对话" className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface @container">
+    <div
+      aria-label="对话"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-surface @container"
+    >
       {/* @container 宿主：空态标题的 @max-[…] 按此宽度生效；ChatComposer 自身另有
           @container 宿主，其内部降级断点测量 composer 实宽（外层 p-3 会造成 24px 死区）。 */}
       {/* 会话切换条：标签标题由 workbench 标签栏承载，这里只留历史与新对话入口。 */}
-      <div className="flex h-10 shrink-0 items-center gap-1 px-3">
+      <div className={embedded ? 'hidden' : 'flex h-10 shrink-0 items-center gap-1 px-3'}>
         <IconButton aria-label="历史对话" onClick={() => setSessionsOpen(true)} title="历史对话">
           <History />
         </IconButton>
@@ -212,6 +232,16 @@ const ChatSessionView = memo(function ChatSessionView({
             title="查看工作区未提交的改动"
           >
             <GitCompare />
+          </IconButton>
+        )}
+        <div className="flex-1" />
+        {conversation && !sidechatOpen && (
+          <IconButton
+            aria-label="旁问"
+            onClick={() => void openSidechat(active)}
+            title="旁问：带着当前对话顺便问一句（/btw）"
+          >
+            <MessageCircleQuestion />
           </IconButton>
         )}
       </div>
@@ -233,6 +263,8 @@ const ChatSessionView = memo(function ChatSessionView({
           chat={chat}
           mailDialog={mailDialog}
           onEditLast={editLast}
+          onFork={fork}
+          onSidechat={sidechatFromQuote}
           onOpenSource={onOpenSource}
           onSaveNote={onSaveNote}
         />
@@ -241,13 +273,20 @@ const ChatSessionView = memo(function ChatSessionView({
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-10">
           <div className="my-auto">
             <h1 className="mb-6 text-center text-3xl font-semibold tracking-tight @max-[400px]:text-2xl">
-              现在想聊些什么？
+              {embedded ? '这节课有什么疑问？' : '现在想聊些什么？'}
             </h1>
             {composer(true)}
           </div>
         </div>
       )}
       {conversation && composer(false)}
+      {sidechatOpen && (
+        <SidechatPanel
+          onOpenSource={onOpenSource}
+          parentId={active}
+          referenceSource={referenceSource}
+        />
+      )}
       <ChatSessions
         currentSessionId={active}
         onDeleteSession={(id) => {

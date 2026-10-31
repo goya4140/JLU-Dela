@@ -1,13 +1,29 @@
 // 功能入口的单一真源：侧栏、折叠后标题栏图标与设置 › 通用 的显示开关都读这里。
 // 功能开启 > 入口显示：隐藏只影响导航，能力仍在；功能关闭（目前只有水源）时入口消失。首页固定显示，不在此列表。
-import { Bell, CalendarDays, FolderOpen, GraduationCap, Mail, MonitorPlay } from 'lucide-react';
+import {
+  Bell,
+  BookOpen,
+  CalendarDays,
+  FolderOpen,
+  GraduationCap,
+  Mail,
+  MonitorPlay,
+} from 'lucide-react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ShuiyuanIcon } from '../components/ui/shuiyuan-icon';
 import { useExperimentEnabled } from '../features/settings/experimental';
 
 export type NavEntryId =
-  'sources' | 'mail' | 'timetable' | 'classroom' | 'shuiyuan' | 'campus' | 'notifications';
+  | 'sources'
+  | 'mail'
+  | 'timetable'
+  | 'classroom'
+  | 'chaoxing'
+  | 'knowledge'
+  | 'shuiyuan'
+  | 'campus'
+  | 'notifications';
 
 export const navEntries: Array<{
   id: NavEntryId;
@@ -15,9 +31,11 @@ export const navEntries: Array<{
   icon: typeof Mail | typeof ShuiyuanIcon;
 }> = [
   { id: 'campus', label: '吉大校园', icon: GraduationCap },
+  { id: 'knowledge', label: '知识库', icon: BookOpen },
   { id: 'sources', label: '课程资料', icon: FolderOpen },
   { id: 'timetable', label: '课表', icon: CalendarDays },
-  { id: 'classroom', label: '课程回放', icon: MonitorPlay },
+  { id: 'classroom', label: '学在吉大', icon: MonitorPlay },
+  { id: 'chaoxing', label: '学习通', icon: BookOpen },
   { id: 'notifications', label: '学校通知', icon: Bell },
 ];
 

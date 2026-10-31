@@ -2,7 +2,7 @@ import type { KeybindingOverrides } from './keybindings';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
-/** 应用图标底色：white 对应 Dela_white_bg.png，black 对应 Dela_black_bg.png。 */
+/** 应用图标底色：white 对应 JLU-Dela-white.png，black 对应 JLU-Dela-black.png。 */
 export type IconPreference = 'white' | 'black';
 
 /** 页面缩放档位（webContents zoom factor）：百分比阶梯与系统显示缩放一致。 */
@@ -54,10 +54,12 @@ export interface SettingsApi {
 }
 
 export type SettingsSectionId =
+  | 'guide'
   | 'general'
   | 'appearance'
   | 'shortcuts'
   | 'workspace'
+  | 'canvas-cache'
   | 'archived'
   | 'connections'
   | 'providers'

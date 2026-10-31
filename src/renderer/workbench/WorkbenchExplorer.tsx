@@ -511,7 +511,7 @@ export function WorkbenchExplorer({
               {projectId === null && (
                 <div className="grid gap-2 px-4 py-3 text-xs text-ink-3">
                   <p className="font-medium text-ink-2">本地课程资料</p>
-                  <p>导入已下载的课件，或按课程创建项目。学校课程同步待接入。</p>
+                  <p>可从学习通导入课件，也可导入本地文件，按课程整理。</p>
                   <div>
                     <Button
                       onClick={() => useAppNavigation.getState().navigate('campus')}

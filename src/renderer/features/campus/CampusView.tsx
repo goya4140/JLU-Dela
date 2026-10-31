@@ -19,9 +19,18 @@ export function CampusView({
             <GraduationCap className="size-5" aria-hidden="true" />
             JLU Dela · 本科生开发预览
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => useNavigationStore.getState().openSettings('guide')}
+            >
+              使用指南与连接配置
+            </Button>
+          </div>
           <p className="text-13 leading-relaxed text-ink-3">
-            课表、课程资料与通知的同步功能正在适配。现在可以前往学校平台，由你在浏览器中登录使用。
+            读取课表、校内通知、学在吉大及学习通课程，已同步内容保存在本机。
           </p>
         </header>
         <div className="grid gap-4" data-setting-id="jlu-campus">
@@ -30,11 +39,41 @@ export function CampusView({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-base font-semibold text-ink">{service.name}</h2>
                 <span className="rounded-full bg-field px-2.5 py-1 text-xs text-ink-3">
-                  同步待接入
+                  {service.id === 'academic' ? '课表接入预览' : '接入预览'}
                 </span>
               </div>
               <p className="text-13 text-ink-3">{service.description}</p>
-              <div>
+              <div className="flex flex-wrap gap-2">
+                {service.id === 'academic' && (
+                  <Button
+                    size="sm"
+                    onClick={() => useNavigationStore.getState().navigate('timetable')}
+                  >
+                    打开课表
+                  </Button>
+                )}
+                {service.id !== 'academic' && (
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      useNavigationStore
+                        .getState()
+                        .navigate(
+                          service.id === 'notices'
+                            ? 'notifications'
+                            : service.id === 'chaoxing'
+                              ? 'chaoxing'
+                              : 'classroom',
+                        )
+                    }
+                  >
+                    {service.id === 'notices'
+                      ? '打开通知'
+                      : service.id === 'chaoxing'
+                        ? '打开学习通'
+                        : '打开学在吉大'}
+                  </Button>
+                )}
                 <Button asChild size="sm" variant="outline">
                   <a href={service.url} rel="noreferrer" target="_blank">
                     前往学校平台

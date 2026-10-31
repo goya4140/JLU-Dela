@@ -15,9 +15,13 @@ import { tool } from './domain/shared';
 import type { AgentTool } from './domain/shared';
 import { assertShuiyuanEnabled, experimentEnabled } from '../settings/prefs';
 import { jluServices } from '../../shared/jlu';
+import { knowledgeTools } from './domain/knowledge';
+import { jluTools } from './domain/jlu';
 
 // 这些是 shell 的业务命令，不常驻模型工具表；复用应用已有的缓存、登录与操作边界。
 const commandDomains = [
+  { name: 'knowledge', description: '检索本地课程知识库与来源片段', commands: knowledgeTools },
+  { name: 'jlu', description: '查询电子校务、学在吉大与学习通本地缓存', commands: jluTools },
   { name: 'canvas', description: '查询、同步 Canvas 课程与资料', commands: canvasTools },
   { name: 'classroom', description: '读取与下载课堂视频语音文稿', commands: classroomTools },
   { name: 'mail', description: '检索邮件、读取附件与准备邮件草稿', commands: mailTools },
@@ -40,7 +44,10 @@ const commands: Record<string, AgentTool> = Object.assign(
     campus_status: tool(
       '查看吉林大学校园平台入口及接入状态；不登录学校、不读取或同步个人数据。',
       z.object({}).strict(),
-      () => ({ services: jluServices, synced: false }),
+      () => ({
+        services: jluServices,
+        note: '课表、电子校务、学在吉大和学习通为接入预览；由用户在对应页面同步，实际数据范围以各查询命令的 coverage 为准。',
+      }),
     ),
     read_resource: readResourceTool,
     prepare_document: tool(

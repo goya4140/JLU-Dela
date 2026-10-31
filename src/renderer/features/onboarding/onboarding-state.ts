@@ -22,15 +22,12 @@ export function needsWizard() {
   return localStorage.getItem(completedKey) !== '1';
 }
 
-/**
- * 是否跳过原有引导流程。没有接受记录就一定先展示条款页，避免拒绝后重启绕过。
- * 接受过条款后不恢复旧向导；App 仍会检查独立的能力拓展版本。
- */
+/** 接受条款并完成向导后进入主界面；未完成时恢复上次步骤。 */
 export function onboardingCompleted() {
-  return isSmokeTest || hasConsent();
+  return isSmokeTest || (hasConsent() && !needsWizard());
 }
 
-/** 当前向导步骤；新启动不再恢复未完成的引导。 */
+/** 上次停留的向导步骤。 */
 export function readWizardStep(): number | null {
   const raw = localStorage.getItem(stepKey);
   if (raw === null) return null;

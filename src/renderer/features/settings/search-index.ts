@@ -121,6 +121,26 @@ export const settingsSearchItems: SettingsSearchItem[] = [
     keywords: ['工作区', '目录', '文件夹', '保存位置', '笔记位置', 'folder'],
   },
   {
+    id: 'canvas-cache',
+    section: 'canvas-cache',
+    title: 'Canvas 缓存',
+    keywords: [
+      'Canvas',
+      '课程资料',
+      '课件',
+      '缓存',
+      '清理',
+      '自动清理',
+      '容量上限',
+      '最近使用',
+      '当前学期',
+      '固定缓存',
+      '占用',
+      '磁盘',
+      'cache',
+    ],
+  },
+  {
     id: 'reset-layout',
     section: 'workspace',
     title: '布局重置',
@@ -207,10 +227,12 @@ export const settingsSearchItems: SettingsSearchItem[] = [
 ];
 
 export const settingsSectionLabels: Record<SettingsSectionId, string> = {
+  guide: '使用指南',
   general: '通用',
   appearance: '外观',
   shortcuts: '快捷键',
   workspace: '工作区',
+  'canvas-cache': 'Canvas 缓存',
   archived: '已归档',
   connections: '连接',
   remotes: '远程',
@@ -227,12 +249,14 @@ export const settingsSectionLabels: Record<SettingsSectionId, string> = {
 
 /** 全局搜索 setting 入口的分组摘要（与设置内搜索共用同一份关键词）。 */
 export const settingsSectionSummaries: Record<SettingsSectionId, string> = {
+  guide: '首次配置、使用须知、校园认证与学习通连接',
   general: '开机自启动与系统通知',
   appearance: '主题、缩放、字号与图标',
   shortcuts: '查看与修改快捷键',
   workspace: '工作目录与布局',
+  'canvas-cache': '课程资料缓存位置、占用与清理',
   archived: '恢复或永久删除已归档对话',
-  connections: 'Canvas、邮箱、教务与水源连接',
+  connections: '吉大校园平台与学习通入口',
   remotes: 'SSH 远程主机与连接',
   providers: 'AI 模型与 API 提供商',
   capabilities: '内置 Agent 能力开关',

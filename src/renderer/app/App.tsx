@@ -6,6 +6,9 @@ import { AppShell } from '../components/AppShell';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { MailView } from '../features/mail';
 import { CampusView } from '../features/campus/CampusView';
+import { SchoolNoticesView } from '../features/campus/SchoolNoticesView';
+import { LearningView } from '../features/campus/LearningView';
+import { TimetableView } from '../features/timetable';
 import { CompletionOverlay } from '../features/onboarding/CompletionOverlay';
 import { OnboardingFlow } from '../features/onboarding/OnboardingFlow';
 import { CapabilitySetup } from '../features/onboarding/CapabilitySetup';
@@ -35,6 +38,8 @@ import { errorText, useWorkspaceStore } from '../workspace/store';
 import { showToast } from './toasts';
 import { useNavigationStore, type MobileDrawer } from '../navigation/view';
 import { useNotifications } from './notifications';
+import { KnowledgeView } from '../features/knowledge/KnowledgeView';
+import { ChaoxingView } from '../features/campus/ChaoxingView';
 import { useAppearance } from './theme';
 import { WorkbenchShell } from '../workbench/WorkbenchShell';
 
@@ -335,16 +340,16 @@ export default function App() {
                   )}
                   {view === 'campus' && <CampusView />}
                   {view === 'timetable' && (
-                    <CampusView title="课表" serviceIds={['academic', 'learning']} />
+                    <TimetableView
+                      onOpenTodo={(todoId) => void useNavigationStore.getState().openTodo(todoId)}
+                    />
                   )}
                   {view === 'shuiyuan' && <ShuiyuanView />}
-                  {view === 'classroom' && (
-                    <CampusView title="课程回放" serviceIds={['learning']} />
-                  )}
+                  {view === 'classroom' && <LearningView />}
+                  {view === 'chaoxing' && <ChaoxingView />}
+                  {view === 'knowledge' && <KnowledgeView />}
                   {view === 'todo' && <TodoView request={todoRequest ?? undefined} />}
-                  {view === 'notifications' && (
-                    <CampusView title="学校通知" serviceIds={['notices']} />
-                  )}
+                  {view === 'notifications' && <SchoolNoticesView />}
                   {view === 'settings' && (
                     <SettingsView
                       fontSize={fontSize}
@@ -377,7 +382,10 @@ export default function App() {
       {launchStage === 'flow' && (
         <OnboardingFlow
           onConsentDone={() => setLaunchStage('checking')}
-          onWizardDone={() => setLaunchStage('completion')}
+          onWizardDone={() => {
+            useNavigationStore.getState().openSettings('guide');
+            setLaunchStage('completion');
+          }}
         />
       )}
       {launchStage === 'checking' && (
