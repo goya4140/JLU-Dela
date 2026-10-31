@@ -109,7 +109,7 @@ jobs:
       - run: pnpm check
       - run: pnpm prepare:runtime
       - name: Build Windows installer
-        run: pnpm exec electron-builder --win --x64 --publish never -c.electronDist=node_modules/electron/dist
+        run: pnpm exec electron-builder --win --x64 --publish never
       - name: Install, launch and uninstall
         run: node scripts/verify-windows-package.ts
       - name: Record source
