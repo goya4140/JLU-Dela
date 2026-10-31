@@ -74,32 +74,27 @@ async function syncFolder(
   generation: number,
 ): Promise<void> {
   const isStale = () => generation !== syncGeneration;
-  const status = await client.status(folder.path, {
-    messages: true,
-    uidValidity: true,
-    uidNext: true,
-  });
-  if (isStale()) return;
-  const uidValidity = status.uidValidity !== undefined ? String(status.uidValidity) : null;
-  if (folder.uid_validity && uidValidity && folder.uid_validity !== uidValidity) {
-    db.prepare('DELETE FROM mail_messages WHERE folder_id = ?').run(folder.id);
-  }
-  // 未读数从本地表统计（排除本地已删除行），不盲信服务器计数。
-  db.prepare(
-    `UPDATE mail_folders SET uid_validity = ?, total = ?,
+  // 吉大学生邮箱（Coremail）会拒绝非 INBOX 的 STATUS，因此统一用 SELECT 后的
+  // client.mailbox 取计数，避免整个同步在第二个文件夹上中断。
+  const lock = await client.getMailboxLock(folder.path);
+  try {
+    const mailbox = client.mailbox;
+    if (!mailbox) throw new Error(`无法打开邮件文件夹 ${folder.path}`);
+    const uidValidity = mailbox.uidValidity !== undefined ? String(mailbox.uidValidity) : null;
+    if (folder.uid_validity && uidValidity && folder.uid_validity !== uidValidity) {
+      db.prepare('DELETE FROM mail_messages WHERE folder_id = ?').run(folder.id);
+    }
+    // 未读数从本地表统计（排除本地已删除行），不盲信服务器计数。
+    db.prepare(
+      `UPDATE mail_folders SET uid_validity = ?, total = ?,
       unread = (SELECT COUNT(*) FROM mail_messages
         WHERE folder_id = mail_folders.id AND deleted_at IS NULL AND seen = 0),
       synced_at = ?
      WHERE id = ?`,
-  ).run(uidValidity, status.messages ?? null, new Date().toISOString(), folder.id);
-  if (!status.messages || status.messages === 0) return;
+    ).run(uidValidity, mailbox.exists, new Date().toISOString(), folder.id);
+    if (isStale() || mailbox.exists === 0) return;
 
-  const uidNext = status.uidNext !== undefined ? Number(status.uidNext) : 1;
-  const highest = Math.max(1, uidNext - 1);
-  const start = Math.max(1, highest - SYNC_WINDOW + 1);
-
-  const lock = await client.getMailboxLock(folder.path);
-  try {
+    const start = Math.max(1, Number(mailbox.uidNext ?? 1) - SYNC_WINDOW);
     const headers = await client.fetchAll(
       { uid: `${start}:*` },
       {
@@ -210,17 +205,16 @@ async function purgeServerDrafts(client: ImapFlow, listed: ListResponse[], addre
   if (readMailSetting('mail-drafts-purged') === address) return;
   const drafts = listed.find((folder) => folder.specialUse === '\\Drafts');
   if (drafts) {
-    const status = await client.status(drafts.path, { messages: true });
-    if (status.messages) {
-      const lock = await client.getMailboxLock(drafts.path);
-      try {
+    const lock = await client.getMailboxLock(drafts.path);
+    try {
+      if (client.mailbox && client.mailbox.exists > 0) {
         // ImapFlow 的 messageDelete 先标记 \Deleted 再 EXPUNGE，一次调用完成真删。
         if (!(await client.messageDelete({ all: true }))) {
           throw new Error(`服务器拒绝清空草稿箱 ${drafts.path}`);
         }
-      } finally {
-        lock.release();
       }
+    } finally {
+      lock.release();
     }
   }
   writeMailSetting('mail-drafts-purged', address);
@@ -287,9 +281,15 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
       db.prepare('DELETE FROM mail_folders WHERE account_id = ?').run(account.id);
     }
 
+    const failures: string[] = [];
     for (const folderRow of folderRows) {
       if (isStale()) return;
-      await syncFolder(db, client, folderRow, generation);
+      try {
+        await syncFolder(db, client, folderRow, generation);
+      } catch (error) {
+        // 单个文件夹失败（服务器不支持、权限不足、解析异常）不影响其余文件夹。
+        failures.push(`${folderRow.name}：${friendlyError(error)}`);
+      }
     }
     if (isStale()) return;
     applyTrashRetention(db);
@@ -298,11 +298,11 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
       account.id,
     );
     updateSync({
-      phase: 'idle',
+      phase: failures.length > 0 ? 'error' : 'idle',
       folderPath: null,
       processed: 0,
       total: null,
-      error: null,
+      error: failures.length > 0 ? `部分文件夹同步失败（${failures.join('；')}）` : null,
       finishedAt: new Date().toISOString(),
     });
   } catch (error) {

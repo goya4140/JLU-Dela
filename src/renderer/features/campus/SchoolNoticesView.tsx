@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import type {
   JluNoticeDetail,
@@ -98,7 +98,7 @@ function NoticesPage({ api }: { api: NoticesPageApi }) {
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-semibold text-ink">学校通知</h1>
-            <p className="mt-1 text-xs text-ink-3">
+            <p className="mt-1 text-xs text-ink-2">
               电子校务 · 校内通知
               {data
                 ? ` · 更新于 ${new Date(data.syncedAt).toLocaleString('zh-CN')}`
@@ -137,7 +137,7 @@ function NoticesPage({ api }: { api: NoticesPageApi }) {
               )}
             </div>
             <h2 className="break-words text-lg font-semibold text-ink">{detail.title}</h2>
-            <p className="whitespace-pre-wrap text-xs text-ink-3">{detail.metadata}</p>
+            <p className="whitespace-pre-wrap text-xs text-ink-2">{detail.metadata}</p>
             <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-ink">
               {detail.text}
             </div>
@@ -162,9 +162,9 @@ function NoticesPage({ api }: { api: NoticesPageApi }) {
               </section>
             )}
             {!api.openAttachment && (
-              <p className="text-xs text-ink-3">学校原文与附件请在本机 Dela 中打开。</p>
+              <p className="text-xs text-ink-2">学校原文与附件请在本机 Dela 中打开。</p>
             )}
-            <p className="text-xs text-ink-3">
+            <p className="text-xs text-ink-2">
               正文缓存于 {new Date(detail.syncedAt).toLocaleString('zh-CN')}
             </p>
           </article>
@@ -177,7 +177,7 @@ function NoticesPage({ api }: { api: NoticesPageApi }) {
               placeholder="筛选本页标题或发布单位"
             />
             {!data && (
-              <p className="py-8 text-13 text-ink-3">
+              <p className="py-8 text-13 text-ink-2">
                 点击「刷新通知」读取学校列表，已读取的通知会保存在本机。
               </p>
             )}
@@ -191,20 +191,20 @@ function NoticesPage({ api }: { api: NoticesPageApi }) {
                     onClick={() => void read(item.id, item.channel)}
                   >
                     <span className="break-words text-sm text-ink">
-                      {item.pinned && <span className="mr-2 text-xs text-ink-3">置顶</span>}
+                      {item.pinned && <span className="mr-2 text-xs text-ink-2">置顶</span>}
                       {item.title}
                     </span>
-                    <span className="flex flex-wrap gap-x-3 text-xs text-ink-3">
+                    <span className="flex flex-wrap gap-x-3 text-xs text-ink-2">
                       <span>{item.department}</span>
                       <span>{item.published}</span>
                     </span>
                   </button>
                 ))}
-                {!notices.length && <p className="py-6 text-13 text-ink-3">本页没有匹配的通知。</p>}
+                {!notices.length && <p className="py-6 text-13 text-ink-2">本页没有匹配的通知。</p>}
               </div>
             )}
             {data && (
-              <footer className="flex flex-wrap items-center justify-between gap-3 text-xs text-ink-3">
+              <footer className="flex flex-wrap items-center justify-between gap-3 text-xs text-ink-2">
                 <span>
                   第 {page}
                   {data.totalPages ? ` / ${data.totalPages}` : ''} 页 · 仅筛选当前页

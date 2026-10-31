@@ -59,12 +59,14 @@ const imapHarness = vi.hoisted(() => {
     messageDeleteResult: true,
     deletions: [] as unknown[],
     lockedPaths: [] as string[],
+    failPaths: [] as string[],
     flagAdds: [] as Array<{ range: unknown; flags: string[] }>,
   };
 });
 
 vi.mock('imapflow', () => ({
   ImapFlow: class {
+    mailbox: unknown = false;
     constructor(options: unknown) {
       imapHarness.options.push(options);
     }
@@ -78,7 +80,16 @@ vi.mock('imapflow', () => ({
       return imapHarness.status(path);
     }
     async getMailboxLock(path: string) {
+      if (imapHarness.failPaths.includes(path)) throw new Error(`NO ${path}`);
       imapHarness.lockedPaths.push(path);
+      // SELECT 后的 mailbox 就是被测代码取计数的来源，与服务器行为一致。
+      const snapshot = imapHarness.status(path);
+      this.mailbox = {
+        path,
+        exists: snapshot.messages,
+        uidValidity: BigInt(snapshot.uidValidity ?? '1'),
+        uidNext: snapshot.uidNext ?? 1,
+      };
       return { release: () => {} };
     }
     async messageDelete(range: unknown) {
@@ -287,6 +298,7 @@ describe('mail local trash and folder sync', () => {
     imapHarness.fetchAllResult = [];
     imapHarness.deletions = [];
     imapHarness.lockedPaths = [];
+    imapHarness.failPaths = [];
     imapHarness.messageDeleteResult = true;
     imapHarness.flagAdds = [];
     imapHarness.status = () => ({ messages: 0, unseen: 0, uidValidity: '1', uidNext: 1 });
@@ -336,7 +348,7 @@ describe('mail local trash and folder sync', () => {
     expect(syncStatus.phase).toBe('idle');
 
     expect(imapHarness.deletions).toEqual([{ all: true }]);
-    expect(imapHarness.lockedPaths).toEqual(['Drafts']);
+    expect(imapHarness.lockedPaths).toEqual(['Drafts', 'INBOX']);
     expect(setting(db, 'mail-drafts-purged')).toBe('reader@example.com');
     expect(folderPaths(db)).toEqual(['INBOX']);
     expect(
@@ -420,6 +432,69 @@ describe('mail local trash and folder sync', () => {
       unread: 1,
     });
     expect(listMailMessages(folderId, 100).map((item) => item.uid)).toEqual([2]);
+  });
+
+  it('caches every server folder, not just INBOX', async () => {
+    imapHarness.folders = [asFolder('INBOX', '\\Inbox'), asFolder('已发送邮件', '\\Sent')];
+    imapHarness.status = () => ({ messages: 1, uidValidity: '9', uidNext: 2 });
+    imapHarness.fetchAllResult = [
+      {
+        uid: 1,
+        flags: new Set<string>(),
+        envelope: {
+          messageId: '<1@example.com>',
+          subject: 'Subject',
+          from: [{ name: '发件人', address: 'sender@example.com' }],
+          to: [],
+          cc: [],
+        },
+        internalDate: new Date('2026-09-12T00:00:00Z'),
+        size: 100,
+      },
+    ];
+
+    startMailSync();
+    await waitForSync();
+
+    expect(syncStatus.phase).toBe('idle');
+    const folders = db
+      .prepare('SELECT path, total, synced_at FROM mail_folders ORDER BY path')
+      .all() as Array<{ path: string; total: number | null; synced_at: string | null }>;
+    expect(folders.map((row) => row.path)).toEqual(['INBOX', '已发送邮件']);
+    expect(folders.every((row) => row.total === 1 && row.synced_at !== null)).toBe(true);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM mail_messages').get()).toEqual({ n: 2 });
+  });
+
+  it('keeps other folders synced when one folder cannot be opened', async () => {
+    imapHarness.folders = [asFolder('INBOX', '\\Inbox'), asFolder('垃圾邮件', '\\Junk')];
+    imapHarness.failPaths = ['垃圾邮件'];
+    imapHarness.status = () => ({ messages: 1, uidValidity: '1', uidNext: 2 });
+    imapHarness.fetchAllResult = [
+      {
+        uid: 1,
+        flags: new Set<string>(),
+        envelope: {
+          messageId: '<1@example.com>',
+          subject: 'Subject',
+          from: [{ name: '发件人', address: 'sender@example.com' }],
+          to: [],
+          cc: [],
+        },
+        internalDate: new Date('2026-09-12T00:00:00Z'),
+        size: 100,
+      },
+    ];
+
+    startMailSync();
+    await waitForSync();
+
+    expect(syncStatus.phase).toBe('error');
+    expect(syncStatus.error).toContain('垃圾邮件');
+    expect(db.prepare('SELECT COUNT(*) AS n FROM mail_messages').get()).toEqual({ n: 1 });
+    const account = db.prepare('SELECT last_synced_at FROM mail_accounts').get() as {
+      last_synced_at: string | null;
+    };
+    expect(account.last_synced_at).not.toBeNull();
   });
 
   it('getMailState removes local \\Drafts/\\Trash rows without waiting for a sync', () => {
