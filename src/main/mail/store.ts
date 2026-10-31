@@ -84,12 +84,26 @@ export function connectImap(
   password: string,
   server: MailServerConfig = storedMailServer(),
 ): ImapFlow {
+  // JLU_MAIL_DEBUG=1 时把 IMAP 会话打到主进程标准输出，用于排查学校邮箱的连接问题。
+  const trace = process.env.JLU_MAIL_DEBUG === '1';
   const client = new ImapFlow({
     host: server.imapHost,
     port: server.imapPort,
     secure: true,
     auth: { user: address, pass: password },
-    logger: false,
+    logger: trace
+      ? {
+          debug: (message: string) => console.log('[imap]', message),
+          info: (message: string) => console.log('[imap]', message),
+          warn: (message: string) => console.warn('[imap]', message),
+          error: (message: string) => console.error('[imap]', message),
+        }
+      : false,
+    // 学校邮箱在代理/弱网下会卡住握手或命令；给每步设上限，让失败变成错误而不是无限等待。
+    // socketTimeout 放宽到 3 分钟：Coremail 打开大文件夹（已发送/垃圾邮件）可能很慢。
+    connectionTimeout: 45_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 180_000,
   });
   client.on('error', () => {
     // 连接错误通过调用方 Promise 传递；此处仅避免未处理事件导致进程退出。

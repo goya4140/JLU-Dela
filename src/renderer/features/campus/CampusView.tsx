@@ -3,6 +3,18 @@ import { jluServices, type JluServiceId } from '../../../shared/jlu';
 import { Button } from '../../components/ui/button';
 import { useNavigationStore } from '../../navigation/view';
 
+/** 每个平台的入口按钮：label 为文案，view 为应用内页面。 */
+const serviceActions: Record<
+  JluServiceId,
+  { label: string; view: 'timetable' | 'notifications' | 'chaoxing' | 'classroom' | 'mail' }
+> = {
+  academic: { label: '打开课表', view: 'timetable' },
+  notices: { label: '打开通知', view: 'notifications' },
+  chaoxing: { label: '打开学习通', view: 'chaoxing' },
+  learning: { label: '打开学在吉大', view: 'classroom' },
+  mail: { label: '打开邮箱', view: 'mail' },
+};
+
 export function CampusView({
   title = '吉大校园',
   serviceIds,
@@ -30,7 +42,7 @@ export function CampusView({
             </Button>
           </div>
           <p className="text-13 leading-relaxed text-ink-3">
-            读取课表、校内通知、学在吉大及学习通课程，已同步内容保存在本机。
+            读取课表、校内通知、学在吉大及学习通课程，并可连接吉大邮箱，已同步内容保存在本机。
           </p>
         </header>
         <div className="grid gap-4" data-setting-id="jlu-campus">
@@ -44,36 +56,14 @@ export function CampusView({
               </div>
               <p className="text-13 text-ink-3">{service.description}</p>
               <div className="flex flex-wrap gap-2">
-                {service.id === 'academic' && (
-                  <Button
-                    size="sm"
-                    onClick={() => useNavigationStore.getState().navigate('timetable')}
-                  >
-                    打开课表
-                  </Button>
-                )}
-                {service.id !== 'academic' && (
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      useNavigationStore
-                        .getState()
-                        .navigate(
-                          service.id === 'notices'
-                            ? 'notifications'
-                            : service.id === 'chaoxing'
-                              ? 'chaoxing'
-                              : 'classroom',
-                        )
-                    }
-                  >
-                    {service.id === 'notices'
-                      ? '打开通知'
-                      : service.id === 'chaoxing'
-                        ? '打开学习通'
-                        : '打开学在吉大'}
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    useNavigationStore.getState().navigate(serviceActions[service.id].view)
+                  }
+                >
+                  {serviceActions[service.id].label}
+                </Button>
                 <Button asChild size="sm" variant="outline">
                   <a href={service.url} rel="noreferrer" target="_blank">
                     前往学校平台

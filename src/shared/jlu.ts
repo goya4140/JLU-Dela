@@ -27,6 +27,13 @@ export const jluServices = [
     url: 'https://i.chaoxing.com/base',
     integration: 'preview',
   },
+  {
+    id: 'mail',
+    name: '吉林大学学生邮箱',
+    description: '在本机收发、检索学生邮箱邮件，凭据只保存在本机。',
+    url: 'https://mails.jlu.edu.cn/',
+    integration: 'preview',
+  },
 ] as const;
 
 export type JluServiceId = (typeof jluServices)[number]['id'];

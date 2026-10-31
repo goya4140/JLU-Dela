@@ -4,7 +4,7 @@ import { BrowserWindow } from 'electron';
 import type { ImapFlow, ListResponse } from 'imapflow';
 import { z } from 'zod';
 import type { MailAddress, MailConfigureInput, MailResult, MailSyncStatus } from '../../shared/api';
-import { SJTU_MAIL_SERVER } from '../../shared/mail';
+import { JLU_MAIL_SERVER } from '../../shared/mail';
 import { getDatabase } from '../database';
 import { clearMailCredentials, loadMailCredentials, saveMailCredentials } from '../credentials';
 import {
@@ -30,6 +30,8 @@ import {
 
 export const SYNC_WINDOW = 300;
 const BODY_PRELOAD = 30;
+/** 超过这个体积的邮件不做正文预取（分段 FETCH 容易被学校服务器断开）。 */
+const BODY_PRELOAD_MAX_BYTES = 1_000_000;
 
 export let syncStatus: MailSyncStatus = {
   phase: 'idle',
@@ -56,6 +58,23 @@ export function emitMailCacheChanged(): void {
   for (const listener of mailCacheListeners) listener();
 }
 
+const FOLDER_TIMEOUT = 240_000;
+
+/** 单个文件夹的整体时间上限：服务器卡住时也要让这一轮同步结束。 */
+async function withTimeout<T>(task: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      task,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} 同步超时`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function pushSyncStatus(): void {
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) window.webContents.send('mail:sync-status', syncStatus);
@@ -74,32 +93,26 @@ async function syncFolder(
   generation: number,
 ): Promise<void> {
   const isStale = () => generation !== syncGeneration;
-  const status = await client.status(folder.path, {
-    messages: true,
-    uidValidity: true,
-    uidNext: true,
-  });
-  if (isStale()) return;
-  const uidValidity = status.uidValidity !== undefined ? String(status.uidValidity) : null;
-  if (folder.uid_validity && uidValidity && folder.uid_validity !== uidValidity) {
-    db.prepare('DELETE FROM mail_messages WHERE folder_id = ?').run(folder.id);
-  }
-  // 未读数从本地表统计（排除本地已删除行），不盲信服务器计数。
-  db.prepare(
-    `UPDATE mail_folders SET uid_validity = ?, total = ?,
+  // 用 EXAMINE（只读）打开：同步只需要读取，Coremail 对只读打开更稳定，也不会因写模式触发锁。
+  const lock = await client.getMailboxLock(folder.path, { readOnly: true });
+  try {
+    const mailbox = client.mailbox;
+    if (!mailbox) throw new Error(`无法打开邮件文件夹 ${folder.path}`);
+    const uidValidity = mailbox.uidValidity !== undefined ? String(mailbox.uidValidity) : null;
+    if (folder.uid_validity && uidValidity && folder.uid_validity !== uidValidity) {
+      db.prepare('DELETE FROM mail_messages WHERE folder_id = ?').run(folder.id);
+    }
+    // 未读数从本地表统计（排除本地已删除行），不盲信服务器计数。
+    db.prepare(
+      `UPDATE mail_folders SET uid_validity = ?, total = ?,
       unread = (SELECT COUNT(*) FROM mail_messages
         WHERE folder_id = mail_folders.id AND deleted_at IS NULL AND seen = 0),
       synced_at = ?
      WHERE id = ?`,
-  ).run(uidValidity, status.messages ?? null, new Date().toISOString(), folder.id);
-  if (!status.messages || status.messages === 0) return;
+    ).run(uidValidity, mailbox.exists, new Date().toISOString(), folder.id);
+    if (isStale() || mailbox.exists === 0) return;
 
-  const uidNext = status.uidNext !== undefined ? Number(status.uidNext) : 1;
-  const highest = Math.max(1, uidNext - 1);
-  const start = Math.max(1, highest - SYNC_WINDOW + 1);
-
-  const lock = await client.getMailboxLock(folder.path);
-  try {
+    const start = Math.max(1, Number(mailbox.uidNext ?? 1) - SYNC_WINDOW);
     const headers = await client.fetchAll(
       { uid: `${start}:*` },
       {
@@ -182,9 +195,13 @@ async function syncFolder(
       index -= 1
     ) {
       if (isStale()) return;
+      // 连接被服务器断开时继续发请求只会得到 Connection not available；交给外层重连。
+      if (!client.usable) break;
       const uid = headers[index]?.uid;
       const textPart = textParts[index];
       if (uid === undefined || !textPart) continue;
+      // 超大邮件不做预取：分段 FETCH 更容易被学校服务器断开，打开时再按需下载。
+      if ((headers[index]?.size ?? 0) > BODY_PRELOAD_MAX_BYTES) continue;
       try {
         const body = await downloadMessageBody(
           client,
@@ -210,27 +227,37 @@ async function purgeServerDrafts(client: ImapFlow, listed: ListResponse[], addre
   if (readMailSetting('mail-drafts-purged') === address) return;
   const drafts = listed.find((folder) => folder.specialUse === '\\Drafts');
   if (drafts) {
-    const status = await client.status(drafts.path, { messages: true });
-    if (status.messages) {
-      const lock = await client.getMailboxLock(drafts.path);
-      try {
+    const lock = await client.getMailboxLock(drafts.path);
+    try {
+      if (client.mailbox && client.mailbox.exists > 0) {
         // ImapFlow 的 messageDelete 先标记 \Deleted 再 EXPUNGE，一次调用完成真删。
         if (!(await client.messageDelete({ all: true }))) {
           throw new Error(`服务器拒绝清空草稿箱 ${drafts.path}`);
         }
-      } finally {
-        lock.release();
       }
+    } finally {
+      lock.release();
     }
   }
   writeMailSetting('mail-drafts-purged', address);
 }
 
 async function runSync(account: AccountRow, password: string): Promise<void> {
+  const trace =
+    process.env.JLU_MAIL_DEBUG === '1'
+      ? (...args: unknown[]) => console.log('[mail-sync]', ...args)
+      : () => {};
   const generation = syncGeneration;
   const db = getDatabase();
   const isStale = () => generation !== syncGeneration;
-  const client = connectImap(account.address, password);
+  let client = connectImap(account.address, password);
+  const ensureClient = async () => {
+    if (client.usable) return;
+    trace('reconnecting after closed connection');
+    client = connectImap(account.address, password);
+    await client.connect();
+  };
+  trace('connect start', account.address);
   updateSync({
     phase: 'connecting',
     folderPath: null,
@@ -242,8 +269,13 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
   });
   try {
     await client.connect();
+    trace('connected');
     updateSync({ phase: 'syncing' });
     const listed = await client.list();
+    trace(
+      'listed',
+      listed.map((folder) => `${folder.path}[${folder.specialUse ?? ''}]`).join(' | '),
+    );
     try {
       await purgeServerDrafts(client, listed, account.address);
     } catch {
@@ -287,9 +319,24 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
       db.prepare('DELETE FROM mail_folders WHERE account_id = ?').run(account.id);
     }
 
+    const failures: string[] = [];
     for (const folderRow of folderRows) {
       if (isStale()) return;
-      await syncFolder(db, client, folderRow, generation);
+      trace('folder start', folderRow.name);
+      try {
+        // 上一个文件夹的预取可能被服务器断开连接，进入下一个文件夹前先恢复。
+        await ensureClient();
+        await withTimeout(
+          syncFolder(db, client, folderRow, generation),
+          FOLDER_TIMEOUT,
+          folderRow.name,
+        );
+        trace('folder done', folderRow.name);
+      } catch (error) {
+        trace('folder failed', folderRow.name, String(error));
+        // 单个文件夹失败（服务器不支持、权限不足、卡住超时）不影响其余文件夹。
+        failures.push(`${folderRow.name}：${friendlyError(error)}`);
+      }
     }
     if (isStale()) return;
     applyTrashRetention(db);
@@ -298,14 +345,15 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
       account.id,
     );
     updateSync({
-      phase: 'idle',
+      phase: failures.length > 0 ? 'error' : 'idle',
       folderPath: null,
       processed: 0,
       total: null,
-      error: null,
+      error: failures.length > 0 ? `部分文件夹同步失败（${failures.join('；')}）` : null,
       finishedAt: new Date().toISOString(),
     });
   } catch (error) {
+    trace('sync failed', String(error));
     updateSync({
       phase: 'error',
       folderPath: null,
@@ -313,10 +361,20 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
       finishedAt: new Date().toISOString(),
     });
   } finally {
-    client.close();
+    try {
+      client.close();
+    } catch {
+      // 连接已被服务器断开时 close 会抛错，忽略即可。
+    }
     // 同步会改写 seen 标志（含他端已读），通知面板的派生已读需随之刷新。
     emitMailCacheChanged();
   }
+}
+
+/** 吉大邮箱地址：学生邮箱在 mails.jlu.edu.cn 子域，教工邮箱是 jlu.edu.cn 本身。 */
+function isJluMailAddress(address: string): boolean {
+  const domain = address.slice(address.lastIndexOf('@') + 1);
+  return domain === 'jlu.edu.cn' || domain.endsWith('.jlu.edu.cn');
 }
 
 export async function configureMailAccount(input: MailConfigureInput): Promise<MailResult> {
@@ -325,10 +383,13 @@ export async function configureMailAccount(input: MailConfigureInput): Promise<M
   if (!z.email().safeParse(address).success || password.length === 0) {
     return { ok: false, error: '请输入完整的邮箱地址和密码' };
   }
-  // 不带 server 就是交大邮箱：只接受校内地址。第三方账号服务器自填，地址不限。
-  const server = input.server ?? SJTU_MAIL_SERVER;
-  if (!input.server && !address.endsWith('@sjtu.edu.cn')) {
-    return { ok: false, error: '交大邮箱地址需以 @sjtu.edu.cn 结尾，或改选第三方 IMAP' };
+  // 不带 server 就是吉大邮箱：只接受校内地址（学生邮箱在 mails 子域）。第三方账号服务器自填，地址不限。
+  const server = input.server ?? JLU_MAIL_SERVER;
+  if (!input.server && !isJluMailAddress(address)) {
+    return {
+      ok: false,
+      error: '吉大邮箱地址需以 @jlu.edu.cn 或 @mails.jlu.edu.cn 结尾，或改选第三方 IMAP',
+    };
   }
   const db = getDatabase();
   const client = connectImap(address, password, server);

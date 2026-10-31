@@ -73,7 +73,7 @@ export function registerMailIpc(): void {
       .object({
         address: z.string(),
         password: z.string(),
-        // 第三方 IMAP 自填服务器；不带 server 即交大邮箱预设。
+        // 第三方 IMAP 自填服务器；不带 server 即吉大邮箱预设。
         server: z
           .object({
             imapHost: z.string().trim().min(1).max(253),

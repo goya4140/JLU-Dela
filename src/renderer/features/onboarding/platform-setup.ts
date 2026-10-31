@@ -1,7 +1,7 @@
 import type { DelaApi } from '../../../shared/api';
 import type { JluServiceId } from '../../../shared/jlu';
 
-export type SetupApi = Pick<DelaApi, 'timetable' | 'jluPlatforms' | 'chaoxing'>;
+export type SetupApi = Pick<DelaApi, 'timetable' | 'jluPlatforms' | 'chaoxing' | 'mail'>;
 export type SetupResult =
   | { ok: true; syncedAt: string | null }
   | { ok: false; error: string; reason?: 'auth'; stopBatch?: boolean };
@@ -18,15 +18,17 @@ export const emptyPlatformProgress = (): PlatformProgressMap => ({
   notices: { phase: 'empty', syncedAt: null },
   learning: { phase: 'empty', syncedAt: null },
   chaoxing: { phase: 'empty', syncedAt: null },
+  mail: { phase: 'empty', syncedAt: null },
 });
 
 export async function readPlatformProgress(api: SetupApi): Promise<PlatformProgressMap> {
-  const ids: JluServiceId[] = [...jluSetupOrder, 'chaoxing'];
+  const ids: JluServiceId[] = [...jluSetupOrder, 'chaoxing', 'mail'];
   const results = await Promise.allSettled([
     api.timetable.getState().then((row) => row.lastSyncedAt),
     api.jluPlatforms.getNotices('179577', 1).then((row) => row?.syncedAt ?? null),
     api.jluPlatforms.getLearning().then((row) => row?.syncedAt ?? null),
     api.chaoxing.courses().then((row) => row?.syncedAt ?? null),
+    api.mail.getState().then((row) => row.account?.lastSyncedAt ?? null),
   ]);
   const progress = emptyPlatformProgress();
   for (const [index, result] of results.entries()) {
@@ -56,6 +58,10 @@ export async function connectPlatform(api: SetupApi, id: JluServiceId): Promise<
     if (!result.ok)
       return { ok: false, error: result.error ?? '课表同步失败', reason: result.reason };
     return { ok: true, syncedAt: (await api.timetable.getState()).lastSyncedAt };
+  }
+  if (id === 'mail') {
+    // 邮箱用账号密码在「吉大邮箱」页连接，不走校园 SSO 批量流程。
+    return { ok: false, error: '请在「吉大邮箱」页填写邮箱地址与密码完成连接' };
   }
   const result =
     id === 'notices'

@@ -679,7 +679,8 @@ function DesktopMailView({
             <div className="grid gap-1.5">
               <h2 className="text-lg font-semibold tracking-tight">连接邮箱</h2>
               <p className="text-13 leading-relaxed text-ink-3">
-                交大邮箱用 jAccount 账号与密码；也可改用第三方 IMAP 服务器。凭据加密保存在本机。
+                吉大邮箱用 @jlu.edu.cn（学生邮箱为 @mails.jlu.edu.cn）账号与邮箱密码；也可改用第三方
+                IMAP 服务器。凭据加密保存在本机。
               </p>
             </div>
             <MailAccountForm

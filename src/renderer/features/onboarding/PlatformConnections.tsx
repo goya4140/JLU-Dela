@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Check, LoaderCircle } from 'lucide-react';
 import { jluServices, type JluServiceId } from '../../../shared/jlu';
 import { Button } from '../../components/ui/button';
+import { useNavigationStore } from '../../navigation/view';
 import { platformFailureHelp } from './platform-failure-help';
 import {
   connectPlatforms,
@@ -95,15 +96,19 @@ export function PlatformConnections({ onBusyChange }: { onBusyChange?: (busy: bo
           const status = progress[service.id];
           const help = status.phase === 'failed' ? platformFailureHelp(status) : null;
           const label =
-            status.phase === 'busy'
-              ? '正在连接，可能需要学校验证…'
-              : status.phase === 'verified'
-                ? '本次连接成功'
-                : status.phase === 'failed'
-                  ? help?.title
-                  : status.phase === 'cached'
-                    ? '本机已有数据'
-                    : '尚未同步';
+            service.id === 'mail'
+              ? status.phase === 'cached'
+                ? '已连接，可收发邮件'
+                : '尚未连接'
+              : status.phase === 'busy'
+                ? '正在连接，可能需要学校验证…'
+                : status.phase === 'verified'
+                  ? '本次连接成功'
+                  : status.phase === 'failed'
+                    ? help?.title
+                    : status.phase === 'cached'
+                      ? '本机已有数据'
+                      : '尚未同步';
           return (
             <div
               key={service.id}
@@ -122,13 +127,19 @@ export function PlatformConnections({ onBusyChange }: { onBusyChange?: (busy: bo
                   disabled={loading || busy || !window.dela}
                   size="sm"
                   variant="outline"
-                  onClick={() => void connect([service.id])}
+                  onClick={() =>
+                    service.id === 'mail'
+                      ? useNavigationStore.getState().navigate('mail')
+                      : void connect([service.id])
+                  }
                 >
-                  {service.id === 'chaoxing'
-                    ? '连接学习通'
-                    : status.phase === 'failed'
-                      ? '重试'
-                      : '连接'}
+                  {service.id === 'mail'
+                    ? '打开邮箱'
+                    : service.id === 'chaoxing'
+                      ? '连接学习通'
+                      : status.phase === 'failed'
+                        ? '重试'
+                        : '连接'}
                 </Button>
               </div>
               {status.syncedAt && (

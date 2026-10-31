@@ -75,7 +75,7 @@ export interface MailState {
 export type MailResult =
   { readonly ok: true; readonly warning?: string } | { readonly ok: false; readonly error: string };
 
-/** 邮箱服务器参数：交大邮箱与第三方 IMAP 共用同一套字段，SSL/TLS 固定开启。 */
+/** 邮箱服务器参数：吉大邮箱与第三方 IMAP 共用同一套字段，SSL/TLS 固定开启。 */
 export interface MailServerConfig {
   readonly imapHost: string;
   readonly imapPort: number;
@@ -83,18 +83,21 @@ export interface MailServerConfig {
   readonly smtpPort: number;
 }
 
-/** 交大邮箱预设（学生与教工同一套服务器）；第三方账号由用户自填。 */
-export const SJTU_MAIL_SERVER: MailServerConfig = {
-  imapHost: 'mail.sjtu.edu.cn',
+/**
+ * 吉大学生邮箱预设（mails.jlu.edu.cn，IMAP 993 / SMTP 465，实测 TLS 握手正常）；
+ * 教工邮箱 mail.jlu.edu.cn 是另一套 Coremail，需要时用第三方 IMAP 自填。
+ */
+export const JLU_MAIL_SERVER: MailServerConfig = {
+  imapHost: 'mails.jlu.edu.cn',
   imapPort: 993,
-  smtpHost: 'mail.sjtu.edu.cn',
+  smtpHost: 'mails.jlu.edu.cn',
   smtpPort: 465,
 };
 
 export interface MailConfigureInput {
   readonly address: string;
   readonly password: string;
-  /** 不传即交大邮箱预设；第三方 IMAP 传自填的服务器参数。 */
+  /** 不传即吉大邮箱预设；第三方 IMAP 传自填的服务器参数。 */
   readonly server?: MailServerConfig;
 }
 
