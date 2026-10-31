@@ -273,6 +273,7 @@ async function run(window) {
   console.log('Native school login shown in workbench');
   const page = native();
   const remote = page.webContents;
+  remote.setBackgroundThrottling(false);
   const pref = remote.getLastWebPreferences();
   assert.ok(pref.sandbox && pref.contextIsolation && !pref.nodeIntegration && !pref.preload);
   assert.equal(remote.session, session.fromPartition('persist:chaoxing'));
@@ -346,11 +347,30 @@ async function run(window) {
     prompts++;
     return 0;
   };
-  assert.equal(await js(`window.dela.webTabs.close('web:chaoxing/1:2/w1')`), false);
+  const closeWork = async (label) => {
+    let timer;
+    try {
+      return await Promise.race([
+        js(`window.dela.webTabs.close('web:chaoxing/1:2/w1')`),
+        new Promise((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error(label + ' timed out; prompts=' + prompts)),
+            10000,
+          );
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  assert.equal(await closeWork('Cancel work page unload'), false);
+  console.log('Native beforeunload cancellation passed');
   assert.equal(prompts, 1);
   assert.equal(remote.isDestroyed(), false);
+  await remote.executeJavaScript('document.readyState');
   dialog.showMessageBoxSync = () => 1;
-  assert.equal(await js(`window.dela.webTabs.close('web:chaoxing/1:2/w1')`), true);
+  assert.equal(await closeWork('Confirm work page unload'), true);
+  console.log('Native beforeunload confirmation passed');
   dialog.showMessageBoxSync = originalDialog;
   assert.equal(remote.isDestroyed(), true);
   const latestWorks = await js('window.dela.chaoxing.works("1:2")');
