@@ -15,7 +15,7 @@ import { notifications } from './notifications';
 import { packages } from './packages';
 import { remotes } from './remotes';
 import { search } from './search';
-import { session } from './session';
+import { session, sidechat } from './session';
 import { settings } from './settings';
 import { shuiyuan } from './shuiyuan';
 import { timetable } from './timetable';
@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('dela', {
   canvas,
   workspace,
   session,
+  sidechat,
   layout,
   capability,
   packages,
