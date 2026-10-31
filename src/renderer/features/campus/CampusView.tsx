@@ -132,7 +132,7 @@ function MailCard() {
         </span>
       </div>
       <p className="text-13 text-ink-3">
-        用 @jlu.edu.cn 学生邮箱账号在本机收发、检索邮件，凭据只保存在本机。
+        用学生邮箱账号（@mails.jlu.edu.cn）在本机收发、检索邮件，凭据只保存在本机。
       </p>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={() => useNavigationStore.getState().navigate('mail')}>

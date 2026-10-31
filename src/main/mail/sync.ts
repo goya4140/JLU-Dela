@@ -319,16 +319,25 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
   }
 }
 
+/** 吉大邮箱地址：学生邮箱在 mails.jlu.edu.cn 子域，教工邮箱是 jlu.edu.cn 本身。 */
+function isJluMailAddress(address: string): boolean {
+  const domain = address.slice(address.lastIndexOf('@') + 1);
+  return domain === 'jlu.edu.cn' || domain.endsWith('.jlu.edu.cn');
+}
+
 export async function configureMailAccount(input: MailConfigureInput): Promise<MailResult> {
   const address = input.address.trim().toLowerCase();
   const password = input.password;
   if (!z.email().safeParse(address).success || password.length === 0) {
     return { ok: false, error: '请输入完整的邮箱地址和密码' };
   }
-  // 不带 server 就是吉大邮箱：只接受校内地址。第三方账号服务器自填，地址不限。
+  // 不带 server 就是吉大邮箱：只接受校内地址（学生邮箱在 mails 子域）。第三方账号服务器自填，地址不限。
   const server = input.server ?? JLU_MAIL_SERVER;
-  if (!input.server && !address.endsWith('@jlu.edu.cn')) {
-    return { ok: false, error: '吉林大学邮箱地址需以 @jlu.edu.cn 结尾，或改选第三方 IMAP' };
+  if (!input.server && !isJluMailAddress(address)) {
+    return {
+      ok: false,
+      error: '吉大邮箱地址需以 @jlu.edu.cn 或 @mails.jlu.edu.cn 结尾，或改选第三方 IMAP',
+    };
   }
   const db = getDatabase();
   const client = connectImap(address, password, server);

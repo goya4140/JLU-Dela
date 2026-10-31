@@ -61,7 +61,7 @@ export function MailAccountForm({
           autoComplete="off"
           className={field}
           onChange={(event) => setAddress(event.target.value)}
-          placeholder={custom ? 'name@example.com' : 'name@jlu.edu.cn'}
+          placeholder={custom ? 'name@example.com' : 'name@mails.jlu.edu.cn'}
           required
           type="email"
           value={address}

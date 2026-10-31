@@ -615,7 +615,7 @@ describe('mail server settings', () => {
   it('keeps the campus-only guard for the preset path and accepts any address with explicit servers', async () => {
     expect(await configureMailAccount({ address: 'me@example.com', password: 'pw' })).toEqual({
       ok: false,
-      error: '吉林大学邮箱地址需以 @jlu.edu.cn 结尾，或改选第三方 IMAP',
+      error: '吉大邮箱地址需以 @jlu.edu.cn 或 @mails.jlu.edu.cn 结尾，或改选第三方 IMAP',
     });
     expect(imapHarness.options).toHaveLength(0);
     expect(await configureMailAccount({ address: 'Me@JLU.edu.cn', password: 'pw' })).toEqual({
@@ -625,6 +625,15 @@ describe('mail server settings', () => {
       host: JLU_MAIL_SERVER.imapHost,
       port: JLU_MAIL_SERVER.imapPort,
       auth: { user: 'me@jlu.edu.cn' },
+    });
+    // 学生邮箱在 mails 子域，同样走预设，登录名就是完整地址。
+    expect(await configureMailAccount({ address: 'Me@mails.jlu.edu.cn', password: 'pw' })).toEqual({
+      ok: true,
+    });
+    expect(imapHarness.options.at(-1)).toMatchObject({
+      host: JLU_MAIL_SERVER.imapHost,
+      port: JLU_MAIL_SERVER.imapPort,
+      auth: { user: 'me@mails.jlu.edu.cn' },
     });
   });
 });
