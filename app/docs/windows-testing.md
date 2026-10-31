@@ -2,9 +2,9 @@
 
 ## 下载安装
 
-面向 Windows 10 / 11 x64。下载 [安装程序](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-win-x64-setup.exe)，运行并选择安装位置；首次启动按引导连接校园平台，模型配置可以跳过。
+面向 Windows 10 / 11 x64。下载 [安装程序](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.10/JLU-Dela-0.1.0-alpha.10-win-x64-setup.exe)，运行并选择安装位置；首次启动按引导连接校园平台，模型配置可以跳过。
 
-这是未签名开发预览，系统可能提示无法验证发布者。请先确认文件来自[本仓库 Release](https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.9)，并核对同页 SHA256SUMS。不要关闭系统安全防护；如出现恶意软件或文件损坏提示，请保留提示并反馈。
+这是未签名开发预览，系统可能提示无法验证发布者。请先确认文件来自[本仓库 Release](https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.10)，并核对同页 SHA256SUMS。不要关闭系统安全防护；如出现恶意软件或文件损坏提示，请保留提示并反馈。
 
 升级前保存笔记、邮件草稿与作业网页中的填写内容，再退出旧版本。安装包与源码同页提供，尚不承诺自动更新。
 

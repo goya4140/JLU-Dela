@@ -1,10 +1,10 @@
 # 安装 JLU Dela · macOS
 
-当前为 `0.1.0-alpha.9` 开发预览，适用于 macOS 13 及以上、Apple Silicon（M 系列芯片）的 Mac。Intel Mac 不在本次安装包的支持范围。
+当前为 `0.1.0-alpha.10` 开发预览，适用于 macOS 13 及以上、Apple Silicon（M 系列芯片）的 Mac。Intel Mac 不在本次安装包的支持范围。
 
 ## 下载与安装
 
-1. 在 [GitHub Release](https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.9) 下载 [DMG 安装包](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-mac-arm64.dmg)。ZIP 是相同版本的备用压缩包。
+1. 在 [GitHub Release](https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.10) 下载 [DMG 安装包](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.10/JLU-Dela-0.1.0-alpha.10-mac-arm64.dmg)。ZIP 是相同版本的备用压缩包。
 2. 打开 DMG，将 `JLU-Dela.app` 拖到「应用程序 / Applications」。
 3. 从「应用程序」启动，按向导阅读使用须知、按需连接校园平台。只使用本地资料或校园功能可以跳过模型配置。
 
@@ -21,7 +21,7 @@
 Release 附有 `SHA256SUMS` 和 `source-commit.txt`。在下载文件所在目录执行：
 
 ```sh
-shasum -a 256 JLU-Dela-0.1.0-alpha.9-mac-arm64.dmg
+shasum -a 256 JLU-Dela-0.1.0-alpha.10-mac-arm64.dmg
 ```
 
 将结果与 `SHA256SUMS` 中同名文件的值比较。校验值可检测下载是否一致，不能代替开发者签名。

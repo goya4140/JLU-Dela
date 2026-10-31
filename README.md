@@ -7,15 +7,15 @@
 <p align="center">面向吉林大学本科生 · 本地优先 · macOS / Windows</p>
 
 <p align="center">
-  <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.9"><img alt="开发预览 v0.1.0-alpha.9" src="https://img.shields.io/badge/preview-v0.1.0--alpha.9-8dd8c3?style=flat-square" /></a>
+  <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.10"><img alt="开发预览 v0.1.0-alpha.10" src="https://img.shields.io/badge/preview-v0.1.0--alpha.10-8dd8c3?style=flat-square" /></a>
   <a href="https://github.com/goya4140/JLU-Dela/actions/workflows/ci.yml"><img alt="macOS CI" src="https://github.com/goya4140/JLU-Dela/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
   <a href="LICENSE"><img alt="GPL-3.0-or-later" src="https://img.shields.io/badge/license-GPL--3.0--or--later-aac5f5?style=flat-square" /></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-mac-arm64.dmg"><strong>↓ 下载 macOS DMG</strong></a> ·
-  <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-win-x64-setup.exe"><strong>↓ 下载 Windows 安装包</strong></a> ·
-  <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.9">全部下载 / 校验值</a> ·
+  <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.10/JLU-Dela-0.1.0-alpha.10-mac-arm64.dmg"><strong>↓ 下载 macOS DMG</strong></a> ·
+  <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.10/JLU-Dela-0.1.0-alpha.10-win-x64-setup.exe"><strong>↓ 下载 Windows 安装包</strong></a> ·
+  <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.10">全部下载 / 校验值</a> ·
   <a href="app/docs/install-macos.md">安装说明</a> ·
   <a href="app/docs/user-guide.md">使用指南</a> ·
   <a href="https://github.com/goya4140/JLU-Dela/issues">反馈</a>
@@ -80,7 +80,7 @@
 
 ## 三步开始
 
-1. **安装**：Mac 下载 [DMG](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-mac-arm64.dmg)，拖入 Applications；Windows 下载 [安装程序](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-win-x64-setup.exe)，运行安装。
+1. **安装**：Mac 下载 [DMG](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.10/JLU-Dela-0.1.0-alpha.10-mac-arm64.dmg)，拖入 Applications；Windows 下载 [安装程序](https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.10/JLU-Dela-0.1.0-alpha.10-win-x64-setup.exe)，运行安装。
 2. **连接**：按向导连接需要的平台。教务、电子校务与学在吉大尝试复用校园认证；学习通独立登录，邮箱单独配置。
 3. **学习**：同步课表，连接课程资料文件夹，或打开回放。只使用校园与本地功能，可以跳过模型配置。
 
