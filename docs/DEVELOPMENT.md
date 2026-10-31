@@ -28,6 +28,7 @@
 
 - 使用者视角：[README.md](../README.md)
 - 协作方式：[CONTRIBUTING.md](../CONTRIBUTING.md)
+- 需求索引：[requirements/README.md](requirements/README.md)
 - 按版本分节的变更记录：[CHANGELOG.md](../CHANGELOG.md)
 - 日常编码约束：[AGENTS.md](../AGENTS.md)
 - 远端 helper 的协议与端点表：[helper/README.md](../helper/README.md)
@@ -217,6 +218,10 @@ Git Bash + node-pty + xterm.js，与 Agent 的 bash 同源（同一份 dela 桥�
 - `scripts/` 全部为 TypeScript（Node 原生执行，仓库不再有 `.mjs`），纳入 `pnpm typecheck`。
 
 边界约定：renderer 不导入 main、不访问凭据和数据库；不引入 Manager/Service/Factory 等抽象层级，出现真实重复前不做提取；打包白名单只含 `out/**/*`、`package.json` 与品牌图——文档、凭据与 `.tools/` 都不进安装包。
+
+### 10.1 需求管理
+
+`docs/requirements/` 只记录团队成员明确要求登记的需求，采用「需求、验收、记录」三段式；描述缺少“做什么、为什么、怎样算完成”时由 Agent 先追问再整理。直接交给 Agent 实现的改动不自动建立需求文件，完成后记入 `CHANGELOG.md`；GitHub Issue 只是收集和讨论入口。具体格式和状态见 [需求索引](requirements/README.md)，Agent 行为边界见 `AGENTS.md`。
 
 ## 11. 工具链与启动
 

@@ -393,7 +393,13 @@ export function AppShell({
           'pl-[env(titlebar-area-x,0px)] [&_button]:max-h-[env(titlebar-area-height,none)] [&_div]:max-h-[env(titlebar-area-height,none)]',
         )}
       >
-        <div className="flex h-full items-center">
+        <div
+          className={cn(
+            'flex h-full items-center',
+            // 预留原生红黄绿按钮区域，避免与侧栏、前进后退按钮重叠。
+            window.dela && platform === 'mac' && 'pl-20',
+          )}
+        >
           <button
             aria-controls="main-nav"
             aria-expanded={!navHidden}

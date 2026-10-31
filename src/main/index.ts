@@ -25,7 +25,7 @@ import { registerJluPlatformsIpc } from './jlu/ipc';
 import { registerKnowledgeIpc } from './knowledge/ipc';
 import { registerChaoxingIpc } from './chaoxing/ipc';
 import { registerVsjtuIpc } from './vsjtu/ipc';
-import { attachContextMenu, checkWorkspaceSender } from './ipc';
+import { attachContextMenu, checkWorkspaceSender, isSameRendererNavigation } from './ipc';
 import type { TrayAction } from '../shared/window';
 import { registerCanvasIpc, refreshCanvasTrees } from './canvas/ipc';
 import { runCanvasCacheCleanup } from './canvas/api';
@@ -350,6 +350,7 @@ async function createWindow(): Promise<void> {
     return { action: 'deny' };
   });
   window.webContents.on('will-navigate', (event, url) => {
+    if (isSameRendererNavigation(window.webContents.getURL(), url)) return;
     event.preventDefault();
     if (!openShuiyuanLinkInApp(url)) openExternalUrl(url);
   });

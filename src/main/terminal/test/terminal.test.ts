@@ -231,49 +231,59 @@ describe('Git Bash 运行时', () => {
     rmSync(join(state.root, 'Git'), { recursive: true, force: true });
   });
 
-  it('locateBash：系统安装优先，其次随包 MinGit，最后自装副本；都缺失时给出安装指引', () => {
-    const bundled = join(state.root, '.build', 'mingit', 'usr', 'bin', 'bash.exe');
-    const local = join(mingitRoot(), 'usr', 'bin', 'bash.exe');
-    const system = join(state.root, 'Git', 'bin', 'bash.exe');
-    expect(() => locateBash()).toThrow('一键安装');
-    mkdirSync(join(mingitRoot(), 'usr', 'bin'), { recursive: true });
-    writeFileSync(local, '');
-    expect(locateBash()).toBe(local);
-    mkdirSync(join(bundled, '..'), { recursive: true });
-    writeFileSync(bundled, '');
-    expect(locateBash()).toBe(bundled);
-    mkdirSync(join(system, '..'), { recursive: true });
-    writeFileSync(system, '');
-    expect(locateBash()).toBe(system);
-    rmSync(join(system, '..', '..'), { recursive: true, force: true });
-    rmSync(join(bundled, '..', '..', '..'), { recursive: true, force: true });
-    rmSync(mingitRoot(), { recursive: true, force: true });
+  it.runIf(process.platform === 'darwin')('macOS 直接使用系统 Bash', () => {
+    expect(locateBash()).toBe('/bin/bash');
   });
 
-  it('bash-status 报告缺失；一键安装逐源尝试，全部失败进 error 态并清理半成品', async () => {
-    const fetchMock = vi.fn(async () => {
-      throw new Error('网络不可达');
-    });
-    vi.stubGlobal('fetch', fetchMock);
-    expect(await invoke('bash-status', owner)).toEqual({
-      found: false,
-      install: { phase: 'idle', received: 0, total: 0, error: null },
-    });
-    await expect(invoke('install-bash', owner)).rejects.toThrow('下载失败');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(await invoke('bash-status', owner)).toMatchObject({
-      found: false,
-      install: { phase: 'error', error: expect.stringContaining('网络不可达') },
-    });
-    expect(existsSync(mingitRoot())).toBe(false);
-    expect(owner.send).toHaveBeenCalledWith(
-      'terminal:bash-install',
-      expect.objectContaining({ phase: 'error' }),
-    );
-    vi.unstubAllGlobals();
-  });
+  it.runIf(process.platform === 'win32')(
+    'locateBash：系统安装优先，其次随包 MinGit，最后自装副本；都缺失时给出安装指引',
+    () => {
+      const bundled = join(state.root, '.build', 'mingit', 'usr', 'bin', 'bash.exe');
+      const local = join(mingitRoot(), 'usr', 'bin', 'bash.exe');
+      const system = join(state.root, 'Git', 'bin', 'bash.exe');
+      expect(() => locateBash()).toThrow('一键安装');
+      mkdirSync(join(mingitRoot(), 'usr', 'bin'), { recursive: true });
+      writeFileSync(local, '');
+      expect(locateBash()).toBe(local);
+      mkdirSync(join(bundled, '..'), { recursive: true });
+      writeFileSync(bundled, '');
+      expect(locateBash()).toBe(bundled);
+      mkdirSync(join(system, '..'), { recursive: true });
+      writeFileSync(system, '');
+      expect(locateBash()).toBe(system);
+      rmSync(join(system, '..', '..'), { recursive: true, force: true });
+      rmSync(join(bundled, '..', '..', '..'), { recursive: true, force: true });
+      rmSync(mingitRoot(), { recursive: true, force: true });
+    },
+  );
 
-  it('安装中可取消，回到 idle 并清理', async () => {
+  it.runIf(process.platform === 'win32')(
+    'bash-status 报告缺失；一键安装逐源尝试，全部失败进 error 态并清理半成品',
+    async () => {
+      const fetchMock = vi.fn(async () => {
+        throw new Error('网络不可达');
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      expect(await invoke('bash-status', owner)).toEqual({
+        found: false,
+        install: { phase: 'idle', received: 0, total: 0, error: null },
+      });
+      await expect(invoke('install-bash', owner)).rejects.toThrow('下载失败');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(await invoke('bash-status', owner)).toMatchObject({
+        found: false,
+        install: { phase: 'error', error: expect.stringContaining('网络不可达') },
+      });
+      expect(existsSync(mingitRoot())).toBe(false);
+      expect(owner.send).toHaveBeenCalledWith(
+        'terminal:bash-install',
+        expect.objectContaining({ phase: 'error' }),
+      );
+      vi.unstubAllGlobals();
+    },
+  );
+
+  it.runIf(process.platform === 'win32')('安装中可取消，回到 idle 并清理', async () => {
     const fetchMock = vi.fn(
       (_url: unknown, init: { signal: AbortSignal }) =>
         new Promise((_resolve, reject) => {
