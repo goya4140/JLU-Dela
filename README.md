@@ -107,10 +107,15 @@ pnpm dev
 | `pnpm smoke:study-calendar` | 课表、作业与个人待办聚合                    |
 | `pnpm smoke:knowledge`      | 原位资料、PDF 检索、引用与笔记              |
 | `pnpm smoke:setup`          | 首次引导、邮箱配置与连接恢复                |
+| `pnpm smoke:web`            | 本机网页端与桌面学习数据共用                |
 | `pnpm demo:capture`         | 在隔离环境中生成新版合成演示截图            |
 | `pnpm package:mac`          | 构建 Apple Silicon DMG / ZIP                |
+| `pnpm package:dir`          | 构建 Windows 可运行目录                     |
+| `pnpm package:dist`         | 构建 Windows NSIS 安装包                    |
 
 主分支与 PR 运行 macOS CI；发布 tag 触发安装包验证和 Release 发布，详见[开发文档](docs/DEVELOPMENT.md)。自动化使用合成数据，不访问真实校园账号。
+
+Windows 打包步骤、已知问题及合作者的验收记录见 [Windows 打包与测试](docs/windows-testing.md)；本次 Release 仅提供 macOS 安装包。
 
 `pnpm web` 提供共用本机学习数据的浏览器预览，仅监听本机；不是公网多用户服务，见[网页端说明](docs/web.md)。
 
