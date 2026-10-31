@@ -30,6 +30,8 @@ import {
 
 export const SYNC_WINDOW = 300;
 const BODY_PRELOAD = 30;
+/** 超过这个体积的邮件不做正文预取（分段 FETCH 容易被学校服务器断开）。 */
+const BODY_PRELOAD_MAX_BYTES = 1_000_000;
 
 export let syncStatus: MailSyncStatus = {
   phase: 'idle',
@@ -193,9 +195,13 @@ async function syncFolder(
       index -= 1
     ) {
       if (isStale()) return;
+      // 连接被服务器断开时继续发请求只会得到 Connection not available；交给外层重连。
+      if (!client.usable) break;
       const uid = headers[index]?.uid;
       const textPart = textParts[index];
       if (uid === undefined || !textPart) continue;
+      // 超大邮件不做预取：分段 FETCH 更容易被学校服务器断开，打开时再按需下载。
+      if ((headers[index]?.size ?? 0) > BODY_PRELOAD_MAX_BYTES) continue;
       try {
         const body = await downloadMessageBody(
           client,
@@ -237,10 +243,21 @@ async function purgeServerDrafts(client: ImapFlow, listed: ListResponse[], addre
 }
 
 async function runSync(account: AccountRow, password: string): Promise<void> {
+  const trace =
+    process.env.JLU_MAIL_DEBUG === '1'
+      ? (...args: unknown[]) => console.log('[mail-sync]', ...args)
+      : () => {};
   const generation = syncGeneration;
   const db = getDatabase();
   const isStale = () => generation !== syncGeneration;
-  const client = connectImap(account.address, password);
+  let client = connectImap(account.address, password);
+  const ensureClient = async () => {
+    if (client.usable) return;
+    trace('reconnecting after closed connection');
+    client = connectImap(account.address, password);
+    await client.connect();
+  };
+  trace('connect start', account.address);
   updateSync({
     phase: 'connecting',
     folderPath: null,
@@ -252,8 +269,13 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
   });
   try {
     await client.connect();
+    trace('connected');
     updateSync({ phase: 'syncing' });
     const listed = await client.list();
+    trace(
+      'listed',
+      listed.map((folder) => `${folder.path}[${folder.specialUse ?? ''}]`).join(' | '),
+    );
     try {
       await purgeServerDrafts(client, listed, account.address);
     } catch {
@@ -300,13 +322,18 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
     const failures: string[] = [];
     for (const folderRow of folderRows) {
       if (isStale()) return;
+      trace('folder start', folderRow.name);
       try {
+        // 上一个文件夹的预取可能被服务器断开连接，进入下一个文件夹前先恢复。
+        await ensureClient();
         await withTimeout(
           syncFolder(db, client, folderRow, generation),
           FOLDER_TIMEOUT,
           folderRow.name,
         );
+        trace('folder done', folderRow.name);
       } catch (error) {
+        trace('folder failed', folderRow.name, String(error));
         // 单个文件夹失败（服务器不支持、权限不足、卡住超时）不影响其余文件夹。
         failures.push(`${folderRow.name}：${friendlyError(error)}`);
       }
@@ -326,6 +353,7 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
       finishedAt: new Date().toISOString(),
     });
   } catch (error) {
+    trace('sync failed', String(error));
     updateSync({
       phase: 'error',
       folderPath: null,
@@ -333,7 +361,11 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
       finishedAt: new Date().toISOString(),
     });
   } finally {
-    client.close();
+    try {
+      client.close();
+    } catch {
+      // 连接已被服务器断开时 close 会抛错，忽略即可。
+    }
     // 同步会改写 seen 标志（含他端已读），通知面板的派生已读需随之刷新。
     emitMailCacheChanged();
   }
