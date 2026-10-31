@@ -56,7 +56,7 @@ export function webArguments(method: WebMethod, args: unknown[]): unknown[] {
     return z.tuple([ids]).parse(args);
   if (['notices.list', 'notices.sync'].includes(method))
     return z.tuple([z.string().regex(/^\d+$/), z.number().int().min(1).max(10000)]).parse(args);
-  if (method === 'notices.read')
+  if (method === 'notices.read' || method === 'notices.cached')
     return z.tuple([z.string().regex(/^\d+$/), z.string().regex(/^\d+$/)]).parse(args);
   return z.tuple([]).parse(args);
 }

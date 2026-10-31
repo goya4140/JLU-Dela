@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ArrowLeft, Play, RefreshCw } from 'lucide-react';
 import type {
   JluCourse,
   JluLearning,
   JluRecording,
   JluRecordings,
+  JluPlatformsApi,
 } from '../../../shared/jlu-platforms';
 import { LearningStudy } from './LearningStudy';
 import { Button } from '../../components/ui/button';
@@ -18,13 +19,24 @@ import {
 import { DesktopOnlyNotice } from '../../components/ui/desktop-only-notice';
 import { errorText } from '../../workspace/store';
 
-export function LearningView() {
-  if (!window.dela)
+export type LearningPageApi = Pick<
+  JluPlatformsApi,
+  'getLearning' | 'syncLearning' | 'getRecordings' | 'syncRecordings'
+>;
+type LearningProps = {
+  api?: LearningPageApi;
+  renderStudy?: (props: {
+    course: JluCourse;
+    recording: JluRecording;
+    onBack: () => void;
+  }) => ReactNode;
+};
+export function LearningView({ api = window.dela?.jluPlatforms, renderStudy }: LearningProps = {}) {
+  if (!api)
     return <DesktopOnlyNotice title="学在吉大" description="请在桌面应用中登录并同步课程。" />;
-  return <DesktopLearning />;
+  return <LearningPage api={api} renderStudy={renderStudy} />;
 }
-function DesktopLearning() {
-  const api = window.dela!.jluPlatforms;
+function LearningPage({ api, renderStudy }: LearningProps & { api: LearningPageApi }) {
   const [data, setData] = useState<JluLearning | null>(null);
   const [course, setCourse] = useState<JluCourse | null>(null);
   const [recordings, setRecordings] = useState<JluRecordings | null>(null);
@@ -61,13 +73,15 @@ function DesktopLearning() {
       setBusy(false);
     }
   }
-  async function read(next: JluCourse) {
+  async function read(next: JluCourse, refresh = true) {
     setBusy(true);
     setError(null);
     setCourse(next);
     setRecordings(null);
     try {
-      setRecordings(await api.getRecordings(next.id));
+      const cached = await api.getRecordings(next.id);
+      setRecordings(cached);
+      if (cached && !refresh) return;
       const result = await api.syncRecordings(next.id);
       if (result.ok) setRecordings(result.data);
       else setError(result.error);
@@ -77,6 +91,8 @@ function DesktopLearning() {
       setBusy(false);
     }
   }
+  if (course && recording && renderStudy)
+    return renderStudy({ course, recording, onBack: () => setRecording(null) });
   if (course && recording)
     return (
       <LearningStudy
@@ -152,6 +168,11 @@ function DesktopLearning() {
             <h2 className="break-words text-lg font-semibold text-ink">
               {course.courseName || course.name}
             </h2>
+            <div>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => void read(course)}>
+                同步录像
+              </Button>
+            </div>
             <p className="text-xs text-ink-3">
               {course.teacher} · 回放目录{recordings ? ` · ${recordings.items.length} 条` : ''}
             </p>
@@ -176,7 +197,7 @@ function DesktopLearning() {
               <p className="text-13 text-ink-3">该课程暂未返回回放记录。</p>
             )}
             <p className="text-xs leading-relaxed text-ink-3">
-              选择录像开始学习。笔记自动保存在本机，需要人工验证时才显示学校登录窗口。
+              选择录像开始学习。需要人工验证时才显示学校登录窗口。
             </p>
           </section>
         ) : (
@@ -187,7 +208,7 @@ function DesktopLearning() {
                   disabled={busy}
                   key={item.id}
                   className="grid min-w-0 gap-2 rounded-xl bg-field p-5 text-left hover:bg-hover disabled:opacity-50"
-                  onClick={() => void read(item)}
+                  onClick={() => void read(item, !renderStudy)}
                 >
                   <h2 className="break-words text-base font-semibold text-ink">
                     {item.courseName || item.name}

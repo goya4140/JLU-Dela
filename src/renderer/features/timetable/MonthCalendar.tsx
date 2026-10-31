@@ -31,8 +31,8 @@ export function MonthCalendar({
   lessons: readonly TimetableLesson[];
   month: Date;
   semesterStart: string | null;
-  onCreate: (start: Date, end?: Date) => void;
-  onEditSemesterStart: () => void;
+  onCreate?: (start: Date, end?: Date) => void;
+  onEditSemesterStart?: () => void;
 }) {
   const first = mondayOf(new Date(month.getFullYear(), month.getMonth(), 1));
   const nextMonthWeek = mondayOf(new Date(month.getFullYear(), month.getMonth() + 1, 1));
@@ -58,7 +58,7 @@ export function MonthCalendar({
           ? [drag.start, drag.end]
           : [drag.end, drag.start];
       setDrag(null);
-      onCreate(start, end);
+      onCreate?.(start, end);
     };
     window.addEventListener('mouseup', finish);
     return () => window.removeEventListener('mouseup', finish);
@@ -72,6 +72,7 @@ export function MonthCalendar({
           <button
             className="font-medium text-ink underline-offset-2 hover:underline"
             onClick={onEditSemesterStart}
+            disabled={!onEditSemesterStart}
             type="button"
           >
             设置开学日期
@@ -129,11 +130,11 @@ export function MonthCalendar({
                 !currentMonth && 'bg-inset text-ink-3',
               )}
               key={dateKey(date)}
-              role="button"
-              tabIndex={0}
+              role={onCreate ? 'button' : undefined}
+              tabIndex={onCreate ? 0 : undefined}
               onClick={(event) => {
                 // 读屏等合成的 click detail 为 0，同样只认日格自身，忽略「更多」冒泡。
-                if (event.detail === 0 && event.target === event.currentTarget) onCreate(date);
+                if (event.detail === 0 && event.target === event.currentTarget) onCreate?.(date);
               }}
               onKeyDown={(event) => {
                 // 只响应日格自身的键盘激活，忽略内部「更多」按钮冒泡上来的按键。
@@ -141,11 +142,11 @@ export function MonthCalendar({
                 // 与 click 的 detail === 0 语义一致：仅键盘激活新建，鼠标点击留给拖拽。
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
-                  onCreate(date);
+                  onCreate?.(date);
                 }
               }}
               onMouseDown={(event) => {
-                if (event.button !== 0) return;
+                if (!onCreate || event.button !== 0) return;
                 event.preventDefault();
                 setDrag({ start: date, end: date });
               }}

@@ -47,7 +47,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { dialogOverlay, dialogPanel, drawerFromLeft, fadeIn, overlayFade } from './ui/motion';
-import { chromeIconButton, navIcon, navRow } from '../navigation/nav-styles';
+import { appFrame, appMain, chromeIconButton, navIcon, navRow } from '../navigation/nav-styles';
 import { UpdateBadge } from '../features/settings/UpdateBadge';
 import { useVisibleNavEntries } from '../navigation/entries';
 
@@ -379,10 +379,7 @@ export function AppShell({
 
   return (
     <div
-      className={cn(
-        'relative grid h-dvh grid-cols-[var(--sidebar-width)_0px_1px_minmax(0,1fr)] grid-rows-[env(titlebar-area-height,2.5rem)_minmax(0,1fr)] bg-page text-ink transition-[grid-template-columns] duration-200 ease-(--ease-out-strong)',
-        sidebarResizing && 'transition-none',
-      )}
+      className={cn(appFrame, sidebarResizing && 'transition-none')}
       style={
         {
           '--sidebar-width': narrow || sidebarCollapsed ? '0px' : `${effectiveSidebarWidth}px`,
@@ -848,13 +845,7 @@ export function AppShell({
       {/* relative + id：供页内悬浮面板（如会话历史）portal 锚定到内容区。 */}
       {/* 浮岛卡片：标题栏与侧栏同为画布色，内容区以圆角卡片浮在其上，仅保留外圈细边框。
           侧栏不额外预留间隙；分隔线仅占 1px，拖动命中范围由 Resizer 的透明伪元素扩展。 */}
-      <main
-        className={cn(
-          'relative col-start-4 row-start-2 mt-1 mr-1.5 flex min-w-0 flex-col overflow-hidden rounded-t-window bg-surface shadow-hairline',
-          'max-md:mt-0 max-md:mr-0 max-md:rounded-none max-md:border-0',
-        )}
-        id="app-main"
-      >
+      <main className={appMain} id="app-main">
         {children}
         <ToastHost />
       </main>

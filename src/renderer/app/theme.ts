@@ -1,6 +1,6 @@
 // 主题/缩放/字号的应用与 localStorage 镜像。
 import { useEffect, useState } from 'react';
-import type { ThemePreference, ZoomPreference } from '../../shared/api';
+import type { DelaApi, ThemePreference, ZoomPreference } from '../../shared/api';
 import { fontSizeDefault, fontSizeMax, fontSizeMin } from '../../shared/api';
 
 const themeStorageKey = 'dela.theme';
@@ -22,7 +22,10 @@ function initialFontSize(): number {
 }
 
 /** 桌面端主题/缩放事实在主进程 DB；这里持视图状态、应用 CSS 效果并镜像到 localStorage。 */
-export function useAppearance() {
+export function useAppearance(
+  reader: Pick<DelaApi['settings'], 'getTheme' | 'getZoom' | 'getFontSize'> | undefined = window
+    .dela?.settings,
+) {
   const [theme, setTheme] = useState<ThemePreference>(initialTheme);
   const [zoom, setZoom] = useState<ZoomPreference>(1);
   const [fontSize, setFontSize] = useState<number>(initialFontSize);
@@ -52,23 +55,26 @@ export function useAppearance() {
 
   // 浏览器预览没有主进程缩放，用 CSS zoom 降级；桌面端由主进程 setZoomFactor 生效。
   useEffect(() => {
-    if (!window.dela) document.documentElement.style.zoom = String(zoom);
+    if (!window.dela) {
+      document.documentElement.style.zoom = String(zoom);
+      document.documentElement.style.setProperty('--dela-web-zoom', String(zoom));
+    }
   }, [zoom]);
 
   useEffect(() => {
-    void window.dela?.settings
-      .getTheme()
+    void reader
+      ?.getTheme()
       .then(setTheme)
       .catch(() => {});
-    void window.dela?.settings
-      .getZoom()
+    void reader
+      ?.getZoom()
       .then(setZoom)
       .catch(() => {});
-    void window.dela?.settings
-      .getFontSize()
+    void reader
+      ?.getFontSize()
       .then(setFontSize)
       .catch(() => {});
-  }, []);
+  }, [reader]);
 
   const changeTheme = async (next: ThemePreference) => {
     if (!window.dela) {

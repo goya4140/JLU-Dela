@@ -5,6 +5,7 @@ import type {
   ChaoxingCourses,
   ChaoxingFolder,
   ChaoxingWorks,
+  ChaoxingApi,
 } from '../../../shared/chaoxing';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -13,15 +14,16 @@ import { DesktopOnlyNotice } from '../../components/ui/desktop-only-notice';
 import { useNavigationStore } from '../../navigation/view';
 import { errorText } from '../../workspace/store';
 
-export function ChaoxingView() {
-  return window.dela ? (
-    <DesktopChaoxing />
+export type ChaoxingPageApi = Omit<ChaoxingApi, 'importFile'> &
+  Partial<Pick<ChaoxingApi, 'importFile'>>;
+export function ChaoxingView({ api = window.dela?.chaoxing }: { api?: ChaoxingPageApi } = {}) {
+  return api ? (
+    <ChaoxingPage api={api} />
   ) : (
     <DesktopOnlyNotice title="学习通" description="请在桌面应用中登录并同步课程资料与作业。" />
   );
 }
-function DesktopChaoxing() {
-  const api = window.dela!.chaoxing;
+function ChaoxingPage({ api }: { api: ChaoxingPageApi }) {
   const [data, setData] = useState<ChaoxingCourses | null>(null);
   const [course, setCourse] = useState<ChaoxingCourse | null>(null);
   const [files, setFiles] = useState<ChaoxingFolder | null>(null);
@@ -89,7 +91,7 @@ function DesktopChaoxing() {
     }
   }
   async function importFile(fileId: string) {
-    if (!course) return;
+    if (!course || !api.importFile) return;
     setBusy(true);
     setError(null);
     try {
@@ -284,11 +286,15 @@ function DesktopChaoxing() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        disabled={busy || !row.downloadable}
+                        disabled={busy || !row.downloadable || !api.importFile}
                         onClick={() => void importFile(row.id)}
                       >
                         <Download className="size-3.5" />
-                        {row.downloadable ? '导入并打开' : '未开放下载'}
+                        {!api.importFile
+                          ? '在桌面端导入'
+                          : row.downloadable
+                            ? '导入并打开'
+                            : '未开放下载'}
                       </Button>
                     )}
                   </div>
@@ -297,7 +303,9 @@ function DesktopChaoxing() {
                   <p className="py-8 text-13 text-ink-3">当前目录暂无资料。</p>
                 )}
                 <p className="text-xs leading-relaxed text-ink-3">
-                  按需读取当前目录。导入的文件保存在本机「学习通资料」，可在资料工作台阅读和引用。
+                  {api.importFile
+                    ? '按需读取当前目录。导入的文件保存在本机「学习通资料」，可在资料工作台阅读和引用。'
+                    : '资料下载与导入请使用本机 Dela。'}
                 </p>
               </>
             ) : (

@@ -1,18 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
-import type { JluNoticeDetail, JluNoticePage } from '../../../shared/jlu-platforms';
+import type {
+  JluNoticeDetail,
+  JluNoticePage,
+  JluPlatformsApi,
+} from '../../../shared/jlu-platforms';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { DesktopOnlyNotice } from '../../components/ui/desktop-only-notice';
 import { errorText } from '../../workspace/store';
 
-export function SchoolNoticesView() {
-  if (!window.dela)
+export type NoticesPageApi = Pick<
+  JluPlatformsApi,
+  'getNotices' | 'syncNotices' | 'getNotice' | 'readNotice'
+> &
+  Partial<Pick<JluPlatformsApi, 'openNotice' | 'openAttachment'>>;
+export function SchoolNoticesView({
+  api = window.dela?.jluPlatforms,
+}: { api?: NoticesPageApi } = {}) {
+  if (!api)
     return <DesktopOnlyNotice title="学校通知" description="请在桌面应用中同步和保存学校通知。" />;
-  return <DesktopNotices />;
+  return <NoticesPage api={api} />;
 }
-function DesktopNotices() {
-  const api = window.dela!.jluPlatforms;
+function NoticesPage({ api }: { api: NoticesPageApi }) {
   const [data, setData] = useState<JluNoticePage | null>(null);
   const [detail, setDetail] = useState<JluNoticeDetail | null>(null);
   const [page, setPage] = useState(1);
@@ -112,17 +122,19 @@ function DesktopNotices() {
                 <ArrowLeft className="size-4" />
                 返回列表
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  void api
-                    .openNotice(detail.id, detail.channel)
-                    .catch((reason) => setError(errorText(reason)))
-                }
-              >
-                学校原文
-              </Button>
+              {api.openNotice && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void api.openNotice!(detail.id, detail.channel).catch((reason) =>
+                      setError(errorText(reason)),
+                    )
+                  }
+                >
+                  学校原文
+                </Button>
+              )}
             </div>
             <h2 className="break-words text-lg font-semibold text-ink">{detail.title}</h2>
             <p className="whitespace-pre-wrap text-xs text-ink-3">{detail.metadata}</p>
@@ -134,19 +146,23 @@ function DesktopNotices() {
                 <h3 className="text-sm font-semibold">附件</h3>
                 {detail.attachments.map((attachment, index) => (
                   <Button
+                    disabled={!api.openAttachment}
                     className="h-auto justify-start whitespace-normal break-all text-left"
                     key={`${attachment.url}:${index}`}
                     variant="outline"
                     onClick={() =>
-                      void api
-                        .openAttachment(detail.id, detail.channel, index)
-                        .catch((reason) => setError(errorText(reason)))
+                      void api.openAttachment!(detail.id, detail.channel, index).catch((reason) =>
+                        setError(errorText(reason)),
+                      )
                     }
                   >
                     {attachment.name}
                   </Button>
                 ))}
               </section>
+            )}
+            {!api.openAttachment && (
+              <p className="text-xs text-ink-3">学校原文与附件请在本机 Dela 中打开。</p>
             )}
             <p className="text-xs text-ink-3">
               正文缓存于 {new Date(detail.syncedAt).toLocaleString('zh-CN')}

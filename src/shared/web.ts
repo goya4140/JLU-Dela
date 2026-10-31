@@ -1,4 +1,7 @@
 export const webMethods = {
+  'appearance.theme': ['settings', 'getTheme'],
+  'appearance.fontSize': ['settings', 'getFontSize'],
+  'appearance.zoom': ['settings', 'getZoom'],
   'schedule.state': ['timetable', 'getState'],
   'schedule.lessons': ['timetable', 'listLessons'],
   'schedule.sync': ['timetable', 'syncNow'],
@@ -11,6 +14,7 @@ export const webMethods = {
   'notices.list': ['jluPlatforms', 'getNotices'],
   'notices.sync': ['jluPlatforms', 'syncNotices'],
   'notices.read': ['jluPlatforms', 'readNotice'],
+  'notices.cached': ['jluPlatforms', 'getNotice'],
   'learning.courses': ['jluPlatforms', 'getLearning'],
   'learning.sync': ['jluPlatforms', 'syncLearning'],
   'learning.note': ['web', 'learningNote'],
