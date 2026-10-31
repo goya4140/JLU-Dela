@@ -1,4 +1,4 @@
-// 在目标架构的 Mac 上检查目录包与同版本 DMG/ZIP（--dir 仅检查目录包）；只读，不安装或启动应用。
+// 在目标架构的 Mac 上检查目录包与同版本 DMG/ZIP；归档内应用以隔离冒烟模式启动，--dir 只检查目录包。
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
@@ -108,45 +108,46 @@ for (const arch of ['amd64', 'arm64']) {
   );
 }
 if (!process.argv.includes('--dir')) {
-  const prefix = join(resolve(bundle, '../..'), `JLU Dela-${version}-mac-${process.arch}`);
+  const prefix = join(resolve(bundle, '../..'), `JLU-Dela-${version}-mac-${process.arch}`);
   for (const extension of ['dmg', 'zip']) assert.ok(statSync(`${prefix}.${extension}`).size > 0);
   execFileSync('/usr/bin/hdiutil', ['verify', '-quiet', `${prefix}.dmg`], {
     timeout: 120000,
     stdio: 'inherit',
   });
   execFileSync('/usr/bin/unzip', ['-tq', `${prefix}.zip`], { timeout: 120000, stdio: 'inherit' });
-  if (signed) {
-    const directory = mkdtempSync(join(tmpdir(), 'dela-signed-archives-'));
-    const mount = join(directory, 'dmg');
-    // 公证票据与 Gatekeeper 已在目录包联网验过；归档副本只做离线签名校验，
-    // ZIP 丢失框架符号链接这类损坏仍会在 codesign --verify 暴露。
+  const directory = mkdtempSync(join(tmpdir(), 'jlu-archives-'));
+  const mount = join(directory, 'dmg');
+  function verifyArchivedApp(path: string) {
+    assert.deepEqual(
+      readFileSync(join(path, 'Contents/Resources/app.asar')),
+      readFileSync(join(resources, 'app.asar')),
+      '归档内应用代码与目录包不一致',
+    );
+    if (signed)
+      assert.equal(cdHash(readSignature(path)), bundleHash, '归档内应用签名与目录包不一致');
+    execFileSync(join(path, 'Contents/MacOS/JLU-Dela'), ['--smoke-test'], {
+      timeout: 30000,
+      stdio: 'inherit',
+    });
+  }
+  try {
+    execFileSync('/usr/bin/ditto', ['-x', '-k', `${prefix}.zip`, join(directory, 'zip')], {
+      timeout: 120000,
+      stdio: 'pipe',
+    });
+    verifyArchivedApp(join(directory, 'zip', 'JLU-Dela.app'));
+    execFileSync(
+      '/usr/bin/hdiutil',
+      ['attach', '-readonly', '-nobrowse', '-mountpoint', mount, `${prefix}.dmg`],
+      { timeout: 120000, stdio: 'pipe' },
+    );
     try {
-      execFileSync('/usr/bin/ditto', ['-x', '-k', `${prefix}.zip`, join(directory, 'zip')], {
-        timeout: 120000,
-        stdio: 'pipe',
-      });
-      assert.equal(
-        cdHash(readSignature(join(directory, 'zip', 'JLU-Dela.app'))),
-        bundleHash,
-        'ZIP 内的应用与目录包不一致',
-      );
-      execFileSync(
-        '/usr/bin/hdiutil',
-        ['attach', '-readonly', '-nobrowse', '-mountpoint', mount, `${prefix}.dmg`],
-        { timeout: 120000, stdio: 'pipe' },
-      );
-      try {
-        assert.equal(
-          cdHash(readSignature(join(mount, 'JLU-Dela.app'))),
-          bundleHash,
-          'DMG 内的应用与目录包不一致',
-        );
-      } finally {
-        execFileSync('/usr/bin/hdiutil', ['detach', mount], { timeout: 30000, stdio: 'pipe' });
-      }
+      verifyArchivedApp(join(mount, 'JLU-Dela.app'));
     } finally {
-      rmSync(directory, { recursive: true, force: true });
+      execFileSync('/usr/bin/hdiutil', ['detach', mount], { timeout: 30000, stdio: 'pipe' });
     }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 }
 console.log(
