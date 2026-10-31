@@ -1,0 +1,45 @@
+name: Application tests
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build and unit tests (Windows)
+    runs-on: windows-2022
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: app
+        shell: bash
+    env:
+      DELA_REMOTE_HOST: ''
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: app/.node-version
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
+          cache: true
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build:bundle
+      - name: Unit tests
+        run: pnpm test
+      - name: Smoke test Electron
+        run: pnpm smoke
+      - uses: actions/upload-artifact@v6
+        with:
+          name: windows-build
+          path: app/out/
+          if-no-files-found: error
+          retention-days: 1

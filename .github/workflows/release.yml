@@ -1,0 +1,174 @@
+name: Desktop release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    defaults:
+      run:
+        working-directory: app
+    name: Verify Apple Silicon packages
+    runs-on: macos-15
+    timeout-minutes: 40
+    outputs:
+      tag: ${{ steps.metadata.outputs.tag }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      DELA_REMOTE_HOST: ''
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: app/.node-version
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
+      - name: Validate version and tag
+        id: metadata
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+          const tag = `v${version}`;
+          if (process.env.GITHUB_REF_TYPE === 'tag' && process.env.GITHUB_REF_NAME !== tag)
+            throw new Error('Git tag must match package.json version');
+          appendFileSync(process.env.GITHUB_OUTPUT, `tag=${tag}\n`);
+          NODE
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - name: Verify campus and study workflows
+        run: |
+          pnpm smoke:jlu
+          pnpm smoke:timetable
+          pnpm smoke:platforms
+          pnpm smoke:chaoxing
+          pnpm smoke:study-calendar
+          pnpm smoke:knowledge
+          pnpm smoke:setup
+      - name: Build DMG and ZIP
+        run: pnpm exec electron-builder --mac --arm64 --publish never -c.electronDist=node_modules/electron/dist
+      - name: Verify archives and launch archived apps
+        run: node scripts/verify-macos-package.ts "dist/mac-arm64/JLU-Dela.app"
+      - name: Verify packaged study workflows
+        run: |
+          pnpm smoke:jlu "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:chaoxing "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:study-calendar "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:setup "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+      - name: Record checksums, source and release notes
+        run: |
+          cd dist
+          shasum -a 256 *.dmg *.zip > SHA256SUMS
+          git rev-parse HEAD > source-commit.txt
+          cd ..
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+          const section = readFileSync('docs/CHANGELOG.md', 'utf8').split(/^## /m)
+            .find(value => value.startsWith(`${version} `));
+          if (!section) throw new Error('Missing versioned changelog');
+          const changes = section.slice(section.indexOf('\n')).trim();
+          writeFileSync('dist/release-notes.md', `适用于 **macOS 13+ / Apple Silicon（M 系列芯片）** 和 **Windows 10/11 x64**。\n\nMac 下载 DMG 后，将 JLU-Dela.app 拖入 Applications；ZIP 为备用压缩包。Windows 下载 win-x64-setup.exe 并安装。\n\n这是开发预览版，Mac 包尚未做 Developer ID 签名与公证，Windows 安装包尚未签名，系统可能提示无法验证发布者；Intel Mac 不在本次发布范围。\n\n## 本版更新\n\n${changes}\n\n## 验证与来源\n\n通过格式、类型、构建、单元测试、校园与学习流程冒烟，以及 Mac DMG / ZIP 完整性与归档内应用启动检查；Windows 目录包启动、NSIS 安装、安装后启动和卸载检查。\n\n附 SHA256SUMS 和 source-commit.txt。源码：${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/commit/${process.env.GITHUB_SHA}。\n\n[使用指南](https://github.com/goya4140/JLU-Dela/blob/${process.env.GITHUB_SHA}/app/docs/user-guide.md) · [Mac 安装说明](https://github.com/goya4140/JLU-Dela/blob/${process.env.GITHUB_SHA}/app/docs/install-macos.md) · [Windows 安装说明](https://github.com/goya4140/JLU-Dela/blob/${process.env.GITHUB_SHA}/app/docs/windows-testing.md)\n`);
+          NODE
+      - uses: actions/upload-artifact@v6
+        with:
+          name: JLU-Dela-mac-arm64-release
+          path: |
+            app/dist/*.dmg
+            app/dist/*.zip
+            app/dist/SHA256SUMS
+            app/dist/source-commit.txt
+            app/dist/release-notes.md
+          if-no-files-found: error
+          retention-days: 14
+  windows:
+    defaults:
+      run:
+        working-directory: app
+    name: Verify Windows x64 installer
+    runs-on: windows-2025
+    timeout-minutes: 40
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      DELA_REMOTE_HOST: ''
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: app/.node-version
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm prepare:runtime
+      - name: Build Windows installer
+        run: pnpm exec electron-builder --win --x64 --publish never
+      - name: Install, launch and uninstall
+        run: node scripts/verify-windows-package.ts
+      - name: Record source
+        run: git rev-parse HEAD | Set-Content -Encoding ascii dist/source-commit-windows.txt
+      - uses: actions/upload-artifact@v6
+        with:
+          name: JLU-Dela-windows-x64-release
+          path: |
+            app/dist/*-win-x64-setup.exe
+            app/dist/source-commit-windows.txt
+          if-no-files-found: error
+          retention-days: 14
+  publish:
+    name: Publish verified release
+    needs: [package, windows]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.package.outputs.tag }}
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: JLU-Dela-mac-arm64-release
+          path: release
+      - uses: actions/download-artifact@v6
+        with:
+          name: JLU-Dela-windows-x64-release
+          path: release
+      - name: Verify source and combine checksums
+        run: |
+          test "$(tr -d '\r\n' < release/source-commit.txt)" = "$(tr -d '\r\n' < release/source-commit-windows.txt)"
+          cd release
+          sha256sum *.dmg *.zip *.exe > SHA256SUMS
+      - name: Upload packages and publish
+        run: |
+          if draft=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [ "$draft" != true ]; then
+              echo 'Release is already public. Publish a new version instead of replacing downloads.'
+              exit 1
+            fi
+          else
+            flags=()
+            if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); fi
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft "${flags[@]}" \
+              --title "JLU Dela $TAG · macOS & Windows" --notes-file release/release-notes.md
+          fi
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            release/*.dmg release/*.zip release/*.exe release/SHA256SUMS release/source-commit.txt
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false

@@ -1,0 +1,77 @@
+// 水源功能关闭时 dela 命令桥拒绝水源命令，且 help 不再列出它们；其他领域不受影响。
+import { tmpdir } from 'node:os';
+import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
+
+const flags = vi.hoisted(() => ({ shuiyuan: true }));
+vi.mock('electron', () => ({
+  ipcMain: {},
+  app: { getPath: () => tmpdir(), isPackaged: false, getAppPath: () => tmpdir() },
+}));
+vi.mock('node-pty', () => ({ spawn: vi.fn() }));
+vi.mock('../../settings/prefs', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../settings/prefs')>()),
+  experimentEnabled: (key: string) => key !== 'shuiyuan' || flags.shuiyuan,
+  assertShuiyuanEnabled: () => {
+    if (!flags.shuiyuan) throw new Error('水源功能已关闭');
+  },
+}));
+import { startDomainBridge } from '../commands';
+
+let bridge: Awaited<ReturnType<typeof startDomainBridge>>;
+beforeAll(async () => {
+  bridge = await startDomainBridge();
+});
+afterAll(() => bridge.close());
+beforeEach(() => {
+  flags.shuiyuan = true;
+});
+
+async function run(command: string, input: unknown = {}) {
+  const response = await fetch(bridge.url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${bridge.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command, input }),
+  });
+  return (await response.json()) as { ok: boolean; result?: unknown; error?: string };
+}
+
+it('reports pending JLU integrations and rejects upstream campus commands', async () => {
+  const help = (await run('help')).result as { name: string }[];
+  const names = help.map((item) => item.name);
+  expect(names).toContain('campus_status');
+  expect(names).toEqual(
+    expect.arrayContaining([
+      'query_chaoxing_courses',
+      'query_chaoxing_files',
+      'query_chaoxing_works',
+    ]),
+  );
+  expect(names).toContain('query_todos');
+  expect(names).toContain('query_schedule');
+  expect(names).toContain('create_entry');
+  for (const command of [
+    'search_shuiyuan_topics',
+    'list_canvas_courses',
+    'query_assignments',
+    'refresh_todos',
+    'link_canvas_source',
+  ]) {
+    expect(names).not.toContain(command);
+    expect(await run(command)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining(
+        command === 'search_shuiyuan_topics' ? '尚未接入' : '命令不存在',
+      ),
+    });
+  }
+  expect(await run('campus_status')).toMatchObject({
+    ok: true,
+    result: {
+      services: expect.arrayContaining([
+        expect.objectContaining({ id: 'academic', integration: 'preview' }),
+        expect.objectContaining({ id: 'notices', integration: 'preview' }),
+        expect.objectContaining({ id: 'learning', integration: 'preview' }),
+      ]),
+    },
+  });
+});

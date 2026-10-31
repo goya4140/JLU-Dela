@@ -1,0 +1,67 @@
+name: JLU macOS CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jlu-macos-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    defaults:
+      run:
+        working-directory: app
+    name: macOS Apple Silicon
+    runs-on: macos-15
+    timeout-minutes: 35
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      DELA_REMOTE_HOST: ''
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: app/.node-version
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify Apple Silicon runner
+        run: node -e "if (process.platform !== 'darwin' || process.arch !== 'arm64') process.exit(1)"
+      - name: Format, lint, typecheck, build and unit tests
+        run: pnpm check
+      - name: Smoke test Electron and JLU workspace
+        run: |
+          pnpm smoke
+          pnpm smoke:runtime
+          pnpm smoke:jlu
+          pnpm smoke:timetable
+          pnpm smoke:platforms
+          pnpm smoke:chaoxing
+          pnpm smoke:study-calendar
+          pnpm smoke:knowledge
+          pnpm smoke:setup
+      - name: Package development app
+        run: pnpm exec electron-builder --dir --mac --arm64 --publish never -c.electronDist=node_modules/electron/dist
+      - name: Verify package and smoke test packaged app
+        run: |
+          node scripts/verify-macos-package.ts "dist/mac-arm64/JLU-Dela.app" --dir
+          "dist/mac-arm64/JLU-Dela.app/Contents/MacOS/JLU-Dela" --smoke-test
+          pnpm smoke:jlu "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:timetable "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:platforms "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:chaoxing "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:study-calendar "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:knowledge "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
+          pnpm smoke:setup "dist/mac-arm64/JLU-Dela.app/Contents/Resources/app.asar"
