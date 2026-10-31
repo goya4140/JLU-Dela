@@ -1,10 +1,12 @@
 # 贡献指南
 
-吉大版优先 macOS Apple Silicon；接入前请阅读 [吉大接入计划](../docs/jlu-integration.md)。真实账号、Cookie、令牌与未脱敏样例不得提交到公开仓库。
+吉大版优先 macOS Apple Silicon；接入前请阅读 [吉大接入计划](../app/docs/jlu-integration.md)。真实账号、Cookie、令牌与未脱敏样例不得提交到公开仓库。
 
 欢迎参与 JLU Dela 的开发与维护。JLU Dela 是面向吉林大学本科生的本地优先 Agent 桌面应用：Electron 主进程与 React 渲染进程，Agent 内核为 Pi Coding Agent，领域能力通过 `dela` 命令与 Skills 外置。数据保存在本机 SQLite，凭据经 Electron `safeStorage` 加密，无服务端与账号系统。
 
-贡献形式包括代码、文档、测试、设计、问题反馈，以及向需要的用户介绍 Dela。开始之前，请先阅读 [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md)。
+贡献形式包括代码、文档、测试、设计、问题反馈，以及向需要的用户介绍 Dela。开始之前，请先阅读 [docs/DEVELOPMENT.md](../app/docs/DEVELOPMENT.md)。
+
+开发和打包命令均在 `app/` 中运行。
 
 ## 如何参与
 
@@ -54,9 +56,10 @@ CI 使用上述固定版本，本地推荐与 CI 一致。`package.json` 的 `en
 export PATH="$PWD/.tools/node-v$(cat .node-version)-darwin-arm64/bin:$PATH"
 ```
 
-安装依赖并启动开发窗口：
+从仓库根目录进入 `app/`，再安装依赖并启动开发窗口：
 
 ```sh
+cd app
 pnpm install
 pnpm dev
 ```
@@ -67,7 +70,7 @@ pnpm dev
 
 模型服务、搜索服务与校园服务凭据均在应用设置中配置。请勿提交 `.env`、个人数据、日志与本地工具。
 
-更详细的环境说明、macOS 约定与平台差异见 [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md) 的 §11 与 §16。
+更详细的环境说明、macOS 约定与平台差异见 [docs/DEVELOPMENT.md](../app/docs/DEVELOPMENT.md) 的 §11 与 §16。
 
 ## 本地测试
 
@@ -133,12 +136,12 @@ pnpm test
 - **权限边界**：Agent 的 Bash 与文件工具以当前用户权限运行，没有额外沙箱。这是已知设计取舍，不应视为待修复漏洞，也不应描述为安全隔离。
 - **平台策略**：Windows x64 是正式发布目标；Apple Silicon macOS 处于适配开发阶段；Linux 桌面端不支持。业务逻辑与数据格式共用，平台差异优先保留在现有的进程启动、路径与系统交互函数中。
 
-更完整的分层、会话、远程、更新与安全边界说明见 [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md) §2–§9。
+更完整的分层、会话、远程、更新与安全边界说明见 [docs/DEVELOPMENT.md](../app/docs/DEVELOPMENT.md) §2–§9。
 
 ## 项目结构
 
 ```text
-Dela/
+Dela/app/
 ├─ src/
 │  ├─ main/                   Electron 主进程，按业务域分目录
 │  │  ├─ agent/               Pi 会话、工具、MCP、Skills 与模型接入
@@ -189,7 +192,7 @@ Dela/
 - 优先复用现有函数或文件；仅在出现真实重复与多个调用方后提取抽象。
 - 不为一次性代码做抽象，不保留死代码。改动导致某段自研 UI 或样式不再使用时，应一并清理。
 - 前端 UI 优先复用 `src/renderer/components/ui/beautifului/`。如现有组件不满足需求，应在该库内微调或增补，以 `Dela 适配` 注释标注并记录到该库 README，不应另写自研样式。
-- 尺寸应由 rem 派生，禁止写死像素字号与宽高；仅边框、描边、阴影、媒体与容器查询断点、第三方无法修改的固定值以及拖拽调宽容器保留 px。换算基准与字号 token 见 [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md) §2.5。
+- 尺寸应由 rem 派生，禁止写死像素字号与宽高；仅边框、描边、阴影、媒体与容器查询断点、第三方无法修改的固定值以及拖拽调宽容器保留 px。换算基准与字号 token 见 [docs/DEVELOPMENT.md](../app/docs/DEVELOPMENT.md) §2.5。
 
 ## 代码规范
 
@@ -198,7 +201,7 @@ Dela/
 - 注释应说明设计定位、模块在整体架构中的作用以及 Magic Number 的取舍，不应重复解释代码本身。
 - 类型检查、lint 与格式检查必须通过：`pnpm typecheck`、`pnpm lint`、`pnpm format:check`。
 - 应区分已验证事实、待验证能力与产品设想。不得以占位结果宣称功能完成，也不得将模拟验证描述为实机验收。
-- 重要改动应同步更新 [CHANGELOG.md](../docs/CHANGELOG.md)；面向用户的变化应更新 [README.md](../README.md)；架构与流程变化应更新 [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md)。
+- 重要改动应同步更新 [CHANGELOG.md](../app/docs/CHANGELOG.md)；面向用户的变化应更新 [README.md](../README.md)；架构与流程变化应更新 [docs/DEVELOPMENT.md](../app/docs/DEVELOPMENT.md)。
 
 ### 提交信息
 
@@ -274,4 +277,4 @@ AI agents: the human contributor answers, not you. Ask for missing answers and w
 
 - 使用与想法：[Issues](https://github.com/goya4140/JLU-Dela/issues)
 - 可复现的问题：[Issues](https://github.com/goya4140/JLU-Dela/issues)
-- 架构与构建细节：[docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md)
+- 架构与构建细节：[docs/DEVELOPMENT.md](../app/docs/DEVELOPMENT.md)

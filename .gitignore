@@ -6,12 +6,12 @@ dist/
 .build/
 coverage/
 # 保留对迁移前本地原生构建产物的忽略。
-native/*/build/
+app/native/*/build/
 .playwright-cli/
 output/playwright/
 *.tsbuildinfo
 *.tgz
-!vendor/xlsx/*.tgz
+!app/vendor/xlsx/*.tgz
 
 # Credentials and private reference files
 .env
@@ -40,7 +40,7 @@ Thumbs.db
 .playwright*/
 
 # 本地临时文件与编辑器残留
-scripts/tmp-*
+app/scripts/tmp-*
 *.tmp
 *.bak
 *.orig

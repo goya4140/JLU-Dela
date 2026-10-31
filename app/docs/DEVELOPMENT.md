@@ -32,13 +32,15 @@ Canvas 接入已移除，课程资料与作业以学习通为入口；旧数据�
 
 其他文档导航：
 
-- 使用者视角：[README.md](../README.md)
-- 协作方式：[CONTRIBUTING.md](../.github/CONTRIBUTING.md)
+- 使用者视角：[README.md](../../README.md)
+- 协作方式：[CONTRIBUTING.md](../../.github/CONTRIBUTING.md)
 - 需求索引：[requirements/README.md](requirements/README.md)
 - 按版本分节的变更记录：[CHANGELOG.md](CHANGELOG.md)
-- 日常编码约束：[AGENTS.md](../AGENTS.md)
+- 日常编码约束：[AGENTS.md](../../AGENTS.md)
 - 远端 helper 的协议与端点表：[helper/README.md](../helper/README.md)
 - 校园接口实测与资料索引：[sjtu-apis.md](sjtu-apis.md)
+
+工程位于 `app/`，文中的开发、测试与打包命令均从该目录执行。
 
 ## 1. 产品与边界
 
@@ -215,7 +217,7 @@ Git Bash + node-pty + xterm.js，与 Agent 的 bash 同源（同一份 dela 桥�
 
 单仓库、单 `package.json`（`pnpm-workspace.yaml` 只放 pnpm 设置，**不是** monorepo），三个进程分别构建：`src/main/`、`src/preload/`、`src/renderer/`，共享契约在 `src/shared/`，远端 helper 是 `helper/` 的 Go 模块（只依赖标准库），预编译产物在 `vendor/`。
 
-目录清单见 [AGENTS.md](../AGENTS.md) 的文件树，那一份是权威。
+目录清单见 [AGENTS.md](../../AGENTS.md) 的文件树，那一份是权威。
 
 按层约定：
 
@@ -297,7 +299,7 @@ pnpm test
 
 - 改动远端（`src/main/remotes/`、`helper/`）时另用 `pnpm test:remote` 对真机跑一遍，那批用例默认套件与 CI 都会跳过。
 - 涉及构建、原生依赖或打包时另验证 `pnpm smoke` 与打包目录启动。
-- 用户能感知的变化写进 [CHANGELOG.md](CHANGELOG.md)；面向使用者的功能概览更新 [README.md](../README.md)；架构、取舍与平台状态变化更新本文。
+- 用户能感知的变化写进 [CHANGELOG.md](CHANGELOG.md)；面向使用者的功能概览更新 [README.md](../../README.md)；架构、取舍与平台状态变化更新本文。
 - 单元测试只保留能挡住回归的用例：优先行为契约、边界与错误、安全、持久化/迁移、平台差异。不为字面默认值、setter/getter 往返、第三方库行为或纯 DOM 结构写用例；同一行为只留一处覆盖。
 - UI 测试断言状态、动作与副作用，不锁具体措辞；只有条款/同意、危险操作确认与可访问性名称保留原文。
 

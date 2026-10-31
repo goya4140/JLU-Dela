@@ -14,6 +14,9 @@ concurrency:
 
 jobs:
   package:
+    defaults:
+      run:
+        working-directory: app
     name: Verify Apple Silicon packages
     runs-on: macos-15
     timeout-minutes: 40
@@ -28,9 +31,11 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
-          node-version-file: .node-version
+          node-version-file: app/.node-version
           package-manager-cache: false
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
       - name: Validate version and tag
         id: metadata
         run: |
@@ -76,20 +81,23 @@ jobs:
             .find(value => value.startsWith(`${version} `));
           if (!section) throw new Error('Missing versioned changelog');
           const changes = section.slice(section.indexOf('\n')).trim();
-          writeFileSync('dist/release-notes.md', `适用于 **macOS 13+ / Apple Silicon（M 系列芯片）** 和 **Windows 10/11 x64**。\n\nMac 下载 DMG 后，将 JLU-Dela.app 拖入 Applications；ZIP 为备用压缩包。Windows 下载 win-x64-setup.exe 并安装。\n\n这是开发预览版，Mac 包尚未做 Developer ID 签名与公证，Windows 安装包尚未签名，系统可能提示无法验证发布者；Intel Mac 不在本次发布范围。\n\n## 本版更新\n\n${changes}\n\n## 验证与来源\n\n通过格式、类型、构建、单元测试、校园与学习流程冒烟，以及 Mac DMG / ZIP 完整性与归档内应用启动检查；Windows 目录包启动、NSIS 安装、安装后启动和卸载检查。\n\n附 SHA256SUMS 和 source-commit.txt。源码：${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/commit/${process.env.GITHUB_SHA}。\n\n[使用指南](https://github.com/goya4140/JLU-Dela/blob/${process.env.GITHUB_SHA}/docs/user-guide.md) · [Mac 安装说明](https://github.com/goya4140/JLU-Dela/blob/${process.env.GITHUB_SHA}/docs/install-macos.md) · [Windows 安装说明](https://github.com/goya4140/JLU-Dela/blob/${process.env.GITHUB_SHA}/docs/windows-testing.md)\n`);
+          writeFileSync('dist/release-notes.md', `适用于 **macOS 13+ / Apple Silicon（M 系列芯片）** 和 **Windows 10/11 x64**。\n\nMac 下载 DMG 后，将 JLU-Dela.app 拖入 Applications；ZIP 为备用压缩包。Windows 下载 win-x64-setup.exe 并安装。\n\n这是开发预览版，Mac 包尚未做 Developer ID 签名与公证，Windows 安装包尚未签名，系统可能提示无法验证发布者；Intel Mac 不在本次发布范围。\n\n## 本版更新\n\n${changes}\n\n## 验证与来源\n\n通过格式、类型、构建、单元测试、校园与学习流程冒烟，以及 Mac DMG / ZIP 完整性与归档内应用启动检查；Windows 目录包启动、NSIS 安装、安装后启动和卸载检查。\n\n附 SHA256SUMS 和 source-commit.txt。源码：${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/commit/${process.env.GITHUB_SHA}。\n\n[使用指南](https://github.com/goya4140/JLU-Dela/blob/${process.env.GITHUB_SHA}/app/docs/user-guide.md) · [Mac 安装说明](https://github.com/goya4140/JLU-Dela/blob/${process.env.GITHUB_SHA}/app/docs/install-macos.md) · [Windows 安装说明](https://github.com/goya4140/JLU-Dela/blob/${process.env.GITHUB_SHA}/app/docs/windows-testing.md)\n`);
           NODE
       - uses: actions/upload-artifact@v6
         with:
           name: JLU-Dela-mac-arm64-release
           path: |
-            dist/*.dmg
-            dist/*.zip
-            dist/SHA256SUMS
-            dist/source-commit.txt
-            dist/release-notes.md
+            app/dist/*.dmg
+            app/dist/*.zip
+            app/dist/SHA256SUMS
+            app/dist/source-commit.txt
+            app/dist/release-notes.md
           if-no-files-found: error
           retention-days: 14
   windows:
+    defaults:
+      run:
+        working-directory: app
     name: Verify Windows x64 installer
     runs-on: windows-2025
     timeout-minutes: 40
@@ -102,9 +110,11 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
-          node-version-file: .node-version
+          node-version-file: app/.node-version
           package-manager-cache: false
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm prepare:runtime
@@ -118,8 +128,8 @@ jobs:
         with:
           name: JLU-Dela-windows-x64-release
           path: |
-            dist/*-win-x64-setup.exe
-            dist/source-commit-windows.txt
+            app/dist/*-win-x64-setup.exe
+            app/dist/source-commit-windows.txt
           if-no-files-found: error
           retention-days: 14
   publish:

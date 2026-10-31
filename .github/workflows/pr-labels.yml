@@ -136,19 +136,19 @@ jobs:
 
             // 生成物与随改动不计入大小；文档与 CHANGELOG 属于核心内容，正常计入。
             const SIZE_IGNORES = [
-              /^(?:pnpm-lock\.yaml|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|Cargo\.lock)$/,
-              /^vendor\//,
-              /^(?:out|dist)\//,
+              /^app\/(?:pnpm-lock\.yaml|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|Cargo\.lock)$/,
+              /^app\/vendor\//,
+              /^app\/(?:out|dist)\//,
             ]
 
-            const isDocs = (name) => name.startsWith('docs/') || /\.(?:md|mdx)$/i.test(name)
+            const isDocs = (name) => name.startsWith('app/docs/') || /\.(?:md|mdx)$/i.test(name)
             const isFrontend = (name) =>
-              name.startsWith('src/renderer/') || name.endsWith('.tsx')
+              name.startsWith('app/src/renderer/') || name.endsWith('.tsx')
             const isBackend = (name) =>
-              name.startsWith('src/main/') ||
-              name.startsWith('src/preload/') ||
-              name.startsWith('helper/')
-            const isShared = (name) => name.startsWith('src/shared/')
+              name.startsWith('app/src/main/') ||
+              name.startsWith('app/src/preload/') ||
+              name.startsWith('app/helper/')
+            const isShared = (name) => name.startsWith('app/src/shared/')
             const countsForSize = (name) =>
               !SIZE_IGNORES.some((pattern) => pattern.test(name))
 

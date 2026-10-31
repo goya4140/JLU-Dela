@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/JLU-Dela-white.png" width="80" alt="JLU Dela 折纸天鹅标识" />
+  <img src="app/assets/JLU-Dela-white.png" width="80" alt="JLU Dela 折纸天鹅标识" />
 </p>
 
 <h1 align="center">JLU Dela</h1>
@@ -16,50 +16,50 @@
   <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-mac-arm64.dmg"><strong>↓ 下载 macOS DMG</strong></a> ·
   <a href="https://github.com/goya4140/JLU-Dela/releases/download/v0.1.0-alpha.9/JLU-Dela-0.1.0-alpha.9-win-x64-setup.exe"><strong>↓ 下载 Windows 安装包</strong></a> ·
   <a href="https://github.com/goya4140/JLU-Dela/releases/tag/v0.1.0-alpha.9">全部下载 / 校验值</a> ·
-  <a href="docs/install-macos.md">安装说明</a> ·
-  <a href="docs/user-guide.md">使用指南</a> ·
+  <a href="app/docs/install-macos.md">安装说明</a> ·
+  <a href="app/docs/user-guide.md">使用指南</a> ·
   <a href="https://github.com/goya4140/JLU-Dela/issues">反馈</a>
 </p>
 
-![JLU Dela：把一学期，装进工作台](docs/demos/hero.svg)
+![JLU Dela：把一学期，装进工作台](app/docs/demos/hero.svg)
 
-> **开发预览 · 非吉林大学官方产品。** 提供 macOS 13+ M 系列 DMG 和 Windows 10/11 x64 安装包，均为未签名预览；Mac 包尚未公证，Intel Mac 未验证。[Mac 安装说明](docs/install-macos.md) · [Windows 安装说明](docs/windows-testing.md)。
+> **开发预览 · 非吉林大学官方产品。** 提供 macOS 13+ M 系列 DMG 和 Windows 10/11 x64 安装包，均为未签名预览；Mac 包尚未公证，Intel Mac 未验证。[Mac 安装说明](app/docs/install-macos.md) · [Windows 安装说明](app/docs/windows-testing.md)。
 
 ## 从「今天学什么」开始
 
 课表、学习通作业和个人待办汇入同一份学习日历。按周安排、按月浏览，或切换列表逐项查看。明确的截止时间显示倒计时；只有相对时间的作业保留同步快照，避免把旧提示误当实时状态。
 
-![学习日历：课程、作业和个人待办的周视图](docs/demos/calendar.png)
+![学习日历：课程、作业和个人待办的周视图](app/docs/demos/calendar.png)
 
 ## 原网页在左，自己的思考在旁边
 
 从作业卡片直达工作台内的学习通原网页，复用学习通登录。作答和提交交给平台，分屏留给笔记与对话；选中文字后提问，先形成草稿，再由你确认发送。
 
-![作业原网页与 AI 提问草稿并排展示](docs/demos/assignment-workbench.png)
+![作业原网页与 AI 提问草稿并排展示](app/docs/demos/assignment-workbench.png)
 
 ## 一边看课，一边整理
 
 在应用内播放学在吉大回放，查找学校字幕、跳转到对应片段，边看边记。把字幕引用放进 AI 草稿，让问题保留课堂上下文。
 
-![回放学习演示：笔记与字幕引用草稿之间切换](docs/demos/study-flow.gif)
+![回放学习演示：笔记与字幕引用草稿之间切换](app/docs/demos/study-flow.gif)
 
 ## 从资料，到自己的知识库
 
 已有文件夹可以直接连接，按课程阅读、搜索和创建 Markdown 笔记。材料留在原来的位置，笔记也写进自己的课程目录。
 
-![本地课程知识库与 Markdown 阅读](docs/demos/knowledge.png)
+![本地课程知识库与 Markdown 阅读](app/docs/demos/knowledge.png)
 
 文件名及 Markdown / TXT 正文可直接检索；PDF 可手动提取文字、搜索并定位页码。目前尚无双链、语义检索、OCR 或 Office 正文索引。
 
 ## 校园信息，也在这里
 
-| 学习通资料                                       | 课表                                                         |
-| ------------------------------------------------ | ------------------------------------------------------------ |
-| ![学习通资料目录与导入](docs/demos/chaoxing.png) | ![教务课表周视图](docs/demos/timetable.png)                  |
-| 按需导入学校允许下载的文件，在工作台阅读与引用。 | 复用教务学期、教学周和节次，查看课程与调停课。               |
-| **学校通知**                                     | **吉大邮箱**                                                 |
-| ![电子校务通知](docs/demos/notices.png)          | ![吉大邮箱合成演示](docs/demos/mail.png)                     |
-| 阅读通知正文，查看附件入口；同步失败保留旧缓存。 | 本机收取、检索和阅读邮件，凭据加密保存；同步保留服务器草稿。 |
+| 学习通资料                                           | 课表                                                         |
+| ---------------------------------------------------- | ------------------------------------------------------------ |
+| ![学习通资料目录与导入](app/docs/demos/chaoxing.png) | ![教务课表周视图](app/docs/demos/timetable.png)              |
+| 按需导入学校允许下载的文件，在工作台阅读与引用。     | 复用教务学期、教学周和节次，查看课程与调停课。               |
+| **学校通知**                                         | **吉大邮箱**                                                 |
+| ![电子校务通知](app/docs/demos/notices.png)          | ![吉大邮箱合成演示](app/docs/demos/mail.png)                 |
+| 阅读通知正文，查看附件入口；同步失败保留旧缓存。     | 本机收取、检索和阅读邮件，凭据加密保存；同步保留服务器草稿。 |
 
 <details>
 <summary>查看各平台的接入范围</summary>
@@ -86,16 +86,17 @@
 
 使用 AI 时再配置自己的模型服务。资料引用先进入草稿，发送后相关内容才会交给所选服务；费用与数据处理方式由该服务决定。校园连接失败会保留旧数据，不会把网络错误一律当作登录失效。
 
-[安装与校验](docs/install-macos.md) · [使用须知与配置](docs/user-guide.md) · [更新日志](docs/CHANGELOG.md) · [隐私说明](docs/privacy.md)
+[安装与校验](app/docs/install-macos.md) · [使用须知与配置](app/docs/user-guide.md) · [更新日志](app/docs/CHANGELOG.md) · [隐私说明](app/docs/privacy.md)
 
 <details>
 <summary>本地开发与验证</summary>
 
-构建、类型与测试配置集中在 `config/`；协作文档在 `.github/`，更新日志和使用文档在 `docs/`。
+整个工程集中在 `app/`，包含源码、构建配置、依赖与使用文档。根目录保留项目主页、许可证和仓库规则；协作文档在 `.github/`。
 
-使用 [.node-version](.node-version) 和 [package.json](package.json) 指定的 Node.js / pnpm。
+使用 [.node-version](app/.node-version) 和 [package.json](app/package.json) 指定的 Node.js / pnpm。
 
 ```sh
+cd app
 pnpm install --frozen-lockfile
 pnpm dev
 ```
@@ -116,11 +117,11 @@ pnpm dev
 | `pnpm package:dir`          | 构建 Windows 可运行目录                     |
 | `pnpm package:dist`         | 构建 Windows NSIS 安装包                    |
 
-主分支与 PR 运行 macOS CI；发布 tag 触发安装包验证和 Release 发布，详见[开发文档](docs/DEVELOPMENT.md)。自动化使用合成数据，不访问真实校园账号。
+主分支与 PR 运行 macOS CI；发布 tag 触发安装包验证和 Release 发布，详见[开发文档](app/docs/DEVELOPMENT.md)。自动化使用合成数据，不访问真实校园账号。
 
-Windows 打包步骤、已知问题及合作者的验收记录见 [Windows 打包与测试](docs/windows-testing.md)。
+Windows 打包步骤、已知问题及合作者的验收记录见 [Windows 打包与测试](app/docs/windows-testing.md)。
 
-`pnpm web` 提供共用本机学习数据的浏览器预览，仅监听本机；不是公网多用户服务，见[网页端说明](docs/web.md)。
+`pnpm web` 提供共用本机学习数据的浏览器预览，仅监听本机；不是公网多用户服务，见[网页端说明](app/docs/web.md)。
 
 </details>
 
@@ -146,4 +147,4 @@ Windows 打包步骤、已知问题及合作者的验收记录见 [Windows 打�
 
 JLU Dela 基于 [Dela](https://github.com/Chang-Yo/Dela) 的工作台持续开发吉林大学校园接入与学习功能，保留原项目历史和版权声明，遵循 [GPL-3.0-or-later](LICENSE)。当前使用原创折纸天鹅标识。感谢原作者、贡献者与参与测试的同学。
 
-[贡献指南](.github/CONTRIBUTING.md) · [使用条款](docs/terms.md) · [隐私说明](docs/privacy.md)
+[贡献指南](.github/CONTRIBUTING.md) · [使用条款](app/docs/terms.md) · [隐私说明](app/docs/privacy.md)
