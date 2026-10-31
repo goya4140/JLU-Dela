@@ -74,20 +74,22 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-| 命令                        | 用途                                  |
-| --------------------------- | ------------------------------------- |
-| `pnpm check`                | 格式、lint、类型检查、构建与单元测试  |
-| `pnpm smoke`                | Electron 基础冒烟                     |
-| `pnpm smoke:timetable`      | 课表读取、认证恢复与失败保留缓存      |
-| `pnpm smoke:platforms`      | 通知、视频、字幕、笔记与 AI 草稿      |
-| `pnpm smoke:chaoxing`       | 独立会话、课程、目录、作业与资料导入  |
-| `pnpm smoke:study-calendar` | 学习日历聚合、作业时间与读取范围      |
-| `pnpm smoke:knowledge`      | 原位课程资料、PDF 检索、引用与笔记    |
-| `pnpm smoke:setup`          | 首次引导、配置恢复与多平台顺序连接    |
-| `pnpm smoke:web`            | 本机网页端与桌面学习数据共用          |
-| `pnpm package:mac`          | 构建 Apple Silicon 开发预览 DMG / ZIP |
+| 命令                        | 用途                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------ |
+| `pnpm check`                | 格式、lint、类型检查、构建与单元测试                                                 |
+| `pnpm smoke`                | Electron 基础冒烟                                                                    |
+| `pnpm smoke:timetable`      | 课表读取、认证恢复与失败保留缓存                                                     |
+| `pnpm smoke:platforms`      | 通知、视频、字幕、笔记与 AI 草稿                                                     |
+| `pnpm smoke:chaoxing`       | 独立会话、课程、目录、作业与资料导入                                                 |
+| `pnpm smoke:study-calendar` | 学习日历聚合、作业时间与读取范围                                                     |
+| `pnpm smoke:knowledge`      | 原位课程资料、PDF 检索、引用与笔记                                                   |
+| `pnpm smoke:setup`          | 首次引导、配置恢复与多平台顺序连接                                                   |
+| `pnpm smoke:web`            | 本机网页端与桌面学习数据共用                                                         |
+| `pnpm package:mac`          | 构建 Apple Silicon 开发预览 DMG / ZIP                                                |
+| `pnpm package:dir`          | 构建 Windows 可运行目录（直接双击运行）                                              |
+| `pnpm package:dist`         | 构建 Windows NSIS 安装包（需镜像，见 [Windows 打包与测试](docs/windows-testing.md)） |
 
-自动化检查使用人工数据，不访问真实校园账号。主分支推送运行 macOS CI，安装包工作流由维护者按需运行。
+自动化检查使用人工数据，不访问真实校园账号。主分支推送运行 macOS CI，安装包工作流由维护者按需运行。Windows 侧步骤、已知问题与验收清单见 [Windows 打包与测试](docs/windows-testing.md)。
 
 本机网页预览通过 `pnpm web` 启动，连接本机工作台，共用已接入的校园内容、笔记和 AI 会话；仅监听本机，不支持公网或多用户部署，详见 [网页端说明](docs/web.md)。
 
