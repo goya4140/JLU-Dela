@@ -213,7 +213,7 @@ function createMailDb(): Database.Database {
   `);
   db.prepare(
     'INSERT INTO mail_accounts (address, imap_host, imap_port, created_at) VALUES (?, ?, ?, ?)',
-  ).run('reader@example.com', 'mail.jlu.edu.cn', 993, '2026-09-13T00:00:00.000Z');
+  ).run('reader@example.com', 'mails.jlu.edu.cn', 993, '2026-09-13T00:00:00.000Z');
   return db;
 }
 

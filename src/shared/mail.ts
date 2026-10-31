@@ -83,11 +83,14 @@ export interface MailServerConfig {
   readonly smtpPort: number;
 }
 
-/** 吉大邮箱预设（Coremail：IMAP 993 / SMTP 465，实测均可连通）；第三方账号由用户自填。 */
+/**
+ * 吉大学生邮箱预设（mails.jlu.edu.cn，IMAP 993 / SMTP 465，实测 TLS 握手正常）；
+ * 教工邮箱 mail.jlu.edu.cn 是另一套 Coremail，需要时用第三方 IMAP 自填。
+ */
 export const JLU_MAIL_SERVER: MailServerConfig = {
-  imapHost: 'mail.jlu.edu.cn',
+  imapHost: 'mails.jlu.edu.cn',
   imapPort: 993,
-  smtpHost: 'mail.jlu.edu.cn',
+  smtpHost: 'mails.jlu.edu.cn',
   smtpPort: 465,
 };
 

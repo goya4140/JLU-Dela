@@ -30,3 +30,9 @@ export const jluServices = [
 ] as const;
 
 export type JluServiceId = (typeof jluServices)[number]['id'];
+
+/** 学生邮箱网站。教工邮箱是另一套服务器（mail.jlu.edu.cn），需要时用第三方 IMAP 自填。 */
+export const jluStudentMail = {
+  name: '吉林大学学生邮箱',
+  url: 'https://mails.jlu.edu.cn/',
+} as const;

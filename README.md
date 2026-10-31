@@ -46,6 +46,7 @@
 | [电子校务](https://oa.jlu.edu.cn/defaultroot/login.jsp?access=oa)      | 通知列表、分页、正文与附件入口                     |
 | [学在吉大](https://ilearntec.jlu.edu.cn/studycenter-web/index#/)       | 学期、课程、回放、多画面、学校字幕、笔记与播放进度 |
 | [学习通](https://i.chaoxing.com/base)                                  | 当前课程、普通资料目录、作业状态与文件导入         |
+| [学生邮箱](https://mails.jlu.edu.cn/)                                  | 本机 IMAP/SMTP 收发与检索；教工邮箱改用第三方 IMAP |
 
 校园接入均为预览版本，已在本人会话下验证主要流程；其他账号、长期过期和网站改版仍需持续验证。成绩、培养方案、选课和作业提交尚未接入。特殊「教师课件」入口暂不支持；列表及作业时间提示以本次同步范围和时间为准。
 

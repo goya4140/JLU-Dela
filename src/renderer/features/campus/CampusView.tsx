@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { ExternalLink, FolderOpen, GraduationCap } from 'lucide-react';
-import { jluServices, type JluServiceId } from '../../../shared/jlu';
+import { jluServices, jluStudentMail, type JluServiceId } from '../../../shared/jlu';
+import type { MailState } from '../../../shared/mail';
 import { Button } from '../../components/ui/button';
 import { useNavigationStore } from '../../navigation/view';
 
@@ -30,7 +32,7 @@ export function CampusView({
             </Button>
           </div>
           <p className="text-13 leading-relaxed text-ink-3">
-            读取课表、校内通知、学在吉大及学习通课程，已同步内容保存在本机。
+            读取课表、校内通知、学在吉大及学习通课程，并可连接吉大邮箱，已同步内容保存在本机。
           </p>
         </header>
         <div className="grid gap-4" data-setting-id="jlu-campus">
@@ -83,6 +85,7 @@ export function CampusView({
               </div>
             </section>
           ))}
+          {!serviceIds && <MailCard />}
         </div>
         <section className="grid gap-3 rounded-xl bg-field p-5">
           <h2 className="text-base font-semibold text-ink">先整理你的课程资料</h2>
@@ -99,5 +102,49 @@ export function CampusView({
         </section>
       </div>
     </div>
+  );
+}
+
+/** 吉大学生邮箱：账号在本机以 IMAP/SMTP 连接，网页入口保留给学校原站。 */
+function MailCard() {
+  const [state, setState] = useState<MailState | null>(null);
+  useEffect(() => {
+    let active = true;
+    void window.dela?.mail
+      .getState()
+      .then((value) => {
+        if (active) setState(value);
+      })
+      .catch(() => {
+        /* 读取失败按未连接展示，不阻断校园页其他内容。 */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const account = state?.account ?? null;
+  return (
+    <section className="grid gap-3 rounded-xl border border-line p-5" data-setting-id="jlu-mail">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-semibold text-ink">{jluStudentMail.name}</h2>
+        <span className="rounded-full bg-field px-2.5 py-1 text-xs text-ink-3">
+          {account ? `已连接 · ${account.address}` : '未连接'}
+        </span>
+      </div>
+      <p className="text-13 text-ink-3">
+        用 @jlu.edu.cn 学生邮箱账号在本机收发、检索邮件，凭据只保存在本机。
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => useNavigationStore.getState().navigate('mail')}>
+          {account ? '打开邮箱' : '连接邮箱'}
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <a href={jluStudentMail.url} rel="noreferrer" target="_blank">
+            前往邮箱网站
+            <ExternalLink className="size-3.5" aria-hidden="true" />
+          </a>
+        </Button>
+      </div>
+    </section>
   );
 }
