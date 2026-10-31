@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
 import { CampusView } from './CampusView';
-import { jluServices, jluStudentMail } from '../../../shared/jlu';
+import { jluServices } from '../../../shared/jlu';
 
 const openProject = vi.hoisted(() => vi.fn());
 vi.mock('../../navigation/view', () => ({
@@ -17,10 +17,9 @@ it('shows platform integration states and opens the local library', async () => 
   const root = createRoot(host);
   try {
     await act(async () => root.render(<CampusView />));
-    expect([...host.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual([
-      ...jluServices.map((service) => service.url),
-      jluStudentMail.url,
-    ]);
+    expect([...host.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual(
+      jluServices.map((service) => service.url),
+    );
     expect(
       [...host.querySelectorAll('span')].filter((node) => node.textContent === '同步待接入'),
     ).toHaveLength(0);

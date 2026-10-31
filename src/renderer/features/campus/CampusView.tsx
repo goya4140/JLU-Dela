@@ -1,7 +1,19 @@
 import { ExternalLink, FolderOpen, GraduationCap } from 'lucide-react';
-import { jluServices, jluStudentMail, type JluServiceId } from '../../../shared/jlu';
+import { jluServices, type JluServiceId } from '../../../shared/jlu';
 import { Button } from '../../components/ui/button';
 import { useNavigationStore } from '../../navigation/view';
+
+/** 每个平台的入口按钮：label 为文案，view 为应用内页面。 */
+const serviceActions: Record<
+  JluServiceId,
+  { label: string; view: 'timetable' | 'notifications' | 'chaoxing' | 'classroom' | 'mail' }
+> = {
+  academic: { label: '打开课表', view: 'timetable' },
+  notices: { label: '打开通知', view: 'notifications' },
+  chaoxing: { label: '打开学习通', view: 'chaoxing' },
+  learning: { label: '打开学在吉大', view: 'classroom' },
+  mail: { label: '打开邮箱', view: 'mail' },
+};
 
 export function CampusView({
   title = '吉大校园',
@@ -44,36 +56,14 @@ export function CampusView({
               </div>
               <p className="text-13 text-ink-3">{service.description}</p>
               <div className="flex flex-wrap gap-2">
-                {service.id === 'academic' && (
-                  <Button
-                    size="sm"
-                    onClick={() => useNavigationStore.getState().navigate('timetable')}
-                  >
-                    打开课表
-                  </Button>
-                )}
-                {service.id !== 'academic' && (
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      useNavigationStore
-                        .getState()
-                        .navigate(
-                          service.id === 'notices'
-                            ? 'notifications'
-                            : service.id === 'chaoxing'
-                              ? 'chaoxing'
-                              : 'classroom',
-                        )
-                    }
-                  >
-                    {service.id === 'notices'
-                      ? '打开通知'
-                      : service.id === 'chaoxing'
-                        ? '打开学习通'
-                        : '打开学在吉大'}
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    useNavigationStore.getState().navigate(serviceActions[service.id].view)
+                  }
+                >
+                  {serviceActions[service.id].label}
+                </Button>
                 <Button asChild size="sm" variant="outline">
                   <a href={service.url} rel="noreferrer" target="_blank">
                     前往学校平台
@@ -83,7 +73,6 @@ export function CampusView({
               </div>
             </section>
           ))}
-          {!serviceIds && <MailCard />}
         </div>
         <section className="grid gap-3 rounded-xl bg-field p-5">
           <h2 className="text-base font-semibold text-ink">先整理你的课程资料</h2>
@@ -100,31 +89,5 @@ export function CampusView({
         </section>
       </div>
     </div>
-  );
-}
-
-/** 吉大学生邮箱：入口与「课表」「学习通」一致，账号在邮箱页连接。 */
-function MailCard() {
-  return (
-    <section className="grid gap-3 rounded-xl border border-line p-5" data-setting-id="jlu-mail">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold text-ink">{jluStudentMail.name}</h2>
-        <span className="rounded-full bg-field px-2.5 py-1 text-xs text-ink-3">接入预览</span>
-      </div>
-      <p className="text-13 text-ink-3">
-        用学生邮箱账号（@mails.jlu.edu.cn）在本机收发、检索邮件，凭据只保存在本机。
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => useNavigationStore.getState().navigate('mail')}>
-          打开邮箱
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <a href={jluStudentMail.url} rel="noreferrer" target="_blank">
-            前往邮箱网站
-            <ExternalLink className="size-3.5" aria-hidden="true" />
-          </a>
-        </Button>
-      </div>
-    </section>
   );
 }

@@ -56,6 +56,23 @@ export function emitMailCacheChanged(): void {
   for (const listener of mailCacheListeners) listener();
 }
 
+const FOLDER_TIMEOUT = 240_000;
+
+/** 单个文件夹的整体时间上限：服务器卡住时也要让这一轮同步结束。 */
+async function withTimeout<T>(task: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      task,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} 同步超时`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function pushSyncStatus(): void {
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) window.webContents.send('mail:sync-status', syncStatus);
@@ -74,9 +91,8 @@ async function syncFolder(
   generation: number,
 ): Promise<void> {
   const isStale = () => generation !== syncGeneration;
-  // 吉大学生邮箱（Coremail）会拒绝非 INBOX 的 STATUS，因此统一用 SELECT 后的
-  // client.mailbox 取计数，避免整个同步在第二个文件夹上中断。
-  const lock = await client.getMailboxLock(folder.path);
+  // 用 EXAMINE（只读）打开：同步只需要读取，Coremail 对只读打开更稳定，也不会因写模式触发锁。
+  const lock = await client.getMailboxLock(folder.path, { readOnly: true });
   try {
     const mailbox = client.mailbox;
     if (!mailbox) throw new Error(`无法打开邮件文件夹 ${folder.path}`);
@@ -285,9 +301,13 @@ async function runSync(account: AccountRow, password: string): Promise<void> {
     for (const folderRow of folderRows) {
       if (isStale()) return;
       try {
-        await syncFolder(db, client, folderRow, generation);
+        await withTimeout(
+          syncFolder(db, client, folderRow, generation),
+          FOLDER_TIMEOUT,
+          folderRow.name,
+        );
       } catch (error) {
-        // 单个文件夹失败（服务器不支持、权限不足、解析异常）不影响其余文件夹。
+        // 单个文件夹失败（服务器不支持、权限不足、卡住超时）不影响其余文件夹。
         failures.push(`${folderRow.name}：${friendlyError(error)}`);
       }
     }

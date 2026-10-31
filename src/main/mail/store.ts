@@ -90,6 +90,11 @@ export function connectImap(
     secure: true,
     auth: { user: address, pass: password },
     logger: false,
+    // 学校邮箱在代理/弱网下会卡住握手或命令；给每步设上限，让失败变成错误而不是无限等待。
+    // socketTimeout 放宽到 3 分钟：Coremail 打开大文件夹（已发送/垃圾邮件）可能很慢。
+    connectionTimeout: 45_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 180_000,
   });
   client.on('error', () => {
     // 连接错误通过调用方 Promise 传递；此处仅避免未处理事件导致进程退出。

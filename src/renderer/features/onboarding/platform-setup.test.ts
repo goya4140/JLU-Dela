@@ -25,6 +25,9 @@ function fixture() {
       courses: vi.fn(async () => null),
       syncCourses: vi.fn(async () => ({ ok: true, data: { syncedAt: date } })),
     },
+    mail: {
+      getState: vi.fn(async () => ({ account: null })),
+    },
   };
   return { api: api as unknown as SetupApi, mocks: api };
 }
@@ -36,6 +39,7 @@ describe('campus setup', () => {
     expect(state.academic).toEqual({ phase: 'cached', syncedAt: date });
     expect(state.learning.phase).toBe('failed');
     expect(state.chaoxing.phase).toBe('empty');
+    expect(state.mail.phase).toBe('empty');
     expect(mocks.timetable.connect).not.toHaveBeenCalled();
     expect(mocks.timetable.syncNow).not.toHaveBeenCalled();
     expect(mocks.jluPlatforms.syncNotices).not.toHaveBeenCalled();
