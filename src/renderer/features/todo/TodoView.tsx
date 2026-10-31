@@ -244,6 +244,7 @@ export function TodoView({ request }: { request?: { id: string } }) {
         </p>
       )}
       <StudyCalendar
+        now={now}
         todos={state?.items ?? []}
         onOpenTodo={openItem}
         onCreateTodo={() => {

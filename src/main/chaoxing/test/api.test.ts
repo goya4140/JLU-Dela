@@ -42,6 +42,8 @@ vi.mock('../../workspace/api', () => ({ getWorkspaceState: () => ({ directory })
 vi.mock('../../storage', () => ({ availablePath: (dir: string, name: string) => join(dir, name) }));
 import { readSchoolPage } from '../../jlu/reader';
 import {
+  cachedWorkEntry,
+  saveWorkTiming,
   getChaoxingCourses,
   getChaoxingCalendar,
   syncChaoxingCalendar,
@@ -127,9 +129,29 @@ it('resolves the course landing page before reading metadata and retains assignm
   ).toBe(true);
   reader
     .mockResolvedValueOnce({ url: 'https://mooc1.chaoxing.com/mooc2/work/list?enc=private' })
-    .mockResolvedValueOnce([{ id: 'w1', title: '示例作业', status: '未交', timing: '剩余2天' }]);
+    .mockResolvedValueOnce([
+      {
+        id: 'w1',
+        title: '示例作业',
+        status: '未交',
+        timing: '剩余2天',
+        url: 'https://mooc1.chaoxing.com/mooc-ans/mooc2/work/task?workId=w1&enc=private',
+      },
+    ]);
   const works = await syncChaoxingWorks('1:2');
   expect(getChaoxingWorks('1:2')).toEqual(works);
+  expect(JSON.stringify(works)).not.toContain('private');
+  expect(cachedWorkEntry('1:2', 'w1')).toMatchObject({
+    exact: true,
+    url: expect.stringContaining('enc=private'),
+  });
+  const plaintext = db
+    .prepare("SELECT data FROM jlu_platform_cache WHERE key='cx:works:1:2'")
+    .get() as { data: string };
+  expect(plaintext.data).not.toMatch(/enc=|https:/);
+  expect(saveWorkTiming('1:2', 'w1', '剩余2天')).toBe(false);
+  expect(saveWorkTiming('1:2', 'missing', '截止时间：2026-11-02 20:00')).toBe(false);
+
   reader
     .mockResolvedValueOnce({ url: 'https://mooc1.chaoxing.com/mooc2/work/list' })
     .mockResolvedValueOnce({ maintenance: true });
@@ -239,4 +261,31 @@ it('continues after a course network failure, stops on authentication, and prese
   ]);
   expect(result.data.works).toEqual([expect.objectContaining({ title: '旧作业' })]);
   expect(reader).toHaveBeenCalledTimes(4);
+});
+
+it('retains a detail deadline across relative list refreshes, but lets newer explicit list dates replace it', async () => {
+  await seedCourse();
+  let first = true;
+  const refresh = async (timing: string) => {
+    if (first) reader.mockResolvedValueOnce({ url: 'https://mooc1.chaoxing.com/course' });
+    first = false;
+    reader.mockResolvedValueOnce({ url: 'https://mooc1.chaoxing.com/list' }).mockResolvedValueOnce([
+      {
+        id: 'w1',
+        title: '报告',
+        status: '未交',
+        timing,
+        url: 'https://mooc1.chaoxing.com/task?workId=w1&enc=private',
+      },
+    ]);
+    return syncChaoxingWorks('1:2');
+  };
+  await refresh('剩余2天');
+  expect(saveWorkTiming('1:2', 'w1', '截止时间：2026-11-02 20:00')).toBe(true);
+  await refresh('剩余1天');
+  expect(getChaoxingCalendar().works[0]?.deadline).toEqual({ date: '2026-11-02', time: '20:00' });
+  expect(getChaoxingWorks('1:2')?.items[0]?.detailSyncedAt).toBeTruthy();
+  await refresh('截止时间：2026-11-04 21:00');
+  expect(getChaoxingCalendar().works[0]?.deadline).toEqual({ date: '2026-11-04', time: '21:00' });
+  expect(getChaoxingWorks('1:2')?.items[0]?.detailSyncedAt).toBeUndefined();
 });

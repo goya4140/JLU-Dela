@@ -30,6 +30,8 @@ export interface ChaoxingWork {
   title: string;
   status: string;
   timing: string;
+  detailTiming?: string;
+  detailSyncedAt?: string;
 }
 export interface ChaoxingWorks {
   courseId: string;

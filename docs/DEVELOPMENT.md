@@ -14,6 +14,8 @@ Canvas 接入已移除，课程资料与作业以学习通为入口；旧数据�
 
 学习日历界面位于 `src/renderer/features/todo/StudyCalendar.tsx`，课表日期复用 `shared/schedule`，学习通聚合与截止日期识别位于 `main/chaoxing`、`shared/chaoxing-calendar`；三种来源保持独立身份，不将作业复制成个人待办。
 
+工作台的学习通网页标签采用隔离的 `WebContentsView`，与采集器复用超星持久会话；签名入口仅在主进程加密保存，布局只记录课程与作业 ID。网页不加载应用 preload；截止时间采集只读取明确标签，AI 引用只读取用户选区。
+
 学习通适配位于 `src/main/chaoxing/`，沿用固定页面采集器与规范化缓存，使用独立超星会话。共同的持久会话机制位于 `src/main/campus-session.ts`；各平台仍自行限定域名和认证证据，避免把不同平台视为同一登录状态。
 
 本地知识库领域位于 `src/main/knowledge/`、`src/shared/knowledge.ts` 和 `src/renderer/features/knowledge/`。原始文件继续保留在用户目录；课程关联、会话与可重建的 PDF 文本索引保存在应用数据库。阅读、编辑与对话复用已有组件，首版以课程范围和可核对的来源为边界。

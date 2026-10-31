@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, RefreshCw } from 'lucide-react';
 import type { TimetableLesson, TimetableState, TodoItem } from '../../../shared/api';
+import { chaoxingWorkTime } from '../../../shared/chaoxing-calendar';
 import type { ChaoxingCalendar, ChaoxingCalendarSync } from '../../../shared/chaoxing-calendar';
 import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/beautifului/atoms/Switch';
@@ -24,10 +25,12 @@ type View = 'month' | 'week' | 'list';
 
 export function StudyCalendar({
   todos,
+  now,
   onOpenTodo,
   onCreateTodo,
 }: {
   todos: readonly TodoItem[];
+  now: number;
   onOpenTodo: (id: string) => void;
   onCreateTodo: () => void;
 }) {
@@ -128,11 +131,10 @@ export function StudyCalendar({
       key={entry.id}
       type="button"
       onClick={() => open(entry)}
-      title={`${sourceLabels[entry.source]} · ${entry.title}${entry.kind === 'assignment' ? ` · ${entry.work.courseName}` : ''}${entry.time ? ` · ${entry.time}` : ''}`}
-      aria-label={`${sourceLabels[entry.source]}：${entry.title}${entry.time ? `，${entry.time}` : ''}`}
+      title={`${sourceLabels[entry.source]} · ${entry.title}${entry.kind === 'assignment' ? ` · ${entry.work.courseName}` : ''}${entry.time ? ` · ${entry.time}` : ''}${entry.kind === 'assignment' ? ` · ${chaoxingWorkTime(entry.work, now)}` : ''}`}
+      aria-label={`${sourceLabels[entry.source]}：${entry.title}${entry.time ? `，${entry.time}` : ''}${entry.kind === 'assignment' ? `，${chaoxingWorkTime(entry.work, now)}` : ''}`}
       className={cn(
-        'flex w-full min-w-0 items-center gap-1 rounded-control px-1.5 py-1 text-left text-2xs hover:opacity-80',
-        view === 'week' && 'flex-wrap',
+        'flex w-full min-w-0 flex-wrap items-center gap-1 rounded-control px-1.5 py-1 text-left text-2xs hover:opacity-80',
         entry.done && 'opacity-60',
       )}
       style={eventColorStyle(entry.color)}
@@ -158,6 +160,9 @@ export function StudyCalendar({
       >
         {entry.title}
       </span>
+      {entry.kind === 'assignment' && (
+        <span className="w-full truncate text-2xs">{chaoxingWorkTime(entry.work, now)}</span>
+      )}
     </button>
   );
   return (
@@ -420,25 +425,24 @@ export function StudyCalendar({
           ) : (
             <div className="mt-4 grid gap-2 text-13">
               <p>学习通 · {selected.work.courseName}</p>
+              <p className="font-medium">{chaoxingWorkTime(selected.work, now)}</p>
               <p>平台状态：{selected.work.status || '未知'}</p>
-              <p>
-                截止：
-                {selected.date
-                  ? `${selected.date} ${selected.time ?? '（未提供具体时刻）'}`
-                  : '待确认'}
-              </p>
               <p className="whitespace-pre-wrap">
-                平台时间原文：{selected.work.timing || '未提供'}
+                平台时间原文：{selected.work.detailTiming || selected.work.timing || '尚未读取到'}
               </p>
               <p className="text-xs text-ink-3">
-                更新于 {new Date(selected.work.syncedAt).toLocaleString('zh-CN')}
-                ；状态和时间以本次同步为准。
+                状态同步于 {new Date(selected.work.syncedAt).toLocaleString('zh-CN')}
+                {selected.work.detailSyncedAt &&
+                  `；截止时间读取于 ${new Date(selected.work.detailSyncedAt).toLocaleString('zh-CN')}`}
               </p>
               <Button
                 variant="outline"
-                onClick={() => useNavigationStore.getState().navigate('chaoxing')}
+                onClick={() => {
+                  useNavigationStore.getState().openWork(selected.work.courseId, selected.work.id);
+                  setSelected(null);
+                }}
               >
-                前往学习通课程
+                在工作台打开作业
               </Button>
             </div>
           )}

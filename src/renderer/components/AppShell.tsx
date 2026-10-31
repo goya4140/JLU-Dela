@@ -669,6 +669,7 @@ export function AppShell({
       </Dialog.Root>
       {narrow && drawer !== null && (
         <div
+          data-mobile-drawer="nav"
           aria-hidden="true"
           className={cn(overlayFade, 'absolute inset-x-0 bottom-0 top-10 z-30 bg-black/30')}
           onMouseDown={() => onMobileDrawerChange?.(null)}

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, safeStorage } = require('electron');
+const { app, BrowserWindow, session, safeStorage, dialog } = require('electron');
 const { mkdtempSync, mkdirSync, writeFileSync, readFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { resolve, join, dirname } = require('node:path');
@@ -19,6 +19,8 @@ Object.assign(safeStorage, {
 });
 let offline = false;
 let downloadRedirects = 0;
+let requiresLogin = false;
+let workLoads = 0;
 const privateQuery = 'courseid=1&clazzid=2&cpi=3&enc=fixture-private';
 const pdfObjects = [
   '<< /Type /Catalog /Pages 2 0 R >>',
@@ -60,6 +62,17 @@ app.whenReady().then(() => {
     else if (url.pathname === '/mooc2/work/list')
       html =
         '<div class="bottomList"><li role="link" data="https://mooc1.chaoxing.com/mooc2/work/task?workId=w1&answerId=private"><div class="right-content"><p class="overHidden2">示例作业</p><p class="status">未交</p></div><div class="time">剩余2天</div></li></div>';
+    else if (url.pathname === '/mooc2/work/task') {
+      if (requiresLogin) return Response.redirect('https://passport2.chaoxing.com/login');
+      workLoads++;
+      html =
+        '<h1>示例作业原网页</h1><p>截止时间：2026-11-02 20:00</p><p id="question">解释微控制器的工作过程</p><textarea id="answer" aria-label="示例作答"></textarea><a href="https://mooc1.chaoxing.com/fixture-next">下一页</a>';
+    } else if (url.pathname === '/login')
+      html = '<a href="https://mooc1.chaoxing.com/fixture-login-done">完成示例登录</a>';
+    else if (url.pathname === '/fixture-login-done') {
+      requiresLogin = false;
+      html = '<p>示例登录已恢复</p>';
+    } else if (url.pathname === '/fixture-next') html = '<h1>示例下一页</h1>';
     else if (url.pathname === '/mooc2-ans/coursedata/stu-datalist')
       html = `<input id="downloadDomain" value="https://mooc1.chaoxing.com"><input id="courseId" value="1"><input id="classId" value="2"><input id="cpi" value="3"><input id="enc" value="fixture-private"><div class="dataBody">${url.searchParams.has('dataId') ? '<ul class="dataBody_td" id="d1" type="pdf" dataname="示例课件.pdf" isdown="1"><li class="dataBody_size_stu">5KB</li></ul>' : '<ul class="dataBody_td" id="f1" type="afolder" dataname="示例资料夹"></ul>'}</div>`;
     else if (url.pathname === '/coursedata/downloadData') {
@@ -227,6 +240,119 @@ async function run(window) {
     `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='打开学习通').click()`,
   );
   await wait(`document.querySelector('h1')?.textContent==='学习通'`);
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('示例课程')).click()`,
+  );
+  await wait(
+    `!!document.querySelector('fieldset') && !document.querySelector('fieldset').disabled && document.body.textContent.includes('示例资料夹')`,
+  );
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='作业').click()`,
+  );
+  await wait(
+    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent==='在工作台打开作业')`,
+  );
+  requiresLogin = true;
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='在工作台打开作业').click()`,
+  );
+  await wait(`!!document.querySelector('[aria-label="学习通原网页区域"]')`);
+  const native = () =>
+    window.contentView.children.find(
+      (view) => view.webContents && view.webContents !== window.webContents,
+    );
+  const until = async (check) => {
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      if (await check()) return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error('Native work page timed out');
+  };
+  await until(() => native()?.webContents.getURL().includes('/login'));
+  console.log('Native school login shown in workbench');
+  const page = native();
+  const remote = page.webContents;
+  const pref = remote.getLastWebPreferences();
+  assert.ok(pref.sandbox && pref.contextIsolation && !pref.nodeIntegration && !pref.preload);
+  assert.equal(remote.session, session.fromPartition('persist:chaoxing'));
+  assert.equal(await remote.executeJavaScript('typeof window.dela'), 'undefined');
+  await remote.executeJavaScript('document.querySelector("a").click()', true);
+  await until(() => remote.getURL().includes('workId=w1') && !remote.isLoading());
+  await wait(`document.body.textContent.includes('已读取作业时间')`);
+  console.log('Native login recovery and deadline extraction passed');
+  const datedWork = (await js('window.dela.chaoxing.calendar()')).works[0];
+  assert.deepEqual(datedWork.deadline, { date: '2026-11-02', time: '20:00' });
+  assert.ok(datedWork.detailSyncedAt);
+  await remote.executeJavaScript('document.querySelector("textarea").value="尚未提交的示例草稿"');
+  await js(`document.querySelector('[data-tab^="preview:"]').click()`);
+  await until(() => !page.getVisible());
+  await js(`document.querySelector('[data-tab="web:chaoxing/1:2/w1"]').click()`);
+  await until(() => page.getVisible());
+  assert.equal(native().webContents.id, remote.id);
+  assert.equal(
+    await remote.executeJavaScript('document.querySelector("textarea").value'),
+    '尚未提交的示例草稿',
+  );
+  // A DOM dialog must temporarily hide the native layer.
+  await js(
+    `{ const d=document.createElement('div'); d.setAttribute('role','dialog'); d.id='fixture-dialog'; d.textContent='示例对话框'; document.body.append(d); }`,
+  );
+  await until(() => !page.getVisible());
+  await js(`document.getElementById('fixture-dialog').remove()`);
+  await until(() => page.getVisible());
+  for (const width of [600, 900, 1280, 1800]) {
+    window.setSize(width, 850);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const rect = await js(
+      `(()=>{const r=document.querySelector('[aria-label="学习通原网页区域"]').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})()`,
+    );
+    const bounds = page.getBounds();
+    assert.ok(
+      Math.abs(bounds.x - rect.x) < 2 && Math.abs(bounds.y - rect.y) < 2,
+      'native position',
+    );
+    assert.ok(
+      Math.abs(bounds.width - rect.width) < 2 && Math.abs(bounds.height - rect.height) < 2,
+      'native size',
+    );
+    assert.ok(
+      await js('document.documentElement.scrollWidth<=document.documentElement.clientWidth'),
+    );
+  }
+  await remote.executeJavaScript(
+    `{ const r=document.createRange(); r.selectNodeContents(document.getElementById('question')); const s=getSelection();s.removeAllRanges();s.addRange(r); }`,
+  );
+  const loads = workLoads;
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='选中文字问 AI').click()`,
+  );
+  await wait(`document.body.textContent.includes('选中文字已放入 AI 草稿')`);
+  assert.equal(workLoads, loads);
+  assert.equal(
+    await remote.executeJavaScript('document.querySelector("textarea").value'),
+    '尚未提交的示例草稿',
+  );
+  const draft = await js(`localStorage.getItem('dela.session.drafts')`);
+  assert.ok(draft.includes('解释微控制器的工作过程') && !draft.includes('尚未提交的示例草稿'));
+  const layout = await js(`localStorage.getItem('dela.workspace.project')`);
+  assert.ok(!String(layout).includes('private'));
+  console.log('Native retained forms, bounds, overlays and split AI draft passed');
+  // Exercise the browser's own beforeunload protection without a real submission.
+  await remote.executeJavaScript('window.onbeforeunload=()=>false; undefined', true);
+  let prompts = 0;
+  const originalDialog = dialog.showMessageBoxSync;
+  dialog.showMessageBoxSync = () => {
+    prompts++;
+    return 0;
+  };
+  assert.equal(await js(`window.dela.webTabs.close('web:chaoxing/1:2/w1')`), false);
+  assert.equal(prompts, 1);
+  assert.equal(remote.isDestroyed(), false);
+  dialog.showMessageBoxSync = () => 1;
+  assert.equal(await js(`window.dela.webTabs.close('web:chaoxing/1:2/w1')`), true);
+  dialog.showMessageBoxSync = originalDialog;
+  assert.equal(remote.isDestroyed(), true);
   const latestWorks = await js('window.dela.chaoxing.works("1:2")');
   offline = true;
   const failed = await js('window.dela.chaoxing.syncWorks("1:2")');
@@ -241,6 +367,6 @@ async function run(window) {
   assert.equal(BrowserWindow.getAllWindows().length, 1);
   assert.ok(downloadRedirects >= 2);
   console.log(
-    'Chaoxing smoke passed: isolated session, course redirects, nested folders, assignment metadata, native download redirects, local PDF import, failure cache retention and four viewport widths. Synthetic data only; no school or model requests.',
+    'Chaoxing smoke passed: isolated session, course redirects, nested folders, assignment metadata, native download redirects, local PDF import, failure cache retention, native workbench tabs, in-tab login recovery, exact deadlines, retained forms, overlay hiding, split AI drafts, beforeunload cancellation and four viewport widths. Synthetic data only; no school or model requests.',
   );
 }

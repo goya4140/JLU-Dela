@@ -38,6 +38,7 @@ import { MailDraftDialog } from '../app/mail-draft-dialog';
 import { ChatHome } from '../content/chat/ChatHome';
 import { referenceCandidates, referenceEntryCandidates } from '../content/chat/reference-tokens';
 import { currentContainerOf, WorkbenchExplorer } from './WorkbenchExplorer';
+import { useWebTabs } from '../content/web/store';
 import { openTarget } from './open-target';
 
 /** TabId → 旧文档键（entryId 或 source:{sourceId}）；chat 无对应文档。 */
@@ -67,6 +68,25 @@ export function WorkbenchShell({ home = false }: { home?: boolean }) {
   // 订阅镜像仅为让标签标题随条目/会话变化重渲染（registry 的 title 是同步读取）。
   useWorkspaceStore((s) => s.workspace.entries);
   useSessions((s) => s.lists);
+  useWebTabs((s) => s.states);
+  useEffect(
+    () =>
+      window.dela?.webTabs?.onCloseShortcut((id) => {
+        const layout = useWorkbenchLayout.getState();
+        const group = walkGroups(layout.root).find((node) => node.tabs.includes(id as TabId));
+        if (group) layout.closeTab(id as TabId, group.id);
+      }),
+    [],
+  );
+  useEffect(
+    () =>
+      window.dela?.webTabs?.onFocus((id) => {
+        const layout = useWorkbenchLayout.getState();
+        const group = walkGroups(layout.root).find((node) => node.active === id);
+        if (group) layout.focusGroup(group.id);
+      }),
+    [],
+  );
   const [dialog, setDialog] = useState<EntryDialogRequest | null>(null);
 
   const activeTab = useWorkbenchLayout((s) => {

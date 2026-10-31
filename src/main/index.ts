@@ -24,6 +24,7 @@ import { registerTimetableIpc } from './timetable/ipc';
 import { registerJluPlatformsIpc } from './jlu/ipc';
 import { registerKnowledgeIpc } from './knowledge/ipc';
 import { registerChaoxingIpc } from './chaoxing/ipc';
+import { registerWebTabsIpc, hasWebTabs, closeAllWebTabs } from './chaoxing/web-tabs';
 import { registerVsjtuIpc } from './vsjtu/ipc';
 import { attachContextMenu, checkWorkspaceSender, isSameRendererNavigation } from './ipc';
 import type { TrayAction } from '../shared/window';
@@ -223,6 +224,7 @@ app
     registerTimetableIpc();
     registerJluPlatformsIpc();
     registerChaoxingIpc();
+    registerWebTabsIpc();
     registerKnowledgeIpc();
     registerVsjtuIpc();
     registerShuiyuanIpc();
@@ -495,6 +497,14 @@ app.on('window-all-closed', () => {
 let sessionsClosed = false;
 app.on('before-quit', (event) => {
   quitting = true;
+  if (hasWebTabs()) {
+    event.preventDefault();
+    void closeAllWebTabs().then((closed) => {
+      if (closed) app.quit();
+      else quitting = false;
+    });
+    return;
+  }
   if (!sessionsClosed && hasLiveSessions()) {
     event.preventDefault();
     sessionsClosed = true;

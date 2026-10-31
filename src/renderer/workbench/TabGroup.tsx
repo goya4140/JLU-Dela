@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 import { EmptyState } from './EmptyState';
 import { ExplorerRevealButton } from './explorer-state';
 import { walkGroups } from './layout-schema';
+import { useWebTabs } from '../content/web/store';
 import { useWorkbenchLayout } from './layout-store';
 import { kindOf, registry, titleOf } from './registry';
 import { TabBar } from './TabBar';
@@ -57,6 +58,7 @@ export const TabGroup = memo(function TabGroup({
   onNewChat: () => void;
 }) {
   // 订阅派生布尔而非 focus/maximized 原值：只有本组的未聚焦态翻转时才重渲。
+  useWebTabs((s) => s.states);
   const unfocused = useWorkbenchLayout((s) => s.maximized === null && s.focus !== group.id);
   const revealAnchor = useWorkbenchLayout(
     (s) => (s.maximized ?? walkGroups(s.root)[0]?.id ?? null) === group.id,

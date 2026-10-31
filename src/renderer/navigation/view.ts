@@ -5,6 +5,7 @@ import { leaveComposer } from '../features/mail/compose-close';
 import { useShuiyuan } from '../features/shuiyuan/store';
 import { ancestorChainOf } from './store';
 import type { SettingsSectionId } from '../../shared/api';
+import { workTabId } from '../../shared/web-tabs';
 import type { TabId } from '../../shared/layout';
 import { errorText, useWorkspaceStore } from '../workspace/store';
 import { opensInEditor } from '../../shared/files';
@@ -78,6 +79,7 @@ interface NavigationState {
   /** 打开文档（entryId 或 source: 资料键）为工作台标签，留在当前工作台；keep 时不作预览。 */
   openDocument(key: string, options?: { keep?: boolean }): boolean;
   openTerminal(projectId: string): boolean;
+  openWork(courseId: string, workId: string): boolean;
   openMail(messageId: number): boolean;
   openTodo(id: string): boolean;
   openSettings(section?: SettingsSectionId): boolean;
@@ -279,6 +281,8 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
 
     openDocument: (key, options) =>
       revealInProject(documentTabId(key), get().projectId, options?.keep),
+    openWork: (courseId, workId) =>
+      revealInProject(workTabId({ courseId, workId }), get().projectId, true),
     openTerminal: (projectId) => revealInProject(`terminal:${projectId}`, projectId),
 
     openMail: (messageId) => {

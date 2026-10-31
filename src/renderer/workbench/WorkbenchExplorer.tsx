@@ -271,6 +271,7 @@ export function WorkbenchExplorer({
       {/* 窄屏抽屉遮罩：点外关闭，与主导航抽屉同一交互模型。 */}
       {narrow && mobileOpen && (
         <div
+          data-mobile-drawer="explorer"
           aria-hidden="true"
           className={cn(overlayFade, 'absolute inset-0 z-20 bg-black/30')}
           onMouseDown={() => useExplorerState.getState().setMobileOpen(false)}
