@@ -5,6 +5,7 @@
     "../scripts/build-helper.ts",
     "../scripts/capture-showcase.ts",
     "../scripts/dev.ts",
+    "../scripts/material-readers-smoke.ts",
     "../scripts/web.ts",
     "../scripts/document-runtime-smoke.ts",
     "../scripts/fix-native-permissions.ts",

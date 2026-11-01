@@ -1,5 +1,6 @@
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { createRequire } from 'node:module';
+import { cp, mkdir, readFile, writeFile, realpath } from 'node:fs/promises';
+import { basename, dirname, join, resolve } from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
@@ -60,6 +61,24 @@ export default defineConfig({
         await writeFile(
           join(outDir, 'LICENSE.md'),
           provenance + (await readFile(join(themeDir, 'LICENSE'), 'utf8')),
+        );
+      },
+    },
+    {
+      name: 'ppt-reader-licenses',
+      apply: 'build',
+      async closeBundle() {
+        await mkdir(resolve('out/renderer/licenses'), { recursive: true });
+        await cp(
+          resolve('node_modules/@web-ppt/core/LICENSE'),
+          resolve('out/renderer/licenses/web-ppt-LICENSE'),
+        );
+        const require = createRequire(
+          await realpath(resolve('node_modules/@web-ppt/core/package.json')),
+        );
+        await cp(
+          join(dirname(require.resolve('fflate/package.json')), 'LICENSE'),
+          resolve('out/renderer/licenses/fflate-LICENSE'),
         );
       },
     },

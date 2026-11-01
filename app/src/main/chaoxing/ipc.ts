@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, dialog, BrowserWindow } from 'electron';
 import { checkWorkspaceSender } from '../ipc';
 import {
   chaoxingResult,
@@ -11,6 +11,9 @@ import {
   getChaoxingWorks,
   syncChaoxingWorks,
   importChaoxingFile,
+  bindChaoxingCourse,
+  linkChaoxingFile,
+  openChaoxingFilesPage,
 } from './api';
 export function registerChaoxingIpc() {
   ipcMain.handle('cx:calendar:get', (event) => {
@@ -45,6 +48,32 @@ export function registerChaoxingIpc() {
     checkWorkspaceSender(event);
     return chaoxingResult(() => syncChaoxingWorks(courseId, event.sender));
   });
+  ipcMain.handle('cx:course:bind', (event, courseId: string, knowledgeCourseId: unknown) => {
+    checkWorkspaceSender(event);
+    return bindChaoxingCourse(courseId, knowledgeCourseId);
+  });
+  ipcMain.handle('cx:files:open', (event, courseId: string, folderId = '') => {
+    checkWorkspaceSender(event);
+    return openChaoxingFilesPage(courseId, folderId, event.sender);
+  });
+  ipcMain.handle(
+    'cx:file:link',
+    async (event, courseId: string, folderId: string, fileId: string) => {
+      checkWorkspaceSender(event);
+      const parent = BrowserWindow.fromWebContents(event.sender);
+      const options = {
+        defaultPath: getChaoxingFiles(courseId, folderId)?.localCourse?.path,
+        title: '关联已下载的本地资料',
+        properties: ['openFile'] as ['openFile'],
+      };
+      const selected = await (parent
+        ? dialog.showOpenDialog(parent, options)
+        : dialog.showOpenDialog(options));
+      return selected.canceled
+        ? null
+        : linkChaoxingFile(courseId, folderId, fileId, selected.filePaths[0]!);
+    },
+  );
   ipcMain.handle('cx:file:import', (event, courseId: string, folderId: string, fileId: string) => {
     checkWorkspaceSender(event);
     return importChaoxingFile(courseId, folderId, fileId);

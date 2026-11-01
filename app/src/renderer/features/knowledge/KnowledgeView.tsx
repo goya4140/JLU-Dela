@@ -11,12 +11,12 @@ import {
   X,
 } from 'lucide-react';
 import type {
-  KnowledgeEntries,
   KnowledgeState,
   KnowledgeRoot,
   KnowledgeCourse,
   KnowledgeFile,
   KnowledgeHit,
+  KnowledgeDirectoryEntry,
 } from '../../../shared/knowledge';
 import { isRelativeAssetPath, noteAssetUrl } from '../../../shared/note-files';
 import { Button } from '../../components/ui/button';
@@ -33,18 +33,6 @@ import { ChatTabSourceProvider } from '../../content/chat/chat-source';
 import { useChatDrafts } from '../../content/chat/drafts';
 import { extractKnowledgePdf } from './pdf-text';
 
-/** 主进程返回的是同一台机器上的绝对路径，按平台分隔符拼接，避免 Windows 上混用斜杠。 */
-function joinPath(base: string, relative: string) {
-  const separator = base.includes('\\') ? '\\' : '/';
-  return base.replace(/[\\/]+$/, '') + separator + relative.replace(/^[\\/]+/, '');
-}
-function formatBytes(bytes: number) {
-  if (!bytes) return '大小未知';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
 export function KnowledgeView() {
   return window.dela ? (
     <KnowledgeLibrary />
@@ -57,7 +45,7 @@ function KnowledgeLibrary() {
   const [state, setState] = useState<KnowledgeState>({ roots: [], courses: [] });
   const [rootId, setRootId] = useState('');
   const [folder, setFolder] = useState('');
-  const [entries, setEntries] = useState<KnowledgeEntries>({ folders: [], files: [] });
+  const [entries, setEntries] = useState<KnowledgeDirectoryEntry[]>([]);
   const [course, setCourse] = useState<KnowledgeCourse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
@@ -85,11 +73,11 @@ function KnowledgeLibrary() {
   useEffect(() => {
     if (!rootId) return;
     let active = true;
-    setEntries({ folders: [], files: [] });
+    setEntries([]);
     setError(null);
     setBusy(true);
     void api
-      .entries(rootId, folder)
+      .browse(rootId, folder)
       .then((rows) => {
         if (active) setEntries(rows);
       })
@@ -106,7 +94,6 @@ function KnowledgeLibrary() {
   async function attach() {
     setBusy(true);
     setError(null);
-    setNotice('');
     try {
       const added = await api.attach();
       if (added) {
@@ -115,6 +102,20 @@ function KnowledgeLibrary() {
         setRootId(added.id);
         setFolder('');
       }
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function enroll() {
+    if (!root) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const added = await api.enroll(root.id, folder);
+      setState(await api.state());
+      setCourse(added);
     } catch (cause) {
       setError(errorText(cause));
     } finally {
@@ -154,20 +155,6 @@ function KnowledgeLibrary() {
       setNotice(
         target ? `已取消课程「${target.name}」，课程文件仍在原目录中。` : '已取消课程登记。',
       );
-    } catch (cause) {
-      setError(errorText(cause));
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function enroll() {
-    if (!root) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const added = await api.enroll(root.id, folder);
-      setState(await api.state());
-      setCourse(added);
     } catch (cause) {
       setError(errorText(cause));
     } finally {
@@ -345,44 +332,33 @@ function KnowledgeLibrary() {
               正在读取…
             </p>
           )}
-          {!busy && !entries.folders.length && !entries.files.length && (
-            <p className="text-13 text-ink-3">
-              {folder ? '这个文件夹是空的。' : '这个文件夹里暂时没有可浏览的内容。'}
-            </p>
-          )}
+          <p className="mb-3 text-xs text-ink-3">
+            当前目录 {entries.length} 项 · 文件可直接打开，无需先设为课程
+          </p>
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {entries.folders.map((name) => (
+            {entries.map((entry) => (
               <button
-                key={name}
-                onClick={() => setFolder([folder, name].filter(Boolean).join('/'))}
-                className="flex min-w-0 items-center gap-3 rounded-control p-3 text-left text-13 text-ink hover:bg-hover"
-              >
-                <Folder className="size-4 shrink-0 text-ink-3" />
-                <span className="break-words">{name}</span>
-              </button>
-            ))}
-            {entries.files.map((file) => (
-              <button
-                key={file.path}
+                key={entry.path}
+                disabled={entry.kind === 'link'}
                 onClick={() =>
-                  useNavigationStore.getState().openDocument(joinPath(root.path, file.path))
+                  entry.kind === 'folder'
+                    ? setFolder(entry.path)
+                    : useNavigationStore.getState().openDocument([root.path, entry.path].join('/'))
                 }
                 className="flex min-w-0 items-center gap-3 rounded-control p-3 text-left text-13 text-ink hover:bg-hover"
               >
-                <FileText className="size-4 shrink-0 text-ink-3" />
-                <span className="min-w-0 flex-1">
-                  <span className="block break-words">{file.name}</span>
-                  <span className="block text-xs text-ink-3">{formatBytes(file.bytes)}</span>
+                {entry.kind === 'folder' ? (
+                  <Folder className="size-4 shrink-0 text-ink-3" />
+                ) : (
+                  <FileText className="size-4 shrink-0 text-ink-3" />
+                )}
+                <span className="break-words">
+                  {entry.name}
+                  {entry.kind === 'link' ? '（符号链接，暂不展开）' : ''}
                 </span>
               </button>
             ))}
           </div>
-          {entries.files.length > 0 && (
-            <p className="mt-3 text-xs text-ink-3">
-              点击文件直接在工作台打开；需要检索正文、提取 PDF
-              或引用提问时，请把所在文件夹「设为课程」。
-            </p>
-          )}
         </section>
       )}
     </div>
@@ -403,6 +379,9 @@ function CourseLibrary({
     null,
   );
   const [query, setQuery] = useState('');
+  const [directory, setDirectory] = useState('');
+  const [entries, setEntries] = useState<KnowledgeDirectoryEntry[]>([]);
+  const [directoryVersion, setDirectoryVersion] = useState(0);
   const [hits, setHits] = useState<KnowledgeHit[] | null>(null);
   const [searched, setSearched] = useState('');
   const [busy, setBusy] = useState(false);
@@ -410,6 +389,25 @@ function CourseLibrary({
   const [notice, setNotice] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const searchVersion = useRef(0);
+  useEffect(() => {
+    let active = true;
+    setError(null);
+    setEntries([]);
+    void api
+      .browse(
+        root.id,
+        [course.relativePath.replaceAll('\\', '/'), directory].filter(Boolean).join('/'),
+      )
+      .then((rows) => {
+        if (active) setEntries(rows);
+      })
+      .catch((cause) => {
+        if (active) setError(errorText(cause));
+      });
+    return () => {
+      active = false;
+    };
+  }, [api, root.id, course.relativePath, directory, directoryVersion]);
   const absolute = (path: string) =>
     [root.path, course.relativePath, path].filter(Boolean).join('/');
   useEffect(() => {
@@ -455,6 +453,7 @@ function CourseLibrary({
     try {
       const rows = await api.files(course.id);
       setFiles(rows);
+      setDirectoryVersion((version) => version + 1);
       setHits(null);
       setSearched('');
       setSelected((previous) => {
@@ -561,8 +560,21 @@ function CourseLibrary({
   }
   const pdfCount = files.filter((file) => /\.pdf$/i.test(file.path)).length;
   const indexed = files.filter((file) => file.indexed).length;
+  const prefix = directory ? directory + '/' : '';
+  const visibleFiles: KnowledgeFile[] = entries
+    .filter((entry) => entry.kind === 'file')
+    .map((entry) => {
+      const path = prefix + entry.name;
+      return {
+        path,
+        name: entry.name,
+        bytes: entry.bytes,
+        revision: entry.revision,
+        indexed: files.find((file) => file.path.replaceAll('\\', '/') === path)?.indexed ?? false,
+      };
+    });
   const displayed: KnowledgeHit[] =
-    hits ?? files.map((file) => ({ path: file.path, title: file.name, excerpt: '' }));
+    hits ?? visibleFiles.map((file) => ({ path: file.path, title: file.name, excerpt: '' }));
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface">
       <header className="flex shrink-0 flex-wrap items-center gap-3 px-4 py-3">
@@ -620,10 +632,12 @@ function CourseLibrary({
             </Button>
           </form>
           <p className="py-2 text-xs text-ink-3">
-            {files.length} 份资料 · {indexed}/{pdfCount} 份 PDF 已检查正文
+            当前目录 {entries.length} 项 · {files.length} 份资料可搜索 · {indexed}/{pdfCount} 份 PDF
+            已检查正文
           </p>
           <p className="pb-3 text-xs text-ink-3">
-            Markdown / TXT 正文（≤ 2 MB）实时检索；PDF 需先提取，Office 文件暂按名称搜索。
+            目录按原文件夹展示，含空目录；搜索跳过隐藏项和依赖目录。Markdown / TXT（≤ 2
+            MB）实时检索；PDF 需先提取正文。
           </p>
           {searched && (
             <div className="mb-2 flex items-center justify-between gap-2 text-xs text-ink-3">
@@ -648,13 +662,53 @@ function CourseLibrary({
               正在读取…
             </p>
           )}
+          {!hits && (
+            <nav
+              aria-label="本地课程资料目录"
+              className="mb-2 flex flex-wrap items-center gap-1 text-xs text-ink-3"
+            >
+              <Button size="sm" variant="ghost" onClick={() => setDirectory('')}>
+                课程根目录
+              </Button>
+              {directory
+                .split('/')
+                .filter(Boolean)
+                .map((part, index, parts) => (
+                  <Button
+                    key={index}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setDirectory(parts.slice(0, index + 1).join('/'))}
+                  >
+                    {part}
+                  </Button>
+                ))}
+            </nav>
+          )}
           <div className="max-h-64 overflow-y-auto lg:max-h-none lg:flex-1">
+            {!hits &&
+              entries
+                .filter((entry) => entry.kind !== 'file')
+                .map((entry) => (
+                  <button
+                    key={entry.path}
+                    disabled={entry.kind === 'link'}
+                    className="mb-1 flex w-full min-w-0 items-center gap-2 rounded-control p-3 text-left text-13 hover:bg-hover"
+                    onClick={() => setDirectory(prefix + entry.name)}
+                  >
+                    <Folder className="size-4 shrink-0" />
+                    <span className="break-words">
+                      {entry.name}
+                      {entry.kind === 'link' ? '（符号链接，暂不展开）' : ''}
+                    </span>
+                  </button>
+                ))}
             {displayed.map((hit, index) => (
               <button
                 disabled={busy}
                 key={hit.path + ':' + index}
                 onClick={() => {
-                  const file = files.find((row) => row.path === hit.path);
+                  const file = (hits ? files : visibleFiles).find((row) => row.path === hit.path);
                   if (file) {
                     setSelected({ file, hit: hits ? hit : undefined });
                     setNotice('');

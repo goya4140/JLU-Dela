@@ -10,7 +10,7 @@ import { sanitizeHtml } from '../../lib/sanitize-html';
 import { showToast } from '../../app/toasts';
 import { errorText } from '../../workspace/store';
 import type { TabId } from '../../../shared/layout';
-import { isRelativeAssetPath } from '../../../shared/note-files';
+import { LocalHtmlPreview } from './LocalHtmlPreview';
 import { CodeViewer } from './CodeViewer';
 import { useContentLoader, type LoadedDocument } from './loader';
 import { OfficeExportBanner, OfficePromptCard } from './OfficePrompt';
@@ -24,6 +24,9 @@ const DocxPreview = lazy(() =>
 );
 const SheetPreview = lazy(() =>
   import('./SheetPreview').then((module) => ({ default: module.SheetPreview })),
+);
+const PptPreview = lazy(() =>
+  import('./PptPreview').then((module) => ({ default: module.PptPreview })),
 );
 
 /** 分流决策（纯函数）：水源来源优先于格式。预览里的文本都是只读的（远端、资料）：
@@ -66,9 +69,6 @@ export function PreviewTab({
   const [doc, setDoc] = useState<LoadedDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  /** HTML 默认渲染，可切到源码查看；切换标签时回到渲染预览。 */
-  const [htmlSource, setHtmlSource] = useState(false);
-  useEffect(() => setHtmlSource(false), [tabId]);
   const scrollContainer = useRef<HTMLDivElement>(null);
   const docRef = useRef<LoadedDocument | null>(null);
   docRef.current = doc;
@@ -123,22 +123,13 @@ export function PreviewTab({
     return () => URL.revokeObjectURL(url);
   }, [content?.bytes, content?.mime]);
   const rootSize = useRootFontSize();
-  const resolveImage = doc?.resolveImage;
-  const html = useMemo(() => {
-    if (content?.format !== 'html') return '';
-    return sanitizeHtml(content.text, content.url ?? '', rootSize, 'auto', (ref) => {
-      if (!isRelativeAssetPath(ref)) return undefined;
-      // 本地文件交给条目资源协议；没有解析器时移除属性，避免 iframe 去请求不存在的地址。
-      return resolveImage ? resolveImage(ref) : null;
-    });
-  }, [content, rootSize, resolveImage]);
-  // 相对引用无法解析时给出说明，而不是让页面静默缺图。
-  const unresolvedAssets = useMemo(() => {
-    if (content?.format !== 'html' || resolveImage) return false;
-    return /(?:src|href)\s*=\s*["'](?!https?:|data:|#|mailto:|dela-resource:)[^"']+/i.test(
-      content.text ?? '',
-    );
-  }, [content, resolveImage]);
+  const html = useMemo(
+    () =>
+      content?.format === 'html'
+        ? sanitizeHtml(content.text, content.url ?? '', rootSize, 'auto')
+        : '',
+    [content, rootSize],
+  );
 
   if (!parsePreviewTabId(tabId))
     return (
@@ -187,67 +178,40 @@ export function PreviewTab({
         />
       )}
       {/* 白底文档以圆角卡片呈现：暗色模式下避免白色大块与深色界面生硬相接。 */}
-      {branch === 'html' && (
-        <div className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="flex shrink-0 items-center justify-end gap-1">
-            <Button
-              aria-pressed={!htmlSource}
-              size="sm"
-              variant={htmlSource ? 'ghost' : 'secondary'}
-              onClick={() => setHtmlSource(false)}
-            >
-              渲染预览
-            </Button>
-            <Button
-              aria-pressed={htmlSource}
-              size="sm"
-              variant={htmlSource ? 'secondary' : 'ghost'}
-              onClick={() => setHtmlSource(true)}
-            >
-              源码
-            </Button>
-          </div>
-          {unresolvedAssets && (
-            <p className="text-xs leading-relaxed text-ink-3">
-              页面里的相对路径图片或链接无法在本机解析，已跳过；可在「源码」查看原始引用。
-            </p>
-          )}
-          {htmlSource ? (
-            <div className="min-h-0 flex-1 overflow-hidden rounded-card border border-line bg-surface">
-              <CodeViewer
-                value={content.text ?? ''}
-                filename={content.title}
-                scroll={scroll}
-                onScroll={onScroll}
-              />
-            </div>
-          ) : (
-            <div className="min-h-0 flex-1 overflow-hidden rounded-card border border-line">
-              <iframe
-                title={content.title}
-                className="size-full border-0 bg-white"
-                sandbox="allow-same-origin"
-                referrerPolicy="no-referrer"
-                srcDoc={html}
-                onLoad={(event) => {
-                  const frame = event.currentTarget;
-                  const frameDoc = frame.contentDocument;
-                  if (!frameDoc) return;
-                  frame.contentWindow?.scrollTo(0, scroll);
-                  frameDoc.addEventListener('click', (e) => {
-                    const target = (e.target as Element).closest?.('a[href]');
-                    if (target) {
-                      e.preventDefault();
-                      openLink(target.getAttribute('href')!);
-                    }
-                  });
-                  frame.contentWindow?.addEventListener('scroll', () =>
-                    onScroll(frame.contentWindow?.scrollY ?? 0),
-                  );
-                }}
-              />
-            </div>
-          )}
+      {branch === 'html' && content.localHtml && (
+        <LocalHtmlPreview
+          key={content.localHtml.entryId}
+          title={content.title}
+          text={content.text ?? ''}
+          entryId={content.localHtml.entryId}
+          truncated={content.truncated}
+        />
+      )}
+      {branch === 'html' && !content.localHtml && (
+        <div className="min-h-0 flex-1 overflow-hidden rounded-card border border-line">
+          <iframe
+            title={content.title}
+            className="size-full border-0 bg-white"
+            sandbox="allow-same-origin"
+            referrerPolicy="no-referrer"
+            srcDoc={html}
+            onLoad={(event) => {
+              const frame = event.currentTarget;
+              const frameDoc = frame.contentDocument;
+              if (!frameDoc) return;
+              frame.contentWindow?.scrollTo(0, scroll);
+              frameDoc.addEventListener('click', (e) => {
+                const target = (e.target as Element).closest?.('a[href]');
+                if (target) {
+                  e.preventDefault();
+                  openLink(target.getAttribute('href')!);
+                }
+              });
+              frame.contentWindow?.addEventListener('scroll', () =>
+                onScroll(frame.contentWindow?.scrollY ?? 0),
+              );
+            }}
+          />
         </div>
       )}
       {branch === 'pdf' &&
@@ -296,6 +260,15 @@ export function PreviewTab({
                 url={exported.previewUrl}
                 scroll={scroll}
                 onScroll={onScroll}
+              />
+            </Suspense>
+          ) : content.previewUrl && window.dela?.platform !== 'win32' ? (
+            <Suspense fallback={<p className="p-4 text-13 text-ink-3">正在加载 PPT 阅读器…</p>}>
+              <PptPreview
+                key={content.previewUrl}
+                url={content.previewUrl}
+                title={content.title}
+                officeRef={doc.officeRef}
               />
             </Suspense>
           ) : (

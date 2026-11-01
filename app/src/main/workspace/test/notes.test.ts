@@ -10,6 +10,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -32,6 +33,7 @@ import {
   readWorkspaceEntry,
   removeWorkspaceEntry,
   resolveWorkspaceAsset,
+  resolveWorkspaceHtmlAsset,
   saveNoteImage,
   saveWorkspaceNote,
   updateWorkspaceEntry,
@@ -780,4 +782,34 @@ describe('导入已有文件夹作为项目', () => {
     mkdirSync(workspaceRoot(), { recursive: true });
     expect(() => linkProjectFolder(workspaceRoot())).toThrow('工作区目录');
   });
+});
+
+it('reads HTML as a static document and only serves assets within its real directory', async () => {
+  const project = createWorkspaceEntry({ parentId: null, name: '网页资料', kind: 'project' });
+  const folder = localPathOf(project.id);
+  const html = join(folder, '课程.html');
+  writeFileSync(html, '<h1>本地课程</h1><img src="images/图.png">');
+  mkdirSync(join(folder, 'images'));
+  writeFileSync(join(folder, 'images', '图.png'), PNG);
+  writeFileSync(join(folder, '样式.css'), 'body{color:navy}');
+  writeFileSync(join(folder, '私密.txt'), 'do not serve');
+  const content = await readWorkspaceEntry(html);
+  expect(content).toMatchObject({
+    format: 'html',
+    readOnly: true,
+    localHtml: { entryId: html },
+    text: expect.stringContaining('本地课程'),
+  });
+  expect(resolveWorkspaceHtmlAsset(html, 'images/图.png')).toMatchObject({ mime: 'image/png' });
+  expect(resolveWorkspaceHtmlAsset(html, '样式.css')).toMatchObject({
+    mime: 'text/css; charset=utf-8',
+  });
+  expect(() => resolveWorkspaceHtmlAsset(html, '私密.txt')).toThrow();
+  expect(() => resolveWorkspaceHtmlAsset(html, '../outside.png')).toThrow();
+  if (process.platform !== 'win32') {
+    const outside = join(state.root, 'outside.png');
+    writeFileSync(outside, PNG);
+    symlinkSync(outside, join(folder, 'linked.png'));
+    expect(() => resolveWorkspaceHtmlAsset(html, 'linked.png')).toThrow();
+  }
 });

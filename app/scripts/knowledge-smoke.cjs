@@ -137,11 +137,11 @@ async function run(window) {
     `document.querySelector('iframe')?.contentDocument?.body?.textContent?.includes('网页渲染成功')`,
   );
   await wait(
-    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='渲染预览')`,
+    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='预览')`,
   );
   assert.equal(
     await js(
-      `document.querySelector('iframe')?.contentDocument?.querySelector('img')?.getAttribute('src')?.startsWith('dela-resource://note-asset/')`,
+      `document.querySelector('iframe')?.contentDocument?.querySelector('img')?.getAttribute('src')?.startsWith('dela-resource://html-asset/')`,
     ),
     true,
   );
@@ -208,7 +208,7 @@ async function run(window) {
   await click('源码');
   await wait(`!document.querySelector('iframe') && !!document.querySelector('.cm-content')`);
   await wait(`document.body.textContent.includes('网页渲染成功')`);
-  await click('渲染预览');
+  await click('预览');
   await wait(
     `document.querySelector('iframe')?.contentDocument?.body?.textContent?.includes('网页渲染成功')`,
   );

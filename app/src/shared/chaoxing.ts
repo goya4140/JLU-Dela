@@ -9,6 +9,16 @@ export interface ChaoxingCourses {
   items: ChaoxingCourse[];
   syncedAt: string;
 }
+export interface ChaoxingLocalCourse {
+  knowledgeCourseId: string;
+  name: string;
+  path: string;
+}
+export interface ChaoxingLocalFile {
+  path: string;
+  origin: 'linked' | 'downloaded';
+  status: 'ready' | 'missing' | 'local-changed' | 'remote-changed';
+}
 export interface ChaoxingFile {
   id: string;
   name: string;
@@ -17,10 +27,13 @@ export interface ChaoxingFile {
   creator: string;
   date: string;
   downloadable: boolean;
+  local?: ChaoxingLocalFile;
 }
 export interface ChaoxingFolder {
   courseId: string;
   folderId: string;
+  relativePath?: string[];
+  localCourse?: ChaoxingLocalCourse;
   name: string;
   items: ChaoxingFile[];
   syncedAt: string;
@@ -49,5 +62,11 @@ export interface ChaoxingApi {
   syncFiles(courseId: string, folderId?: string): Promise<ChaoxingResult<ChaoxingFolder>>;
   works(courseId: string): Promise<ChaoxingWorks | null>;
   syncWorks(courseId: string): Promise<ChaoxingResult<ChaoxingWorks>>;
+  bindCourse(
+    courseId: string,
+    knowledgeCourseId: string | null,
+  ): Promise<ChaoxingLocalCourse | null>;
+  linkFile(courseId: string, folderId: string, fileId: string): Promise<{ id: string } | null>;
+  openFilesPage(courseId: string, folderId?: string): Promise<void>;
   importFile(courseId: string, folderId: string, fileId: string): Promise<{ id: string }>;
 }

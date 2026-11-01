@@ -24,8 +24,8 @@ import {
   attachKnowledge,
   detachKnowledge,
   enrollCourse,
-  knowledgeEntries,
   knowledgeFolders,
+  browseKnowledge,
   knowledgeFiles,
   knowledgeState,
   removeCourse,
@@ -110,25 +110,31 @@ it('writes a new Markdown note in its course and never overwrites an existing no
   expect(await knowledgeNote(row.id, '另一份笔记')).not.toBe(path);
   expect(readFileSync(path, 'utf8')).toContain('引用');
 });
-it('lists files as well as folders when browsing a connected folder', async () => {
-  const library = await attachKnowledge(root);
-  writeFileSync(join(root, '学期', '课件.pdf'), '%PDF-fixture');
-  writeFileSync(join(root, '学期', '说明.txt'), 'hello');
-  writeFileSync(join(root, '学期', '.hidden.md'), 'hidden');
-  mkdirSync(join(root, '学期', 'node_modules'));
 
-  const browsing = await knowledgeEntries(library.id, '');
-  expect(browsing.folders).toEqual(['学期']);
-  expect(browsing.files).toEqual([]);
-
-  const inside = await knowledgeEntries(library.id, '学期');
-  expect(inside.folders).toEqual(['课程']);
-  expect(inside.files.map((file) => file.path.split(/[\\/]/).at(-1))).toEqual([
-    '课件.pdf',
-    '说明.txt',
-  ]);
-  expect(inside.files.find((file) => file.name === '说明.txt')?.bytes).toBe(5);
-  expect(inside.files.some((file) => file.name === '.hidden.md')).toBe(false);
+it('browses root files, empty folders, hidden study notes and dependency folders without flattening', async () => {
+  await course();
+  writeFileSync(join(root, '培养方案.xmind'), 'map');
+  writeFileSync(join(root, '.学习记录.md'), 'note');
+  writeFileSync(join(root, '.DS_Store'), 'hidden');
+  mkdirSync(join(root, '空目录'));
+  mkdirSync(join(root, 'node_modules'));
+  const entries = await browseKnowledge(projectId, '');
+  expect(entries).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        name: '培养方案.xmind',
+        path: '培养方案.xmind',
+        kind: 'file',
+        bytes: 3,
+      }),
+      expect.objectContaining({ name: '.学习记录.md', kind: 'file' }),
+      expect.objectContaining({ name: '空目录', kind: 'folder' }),
+      expect.objectContaining({ name: 'node_modules', kind: 'folder' }),
+    ]),
+  );
+  expect(entries.some((entry) => entry.name === '.DS_Store')).toBe(false);
+  expect(await browseKnowledge(projectId, '空目录')).toEqual([]);
+  await expect(browseKnowledge(projectId, '..')).rejects.toThrow('范围');
 });
 it('cancels a course registration and its PDF index while keeping the files on disk', async () => {
   const row = await course(),
@@ -147,6 +153,7 @@ it('cancels a course registration and its PDF index while keeping the files on d
   expect(await searchKnowledge(again.id, '滑动窗口')).toEqual([]);
   expect(() => removeCourse(row.id)).toThrow('课程不存在');
 });
+
 it('detaches a connected folder with its courses and indexes but keeps the files', async () => {
   const row = await course(),
     file = join(root, '学期', '课程', '笔记.md');

@@ -13,6 +13,9 @@ export interface KnowledgeState {
   roots: KnowledgeRoot[];
   courses: KnowledgeCourse[];
 }
+export type KnowledgeDirectoryEntry = { name: string; path: string } & (
+  { kind: 'folder' | 'link' } | { kind: 'file'; bytes: number; revision: string }
+);
 export interface KnowledgeFile {
   path: string;
   name: string;
@@ -27,20 +30,15 @@ export interface KnowledgeHit {
   page?: number;
   line?: number;
 }
-
-/** 浏览已连接文件夹时的目录内容：子文件夹与文件都列出，文件带相对路径与体积。 */
-export interface KnowledgeEntries {
-  folders: string[];
-  files: { name: string; path: string; bytes: number }[];
-}
-
 export interface KnowledgeApi {
   state(): Promise<KnowledgeState>;
   attach(): Promise<KnowledgeRoot | null>;
+  /** 断开连接：只删本机登记与索引，磁盘文件保留；返回同时取消的课程数。 */
   detach(rootId: string): Promise<number>;
+  browse(rootId: string, path: string): Promise<KnowledgeDirectoryEntry[]>;
   folders(rootId: string, path: string): Promise<string[]>;
-  entries(rootId: string, path: string): Promise<KnowledgeEntries>;
   enroll(rootId: string, path: string): Promise<KnowledgeCourse>;
+  /** 取消课程：只删本机登记与索引，课程文件保留。 */
   remove(courseId: string): Promise<void>;
   files(courseId: string): Promise<KnowledgeFile[]>;
   search(courseId: string, query: string): Promise<KnowledgeHit[]>;

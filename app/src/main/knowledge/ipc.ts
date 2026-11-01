@@ -5,11 +5,11 @@ import {
   attachKnowledge,
   knowledgeState,
   knowledgeFolders,
-  knowledgeEntries,
-  enrollCourse,
-  removeCourse,
+  browseKnowledge,
   detachKnowledge,
+  enrollCourse,
   knowledgeFiles,
+  removeCourse,
   searchKnowledge,
   indexKnowledgePdf,
   knowledgeSession,
@@ -44,7 +44,7 @@ export function registerKnowledgeIpc() {
     });
   const methods: Record<string, (id: string, value: string) => unknown> = {
     folders: knowledgeFolders,
-    entries: knowledgeEntries,
+    browse: browseKnowledge,
     enroll: enrollCourse,
     files: knowledgeFiles,
     search: searchKnowledge,

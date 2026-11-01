@@ -200,6 +200,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: 6.1.1
         version: 6.1.1(vite@8.2.2(@types/node@24.9.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+      '@web-ppt/core':
+        specifier: 0.5.0
+        version: 0.5.0
       '@xterm/addon-fit':
         specifier: 0.11.0
         version: 0.11.0
@@ -2465,6 +2468,9 @@ packages:
   '@vitest/spy@5.0.0':
     resolution: {integrity: sha512-uy+luWBAPw9XfthoHi5AkfHUnuPYEESjl0p/r+meoBnU8bxg5GDQ3Ey8MjcJ6sqahkL4PFyrvfMJJBw7LbU06g==}
 
+  '@web-ppt/core@0.5.0':
+    resolution: {integrity: sha512-Mhz8OP4PyvH9e7yIJI5pROLoVglr+BauUiqSlep/FCDzNOsG8KV4MPzGJSYScQ8AyPHyX22tmJqS+6CyPkM1zg==}
+
   '@xmldom/xmldom@0.8.15':
     resolution: {integrity: sha512-/5NV/vDALVFDXgLmfsy9TRCBlKwO2LNBFzpzvb9iIj+jR+eSc6DLYYvVOdivT/jm7MtU6TebYuRmzEOI7w40UA==}
     engines: {node: '>=10.0.0'}
@@ -3153,6 +3159,9 @@ packages:
   fetch-blob@3.2.0:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
     engines: {node: ^12.20 || >= 14.13}
+
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
 
   file-type@22.2.0:
     resolution: {integrity: sha512-XmEVJsRpQMVYC+sWFW+FKAVo2P7/lPctDdWH4UQ1r6oxhdrTobnowdM3z+ZJ93a4J8D3yDpxX0bEvRuFev0vUQ==}
@@ -7393,6 +7402,10 @@ snapshots:
 
   '@vitest/spy@5.0.0': {}
 
+  '@web-ppt/core@0.5.0':
+    dependencies:
+      fflate: 0.8.3
+
   '@xmldom/xmldom@0.8.15': {}
 
   '@xterm/addon-fit@0.11.0': {}
@@ -8173,6 +8186,8 @@ snapshots:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
+
+  fflate@0.8.3: {}
 
   file-type@22.2.0(supports-color@7.2.0):
     dependencies:

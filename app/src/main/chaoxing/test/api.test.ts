@@ -1,5 +1,14 @@
 import Database from 'better-sqlite3';
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import {
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  rmSync,
+  unlinkSync,
+  symlinkSync,
+  realpathSync,
+} from 'node:fs';
 import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 import { tmpdir } from 'node:os';
@@ -39,7 +48,11 @@ vi.mock('../session', () => ({
   isChaoxingLoginUrl: () => false,
 }));
 vi.mock('../../workspace/api', () => ({ getWorkspaceState: () => ({ directory }) }));
-vi.mock('../../storage', () => ({ availablePath: (dir: string, name: string) => join(dir, name) }));
+vi.mock('../../storage', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../storage')>();
+  return { ...actual, availablePath: vi.fn(actual.availablePath) };
+});
+import { availablePath } from '../../storage';
 import { readSchoolPage } from '../../jlu/reader';
 import {
   cachedWorkEntry,
@@ -53,6 +66,8 @@ import {
   syncChaoxingFiles,
   syncChaoxingWorks,
   importChaoxingFile,
+  bindChaoxingCourse,
+  linkChaoxingFile,
   chaoxingResult,
 } from '../api';
 const reader = vi.mocked(readSchoolPage);
@@ -60,7 +75,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   db = new Database(':memory:');
   db.exec('CREATE TABLE jlu_platform_cache(key TEXT PRIMARY KEY,data TEXT NOT NULL)');
-  directory = mkdtempSync(join(tmpdir(), 'dela-cx-api-'));
+  directory = realpathSync(mkdtempSync(join(tmpdir(), 'dela-cx-api-')));
 });
 afterEach(() => {
   db.close();
@@ -206,10 +221,11 @@ it('reports a refused file download as a download failure and retains the direct
 });
 it('does not replace or remove an existing note when file creation is refused', async () => {
   await seedFile();
-  const folder = join(directory, 'workspace', '学习通资料', '示例课程');
+  const folder = join(directory, 'workspace', '学习通资料', '示例课程 (1_2)');
   mkdirSync(folder, { recursive: true });
   const file = join(folder, '示例.pdf');
   writeFileSync(file, 'original');
+  vi.mocked(availablePath).mockReturnValueOnce(file);
   downloadRequest();
   await expect(importChaoxingFile('1:2', '', 'd1')).rejects.toThrow();
   expect(readFileSync(file, 'utf8')).toBe('original');
@@ -288,4 +304,128 @@ it('retains a detail deadline across relative list refreshes, but lets newer exp
   await refresh('截止时间：2026-11-04 21:00');
   expect(getChaoxingCalendar().works[0]?.deadline).toEqual({ date: '2026-11-04', time: '21:00' });
   expect(getChaoxingWorks('1:2')?.items[0]?.detailSyncedAt).toBeUndefined();
+});
+
+function localCourse() {
+  db.exec(
+    'CREATE TABLE knowledge_roots(id TEXT PRIMARY KEY,path TEXT); CREATE TABLE knowledge_courses(id TEXT PRIMARY KEY,root_id TEXT,name TEXT,relative_path TEXT)',
+  );
+  const id = crypto.randomUUID(),
+    rootId = crypto.randomUUID();
+  const root = join(directory, '本地知识库'),
+    path = join(root, '计算机网络');
+  mkdirSync(path, { recursive: true });
+  db.prepare('INSERT INTO knowledge_roots VALUES (?,?)').run(rootId, root);
+  db.prepare('INSERT INTO knowledge_courses VALUES (?,?,?,?)').run(
+    id,
+    rootId,
+    '计算机网络',
+    '计算机网络',
+  );
+  return { id, path };
+}
+it('binds courses explicitly and opens an associated file without downloading it again', async () => {
+  await seedFile();
+  const course = localCourse();
+  const file = join(course.path, '已有课件.pdf');
+  writeFileSync(file, 'existing local notes');
+  expect(bindChaoxingCourse('1:2', course.id)).toMatchObject({ knowledgeCourseId: course.id });
+  linkChaoxingFile('1:2', '', 'd1', file);
+  expect(getChaoxingFiles('1:2')?.items[0]?.local).toMatchObject({
+    origin: 'linked',
+    status: 'ready',
+  });
+  expect(await importChaoxingFile('1:2', '', 'd1')).toEqual({
+    id: expect.stringContaining('已有课件.pdf'),
+  });
+  expect(mocks.request).not.toHaveBeenCalled();
+  writeFileSync(file, 'edited locally');
+  expect(getChaoxingFiles('1:2')?.items[0]?.local?.status).toBe('local-changed');
+  expect(bindChaoxingCourse('1:2', null)).toBeNull();
+  expect(readFileSync(file, 'utf8')).toBe('edited locally');
+  unlinkSync(file);
+  expect(getChaoxingFiles('1:2')?.items[0]?.local?.status).toBe('missing');
+});
+it('preserves the remote folder hierarchy when importing into a linked course', async () => {
+  await seedFile();
+  const course = localCourse();
+  bindChaoxingCourse('1:2', course.id);
+  const root = getChaoxingFiles('1:2')!;
+  db.prepare('UPDATE jlu_platform_cache SET data=? WHERE key=?').run(
+    JSON.stringify({
+      ...root,
+      items: [
+        {
+          id: 'folder1',
+          name: '课件PPT',
+          type: 'afolder',
+          size: '',
+          creator: '',
+          date: '',
+          downloadable: false,
+        },
+      ],
+    }),
+    'cx:files:1:2:',
+  );
+  const routes = JSON.parse(
+    Buffer.from(
+      JSON.parse(
+        (
+          db.prepare("SELECT data FROM jlu_platform_cache WHERE key='cx:routes'").get() as {
+            data: string;
+          }
+        ).data,
+      ),
+      'base64',
+    )
+      .toString()
+      .slice(7),
+  );
+  routes['folder:1:2:folder1'] =
+    'https://mooc2-ans.chaoxing.com/mooc2-ans/coursedata/stu-datalist?folder=1';
+  db.prepare('UPDATE jlu_platform_cache SET data=? WHERE key=?').run(
+    JSON.stringify(Buffer.from('sealed:' + JSON.stringify(routes)).toString('base64')),
+    'cx:routes',
+  );
+  reader.mockResolvedValueOnce([
+    {
+      ...root.items[0],
+      folderUrl: null,
+      downloadUrl: 'https://mooc1.chaoxing.com/coursedata/downloadData?dataId=d1',
+    },
+  ]);
+  expect((await syncChaoxingFiles('1:2', 'folder1')).relativePath).toEqual(['课件PPT']);
+  downloadRequest();
+  const result = await importChaoxingFile('1:2', 'folder1', 'd1');
+  expect(result.id).toBe(join(course.path, '课件PPT', '示例.pdf'));
+  expect((await importChaoxingFile('1:2', 'folder1', 'd1')).id).toBe(result.id);
+  expect(mocks.request).toHaveBeenCalledOnce();
+  const snapshot = getChaoxingFiles('1:2', 'folder1')!;
+  db.prepare('UPDATE jlu_platform_cache SET data=? WHERE key=?').run(
+    JSON.stringify({
+      ...snapshot,
+      items: snapshot.items.map((file) => ({ ...file, date: '11-02' })),
+    }),
+    'cx:files:1:2:folder1',
+  );
+  expect(getChaoxingFiles('1:2', 'folder1')?.items[0]?.local?.status).toBe('remote-changed');
+  downloadRequest();
+  const updated = await importChaoxingFile('1:2', 'folder1', 'd1');
+  expect(updated.id).not.toBe(result.id);
+  expect(readFileSync(updated.id, 'utf8')).toBe('%PDF-fixture');
+  expect(readFileSync(result.id, 'utf8')).toBe('%PDF-fixture');
+});
+it('refuses linking files outside the bound course, including symlink targets', async () => {
+  await seedFile();
+  const course = localCourse();
+  bindChaoxingCourse('1:2', course.id);
+  const outside = join(directory, 'outside.pdf');
+  writeFileSync(outside, 'private');
+  expect(() => linkChaoxingFile('1:2', '', 'd1', outside)).toThrow('课程目录');
+  if (process.platform !== 'win32') {
+    const linked = join(course.path, 'linked.pdf');
+    symlinkSync(outside, linked);
+    expect(() => linkChaoxingFile('1:2', '', 'd1', linked)).toThrow('课程目录');
+  }
 });

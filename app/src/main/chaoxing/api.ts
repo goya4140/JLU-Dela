@@ -3,9 +3,10 @@ import {
   type ChaoxingCalendar,
   type ChaoxingCalendarSync,
 } from '../../shared/chaoxing-calendar';
-import { net, safeStorage, type IncomingMessage, type WebContents } from 'electron';
-import { mkdirSync, rmSync, createWriteStream } from 'node:fs';
-import { join } from 'node:path';
+import { BrowserWindow, net, safeStorage, type IncomingMessage, type WebContents } from 'electron';
+import { mkdirSync, rmSync, createWriteStream, statSync, realpathSync } from 'node:fs';
+import { join, relative, isAbsolute, sep } from 'node:path';
+import type { ChaoxingFile, ChaoxingFolder } from '../../shared/chaoxing';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { z } from 'zod';
@@ -64,6 +65,7 @@ const coursesSchema = z.object({ items: z.array(courseSchema), syncedAt: z.strin
 const filesSchema = z.object({
   courseId: id,
   folderId: z.string(),
+  relativePath: z.array(z.string()).optional(),
   name: z.string(),
   items: z.array(fileSchema),
   syncedAt: z.string().datetime(),
@@ -169,10 +171,146 @@ async function courseFrame(courseId: string, kind: 'files' | 'works', sender?: W
   return z.object({ url: schoolUrl }).parse(await read(url.href, chaoxingFrameScript(kind), sender))
     .url;
 }
-export function getChaoxingFiles(courseId: string, folderId = '') {
-  id.parse(courseId);
+const localCourseSchema = z.object({
+  knowledgeCourseId: z.string().uuid(),
+  name: z.string(),
+  path: z.string(),
+});
+const localFileSchema = z.object({
+  path: z.string(),
+  origin: z.enum(['linked', 'downloaded']),
+  remoteVersion: z.string(),
+  localVersion: z.string(),
+});
+const fileLinkKey = (courseId: string, folderId: string, fileId: string) =>
+  `local-file:${courseId}:${folderId}:${fileId}`;
+const remoteFileVersion = (file: ChaoxingFile) => JSON.stringify([file.name, file.size, file.date]);
+const localFileVersion = (path: string) => {
+  const stats = statSync(path);
+  return `${stats.mtimeMs}-${stats.size}`;
+};
+
+export function bindChaoxingCourse(courseId: string, knowledgeCourseId: unknown) {
+  ownCourse(courseId);
+  if (knowledgeCourseId === null) {
+    getDatabase()
+      .prepare('DELETE FROM jlu_platform_cache WHERE key=?')
+      .run('cx:local-course:' + courseId);
+    return null;
+  }
+  const course = getDatabase()
+    .prepare(
+      `SELECT c.id, c.name, c.relative_path, r.path AS root FROM knowledge_courses c JOIN knowledge_roots r ON r.id=c.root_id WHERE c.id=?`,
+    )
+    .get(z.string().uuid().parse(knowledgeCourseId)) as
+    { id: string; name: string; relative_path: string; root: string } | undefined;
+  if (!course) throw new Error('请先在本地知识库中设置对应课程');
+  const root = realpathSync(course.root),
+    path = realpathSync(join(root, course.relative_path));
+  const suffix = relative(root, path);
+  if (
+    isAbsolute(suffix) ||
+    suffix === '..' ||
+    suffix.startsWith('..' + sep) ||
+    !statSync(path).isDirectory()
+  )
+    throw new Error('课程目录不在已连接的知识库内');
+  return save('local-course:' + courseId, {
+    knowledgeCourseId: course.id,
+    name: course.name,
+    path,
+  });
+}
+
+export function getChaoxingFiles(courseId: string, folderId = ''): ChaoxingFolder | null {
+  ownCourse(courseId);
   if (folderId) id.parse(folderId);
-  return cache(`files:${courseId}:${folderId}`, filesSchema);
+  const folder = cache(`files:${courseId}:${folderId}`, filesSchema);
+  if (!folder) return null;
+  const localCourse = cache('local-course:' + courseId, localCourseSchema) ?? undefined;
+  return {
+    ...folder,
+    localCourse,
+    items: folder.items.map((file) => {
+      const link = cache(fileLinkKey(courseId, folderId, file.id), localFileSchema);
+      if (!link) return file;
+      let status: NonNullable<ChaoxingFile['local']>['status'];
+      try {
+        status =
+          remoteFileVersion(file) !== link.remoteVersion
+            ? 'remote-changed'
+            : localFileVersion(link.path) !== link.localVersion
+              ? 'local-changed'
+              : 'ready';
+      } catch {
+        status = 'missing';
+      }
+      return { ...file, local: { path: link.path, origin: link.origin, status } };
+    }),
+  };
+}
+
+export function linkChaoxingFile(
+  courseId: string,
+  folderId: string,
+  fileId: string,
+  selected: string,
+) {
+  const folder = getChaoxingFiles(courseId, folderId);
+  const file = folder?.items.find((row) => row.id === id.parse(fileId));
+  if (!file || ['afolder', 'tch-courseware'].includes(file.type)) throw new Error('请选择线上文件');
+  if (!folder?.localCourse) throw new Error('请先关联本地课程');
+  const root = realpathSync(folder.localCourse.path),
+    path = realpathSync(selected),
+    suffix = relative(root, path);
+  if (
+    isAbsolute(suffix) ||
+    suffix === '..' ||
+    suffix.startsWith('..' + sep) ||
+    !statSync(path).isFile()
+  )
+    throw new Error('请选择已关联课程目录内的文件');
+  save(fileLinkKey(courseId, folderId, fileId), {
+    path,
+    origin: 'linked',
+    remoteVersion: remoteFileVersion(file),
+    localVersion: localFileVersion(path),
+  });
+  return { id: path };
+}
+
+export async function openChaoxingFilesPage(
+  courseId: string,
+  folderId: string,
+  sender: WebContents,
+) {
+  ownCourse(courseId);
+  if (folderId) id.parse(folderId);
+  const url = folderId
+    ? privateRoutes()[`folder:${courseId}:${folderId}`]
+    : await courseFrame(courseId, 'files', sender);
+  if (!url) throw new Error('请先刷新当前资料目录');
+  schoolUrl.parse(url);
+  await chaoxingSession.get();
+  const window = new BrowserWindow({
+    title: '学习通原平台资料',
+    width: 1000,
+    height: 760,
+    parent: BrowserWindow.fromWebContents(sender) ?? undefined,
+    webPreferences: {
+      partition: chaoxingSession.partition,
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  try {
+    await window.loadURL(url);
+  } catch {
+    window.destroy();
+    throw new Error('学习通资料页未能打开，请检查网络后重试');
+  }
 }
 export async function syncChaoxingFiles(courseId: string, folderId = '', sender?: WebContents) {
   ownCourse(courseId);
@@ -193,13 +331,33 @@ export async function syncChaoxingFiles(courseId: string, folderId = '', sender?
     if (row.downloadUrl) routes[`download:${courseId}:${folderId}:${row.id}`] = row.downloadUrl;
   }
   saveRoutes(routes);
-  return save(`files:${courseId}:${folderId}`, {
+  let relativePath: string[] = [];
+  if (folderId) {
+    const cachedFolders = getDatabase()
+      .prepare("SELECT data FROM jlu_platform_cache WHERE key LIKE 'cx:files:%'")
+      .all() as { data: string }[];
+    for (const row of cachedFolders) {
+      const parent = filesSchema.parse(JSON.parse(row.data));
+      const child =
+        parent.courseId === courseId
+          ? parent.items.find((item) => item.id === folderId && item.type === 'afolder')
+          : undefined;
+      if (child) {
+        relativePath = [...(parent.relativePath ?? []), child.name];
+        break;
+      }
+    }
+    if (!relativePath.length) throw new Error('请从资料根目录重新进入此文件夹');
+  }
+  save(`files:${courseId}:${folderId}`, {
     courseId,
     folderId,
+    relativePath,
     name: folderId ? new URL(url).searchParams.get('dataName') || '资料' : '课程资料',
     items: rows.map(({ folderUrl: _folder, downloadUrl: _download, ...file }) => file),
     syncedAt: new Date().toISOString(),
   });
+  return getChaoxingFiles(courseId, folderId)!;
 }
 export function getChaoxingWorks(courseId: string) {
   id.parse(courseId);
@@ -232,21 +390,35 @@ export async function syncChaoxingWorks(courseId: string, sender?: WebContents) 
 }
 export async function importChaoxingFile(courseId: string, folderId: string, fileId: string) {
   const course = ownCourse(courseId);
-  const file = getChaoxingFiles(courseId, folderId)?.items.find(
-    (row) => row.id === id.parse(fileId),
-  );
+  const folder = getChaoxingFiles(courseId, folderId);
+  const file = folder?.items.find((row) => row.id === id.parse(fileId));
+  if (file?.local && file.local.status === 'ready') return { id: file.local.path };
   const routes = privateRoutes();
   const route = routes[`download:${courseId}:${folderId}:${fileId}`];
   const courseRoute = routes['course:' + courseId];
   if (!file?.downloadable || !route || !courseRoute) throw new Error('学校未提供该文件的下载入口');
   const campus = await chaoxingSession.get();
+  if (folderId && !folder?.relativePath?.length)
+    throw new Error('请刷新当前目录后再导入，以保留线上文件夹层级');
+  const localCourse = folder?.localCourse;
+  const base = localCourse
+    ? realpathSync(localCourse.path)
+    : join(
+        getWorkspaceState().directory,
+        'workspace',
+        '学习通资料',
+        `${safeFileName(course.name)} (${safeFileName(course.id)})`,
+      );
   const directory = join(
-    getWorkspaceState().directory,
-    'workspace',
-    '学习通资料',
-    safeFileName(course.name),
+    base,
+    ...(folder?.relativePath ?? []).map((name) => safeFileName(name) || '未命名目录'),
   );
   mkdirSync(directory, { recursive: true });
+  const targetDirectory = realpathSync(directory),
+    baseDirectory = realpathSync(base);
+  const suffix = relative(baseDirectory, targetDirectory);
+  if (isAbsolute(suffix) || suffix === '..' || suffix.startsWith('..' + sep))
+    throw new Error('导入目录超出课程资料范围');
   const path = availablePath(directory, safeFileName(file.name), false);
   let received = 0;
   let created = false;
@@ -319,6 +491,12 @@ export async function importChaoxingFile(courseId: string, folderId: string, fil
     clearTimeout(timer);
     request.abort();
   }
+  save(fileLinkKey(courseId, folderId, fileId), {
+    path,
+    origin: 'downloaded',
+    remoteVersion: remoteFileVersion(file),
+    localVersion: localFileVersion(path),
+  });
   return { id: path };
 }
 

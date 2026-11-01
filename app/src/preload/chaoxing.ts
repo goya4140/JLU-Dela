@@ -9,6 +9,10 @@ export const chaoxing = {
   syncFiles: (courseId: string, folderId?: string) => invoke('cx:files:sync', courseId, folderId),
   works: (courseId: string) => invoke('cx:works:get', courseId),
   syncWorks: (courseId: string) => invoke('cx:works:sync', courseId),
+  bindCourse: (courseId, knowledgeCourseId) =>
+    invoke('cx:course:bind', courseId, knowledgeCourseId),
+  linkFile: (courseId, folderId, fileId) => invoke('cx:file:link', courseId, folderId, fileId),
+  openFilesPage: (courseId, folderId) => invoke('cx:files:open', courseId, folderId),
   importFile: (courseId: string, folderId: string, fileId: string) =>
     invoke('cx:file:import', courseId, folderId, fileId),
 } satisfies ChaoxingApi;
