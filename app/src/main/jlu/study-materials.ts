@@ -9,8 +9,10 @@ import { safeFileName } from '../vsjtu/transcript';
 import type { JluStudyMaterial } from '../../shared/jlu-platforms';
 import { getRecordings } from './api';
 
-/** 观课时可导入的课件类型：能预览的办公文档与讲义 PDF。 */
-export const studyMaterialExtensions = ['.pdf', '.pptx', '.ppt', '.docx', '.doc', '.xlsx', '.xls'];
+/** 观课时可导入的课件类型：与预览器支持的范围一致（PDF 与 OOXML 文档）。 */
+export const studyMaterialExtensions = ['.pdf', '.pptx', '.docx', '.xlsx'];
+/** 旧版二进制 Office 不在预览与解析范围内：明确提示另存，而不是导入后打不开。 */
+const legacyExtensions = ['.ppt', '.doc', '.xls'];
 
 const materialsSchema = z.array(
   z.object({ entryId: z.string().min(1), name: z.string().min(1), addedAt: z.string() }),
@@ -58,7 +60,10 @@ export function importStudyMaterials(
 ): JluStudyMaterial[] {
   if (!paths.length) return studyMaterials(courseId, recordingId);
   for (const source of paths) {
-    if (!studyMaterialExtensions.includes(extname(source).toLowerCase()))
+    const extension = extname(source).toLowerCase();
+    if (legacyExtensions.includes(extension))
+      throw new Error('旧版 Office 格式无法预览，请另存为 .pptx / .docx / .xlsx 后再导入');
+    if (!studyMaterialExtensions.includes(extension))
       throw new Error('只支持 PDF、PowerPoint、Word 与 Excel 课件');
     if (!existsSync(source)) throw new Error('课件文件已不存在，请重新选择');
   }

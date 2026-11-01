@@ -68,6 +68,10 @@ it('rejects unsupported or missing files before touching the workspace', () => {
   const text = join(root, '讲义.txt');
   writeFileSync(text, 'text');
   expect(() => importStudyMaterials('c1', 'r1', [text])).toThrow('只支持');
+  // 旧版 Office 无法预览，提示另存而不是导入后打不开。
+  const legacy = join(root, '旧课件.ppt');
+  writeFileSync(legacy, 'ppt');
+  expect(() => importStudyMaterials('c1', 'r1', [legacy])).toThrow('另存为 .pptx');
   expect(() => importStudyMaterials('c1', 'r1', [join(root, '不存在.pptx')])).toThrow(
     '课件文件已不存在',
   );

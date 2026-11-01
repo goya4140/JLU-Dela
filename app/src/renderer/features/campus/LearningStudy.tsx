@@ -53,6 +53,24 @@ export function LearningStudy({
   const [media, setMedia] = useState<JluStudyMedia | null>(null);
   const [tools, setTools] = useState<{ noteId: string; sessionId: string } | null>(null);
   const [materials, setMaterials] = useState<JluStudyMaterial[]>([]);
+  /** AI 读取 PDF / Office 课件依赖 document-reading 组件；null 表示尚未读到。 */
+  const [docReaderReady, setDocReaderReady] = useState<boolean | null>(null);
+  useEffect(() => {
+    let active = true;
+    void window.dela?.capability
+      .listSkills()
+      .then((rows) => {
+        if (!active) return;
+        const skill = rows.find((row) => row.name === 'document-reading');
+        setDocReaderReady(Boolean(skill?.enabled && skill.dependency?.status === 'ready'));
+      })
+      .catch(() => {
+        if (active) setDocReaderReady(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -332,6 +350,19 @@ export function LearningStudy({
                 </li>
               ))}
             </ul>
+          )}
+          {materials.length > 0 && docReaderReady === false && (
+            <p className="text-xs leading-relaxed text-ink-2">
+              让 AI 读取 PDF 或 Office 课件需要先安装文档读取组件；未安装时 AI 只会说明无法解析。
+              <Button
+                className="ml-2"
+                size="sm"
+                variant="outline"
+                onClick={() => useNavigationStore.getState().openSettings('skills')}
+              >
+                去安装
+              </Button>
+            </p>
           )}
         </section>
         {quote && (
