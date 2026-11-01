@@ -5,7 +5,10 @@ import {
   attachKnowledge,
   knowledgeState,
   knowledgeFolders,
+  knowledgeEntries,
   enrollCourse,
+  removeCourse,
+  detachKnowledge,
   knowledgeFiles,
   searchKnowledge,
   indexKnowledgePdf,
@@ -29,8 +32,19 @@ export function registerKnowledgeIpc() {
     checkWorkspaceSender(event);
     return knowledgeState();
   });
+  // 单参数方法：课程与知识库的移除只接受一个 id。
+  const oneArg: Record<string, (id: string) => unknown> = {
+    detach: detachKnowledge,
+    remove: removeCourse,
+  };
+  for (const [name, method] of Object.entries(oneArg))
+    ipcMain.handle('knowledge:' + name, (event, id: unknown) => {
+      checkWorkspaceSender(event);
+      return method(z.string().uuid().parse(id));
+    });
   const methods: Record<string, (id: string, value: string) => unknown> = {
     folders: knowledgeFolders,
+    entries: knowledgeEntries,
     enroll: enrollCourse,
     files: knowledgeFiles,
     search: searchKnowledge,

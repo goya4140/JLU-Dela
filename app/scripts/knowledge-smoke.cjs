@@ -108,6 +108,33 @@ async function run(window) {
   );
   await click('知识库');
   await wait('document.body.textContent.includes("我的课程")');
+  // 浏览模式：连接文件夹后应能直接看到其中的文件，而不只是文件夹。
+  const hasButton = (label) =>
+    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()===${JSON.stringify(label)})`;
+  await wait(hasButton('本学期'));
+  await click('本学期');
+  await wait(hasButton('计算机网络'));
+  await click('计算机网络');
+  await wait(
+    `document.body.textContent.includes('课堂笔记.md') && document.body.textContent.includes('网络课件.pdf')`,
+  );
+  assert.equal(
+    await js(
+      `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.includes('设为课程'))`,
+    ),
+    true,
+  );
+  if (!root.endsWith('.asar')) {
+    // 窗口未重绘时 capturePage 会拿到空白画面，先触发一次尺寸变化再截图。
+    window.setSize(1280, 850);
+    await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+    await js(
+      'Promise.all(document.getAnimations().filter(a=>a.effect?.getComputedTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))',
+    );
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    mkdirSync('.build', { recursive: true });
+    writeFileSync('.build/knowledge-browse.png', (await window.webContents.capturePage()).toPNG());
+  }
   await js(
     `Array.from(document.querySelectorAll('button')).find(b=>b.querySelector('h3')?.textContent==='计算机网络').click()`,
   );
@@ -198,8 +225,30 @@ async function run(window) {
   assert.ok(readFileSync(saved, 'utf8').includes('引用'));
   assert.equal(readFileSync(note, 'utf8'), noteContent);
   assert.equal((await js('window.dela.knowledge.state()')).courses[0].id, course.id);
+  // 取消课程与断开连接：只清本机登记，磁盘文件保持原位。
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='知识库'&&!b.closest('#main-nav')).click()`,
+  );
+  await wait('document.body.textContent.includes("我的课程")');
+  await js(`document.querySelector('button[aria-label="取消课程 计算机网络"]').click()`);
+  await wait(`document.body.textContent.includes('取消这门课程？')`);
+  await js(
+    `Array.from(document.querySelectorAll('[role="alertdialog"] button')).find(b=>b.textContent.trim()==='取消课程').click()`,
+  );
+  await wait(`!document.body.textContent.includes('我的课程')`);
+  assert.equal((await js('window.dela.knowledge.state()')).courses.length, 0);
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='断开连接').click()`,
+  );
+  await wait(`document.body.textContent.includes('保持连接')`);
+  await js(
+    `Array.from(document.querySelectorAll('[role="alertdialog"] button')).find(b=>b.textContent.trim()==='断开连接').click()`,
+  );
+  await wait(`!document.body.textContent.includes('断开连接')`);
+  assert.deepEqual(await js('window.dela.knowledge.state()'), { roots: [], courses: [] });
+  assert.equal(readFileSync(note, 'utf8'), noteContent);
   assert.equal(BrowserWindow.getAllWindows().length, 1);
   console.log(
-    'Knowledge smoke passed: in-place folders, course scope, Markdown search, real PDF text extraction and page jump, unsent AI drafts, new notes, source preservation and four viewport widths. Synthetic data only; no school or model requests.',
+    'Knowledge smoke passed: in-place folders, folder browsing with files, course scope, Markdown search, real PDF text extraction and page jump, unsent AI drafts, new notes, course removal and folder detaching without touching source files, and four viewport widths. Synthetic data only; no school or model requests.',
   );
 }

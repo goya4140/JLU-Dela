@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertDialog } from 'radix-ui';
 import {
   ArrowLeft,
   BookOpen,
@@ -7,8 +8,10 @@ import {
   FolderPlus,
   MessageSquare,
   Search,
+  X,
 } from 'lucide-react';
 import type {
+  KnowledgeEntries,
   KnowledgeState,
   KnowledgeRoot,
   KnowledgeCourse,
@@ -19,6 +22,8 @@ import { isRelativeAssetPath, noteAssetUrl } from '../../../shared/note-files';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { DesktopOnlyNotice } from '../../components/ui/desktop-only-notice';
+import { dialogOverlay, dialogPanel } from '../../components/ui/motion';
+import { cn } from '../../lib/utils';
 import { errorText, useWorkspaceStore } from '../../workspace/store';
 import { useNavigationStore } from '../../navigation/view';
 import { ContentLoaderProvider, type ContentLoader } from '../../content/preview/loader';
@@ -27,6 +32,18 @@ import { ChatTab } from '../../content/chat/ChatTab';
 import { ChatTabSourceProvider } from '../../content/chat/chat-source';
 import { useChatDrafts } from '../../content/chat/drafts';
 import { extractKnowledgePdf } from './pdf-text';
+
+/** 主进程返回的是同一台机器上的绝对路径，按平台分隔符拼接，避免 Windows 上混用斜杠。 */
+function joinPath(base: string, relative: string) {
+  const separator = base.includes('\\') ? '\\' : '/';
+  return base.replace(/[\\/]+$/, '') + separator + relative.replace(/^[\\/]+/, '');
+}
+function formatBytes(bytes: number) {
+  if (!bytes) return '大小未知';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
 
 export function KnowledgeView() {
   return window.dela ? (
@@ -40,10 +57,13 @@ function KnowledgeLibrary() {
   const [state, setState] = useState<KnowledgeState>({ roots: [], courses: [] });
   const [rootId, setRootId] = useState('');
   const [folder, setFolder] = useState('');
-  const [folders, setFolders] = useState<string[]>([]);
+  const [entries, setEntries] = useState<KnowledgeEntries>({ folders: [], files: [] });
   const [course, setCourse] = useState<KnowledgeCourse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [detachOpen, setDetachOpen] = useState(false);
+  const [removeId, setRemoveId] = useState<string | null>(null);
   const root = state.roots.find((row) => row.id === rootId);
   useEffect(() => {
     let active = true;
@@ -65,13 +85,13 @@ function KnowledgeLibrary() {
   useEffect(() => {
     if (!rootId) return;
     let active = true;
-    setFolders([]);
+    setEntries({ folders: [], files: [] });
     setError(null);
     setBusy(true);
     void api
-      .folders(rootId, folder)
+      .entries(rootId, folder)
       .then((rows) => {
-        if (active) setFolders(rows);
+        if (active) setEntries(rows);
       })
       .catch((cause) => {
         if (active) setError(errorText(cause));
@@ -86,6 +106,7 @@ function KnowledgeLibrary() {
   async function attach() {
     setBusy(true);
     setError(null);
+    setNotice('');
     try {
       const added = await api.attach();
       if (added) {
@@ -94,6 +115,45 @@ function KnowledgeLibrary() {
         setRootId(added.id);
         setFolder('');
       }
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function detach() {
+    if (!root) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const removed = await api.detach(root.id);
+      const next = await api.state();
+      setState(next);
+      setRootId(next.roots[0]?.id ?? '');
+      setFolder('');
+      setDetachOpen(false);
+      setNotice(
+        removed
+          ? `已断开「${root.name}」，同时取消 ${removed} 门课程登记；磁盘文件未改动。`
+          : `已断开「${root.name}」，磁盘文件未改动。`,
+      );
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function remove(courseId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const target = state.courses.find((row) => row.id === courseId);
+      await api.remove(courseId);
+      setState(await api.state());
+      setRemoveId(null);
+      setNotice(
+        target ? `已取消课程「${target.name}」，课程文件仍在原目录中。` : '已取消课程登记。',
+      );
     } catch (cause) {
       setError(errorText(cause));
     } finally {
@@ -143,6 +203,11 @@ function KnowledgeLibrary() {
           {error}
         </p>
       )}
+      {notice && (
+        <p role="status" className="mb-4 text-13 text-ink-3">
+          {notice}
+        </p>
+      )}
       {!state.roots.length && (
         <div className="py-12 text-center">
           <BookOpen className="mx-auto mb-4 size-8 text-ink-3" />
@@ -155,22 +220,88 @@ function KnowledgeLibrary() {
           <h2 className="mb-3 text-sm font-medium text-ink">我的课程</h2>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {state.courses.map((row) => (
-              <button
-                key={row.id}
-                onClick={() => setCourse(row)}
-                className="min-w-0 rounded-panel bg-surface-2 p-4 text-left hover:bg-hover"
-              >
-                <BookOpen className="mb-3 size-5 text-ink-3" />
-                <h3 className="break-words font-medium text-ink">{row.name}</h3>
-                <p className="mt-1 break-all text-xs text-ink-3">
-                  {state.roots.find((item) => item.id === row.rootId)?.name} /{' '}
-                  {row.relativePath || '根目录'}
-                </p>
-              </button>
+              <div className="relative min-w-0" key={row.id}>
+                <button
+                  onClick={() => setCourse(row)}
+                  className="w-full min-w-0 rounded-panel bg-surface-2 p-4 text-left hover:bg-hover"
+                >
+                  <BookOpen className="mb-3 size-5 text-ink-3" />
+                  <h3 className="break-words pr-8 font-medium text-ink">{row.name}</h3>
+                  <p className="mt-1 break-all text-xs text-ink-3">
+                    {state.roots.find((item) => item.id === row.rootId)?.name} /{' '}
+                    {row.relativePath || '根目录'}
+                  </p>
+                </button>
+                <Button
+                  aria-label={`取消课程 ${row.name}`}
+                  className="absolute top-2 right-2"
+                  disabled={busy}
+                  size="icon-sm"
+                  title="取消课程"
+                  variant="ghost"
+                  onClick={() => setRemoveId(row.id)}
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
             ))}
           </div>
         </section>
       )}
+      <AlertDialog.Root
+        onOpenChange={(open) => !open && !busy && setRemoveId(null)}
+        open={removeId !== null}
+      >
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className={dialogOverlay} />
+          <AlertDialog.Content className={cn(dialogPanel, 'max-w-sm')}>
+            <AlertDialog.Title className="text-base font-semibold">
+              取消这门课程？
+            </AlertDialog.Title>
+            <AlertDialog.Description className="mt-2 text-xs leading-relaxed text-ink-3">
+              只删除本机知识库里的课程登记与 PDF 正文索引，课程文件夹和其中的文件保持原位。
+              取消后可以重新「设为课程」恢复。
+            </AlertDialog.Description>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button disabled={busy} variant="ghost" onClick={() => setRemoveId(null)}>
+                保留课程
+              </Button>
+              <Button
+                disabled={busy}
+                onClick={() => removeId && void remove(removeId)}
+                variant="destructive"
+              >
+                取消课程
+              </Button>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
+      <AlertDialog.Root
+        onOpenChange={(open) => !open && !busy && setDetachOpen(false)}
+        open={detachOpen}
+      >
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className={dialogOverlay} />
+          <AlertDialog.Content className={cn(dialogPanel, 'max-w-sm')}>
+            <AlertDialog.Title className="text-base font-semibold">
+              断开「{root?.name ?? '知识库'}」？
+            </AlertDialog.Title>
+            <AlertDialog.Description className="mt-2 text-xs leading-relaxed text-ink-3">
+              会移除这个文件夹的所有课程登记与 PDF
+              正文索引；磁盘文件、工作台项目和学习笔记都不受影响。 重新连接同一目录即可再次浏览。
+            </AlertDialog.Description>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button disabled={busy} variant="ghost" onClick={() => setDetachOpen(false)}>
+                保持连接
+              </Button>
+              <Button disabled={busy} onClick={() => void detach()} variant="destructive">
+                断开连接
+              </Button>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
       {root && (
         <section>
           <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -204,6 +335,9 @@ function KnowledgeLibrary() {
             <Button size="sm" disabled={busy} onClick={() => void enroll()}>
               设为课程
             </Button>
+            <Button disabled={busy} size="sm" variant="ghost" onClick={() => setDetachOpen(true)}>
+              断开连接
+            </Button>
           </div>
           <p className="mb-3 break-all text-xs text-ink-3">{root.path}</p>
           {busy && (
@@ -211,8 +345,13 @@ function KnowledgeLibrary() {
               正在读取…
             </p>
           )}
+          {!busy && !entries.folders.length && !entries.files.length && (
+            <p className="text-13 text-ink-3">
+              {folder ? '这个文件夹是空的。' : '这个文件夹里暂时没有可浏览的内容。'}
+            </p>
+          )}
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {folders.map((name) => (
+            {entries.folders.map((name) => (
               <button
                 key={name}
                 onClick={() => setFolder([folder, name].filter(Boolean).join('/'))}
@@ -222,7 +361,28 @@ function KnowledgeLibrary() {
                 <span className="break-words">{name}</span>
               </button>
             ))}
+            {entries.files.map((file) => (
+              <button
+                key={file.path}
+                onClick={() =>
+                  useNavigationStore.getState().openDocument(joinPath(root.path, file.path))
+                }
+                className="flex min-w-0 items-center gap-3 rounded-control p-3 text-left text-13 text-ink hover:bg-hover"
+              >
+                <FileText className="size-4 shrink-0 text-ink-3" />
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words">{file.name}</span>
+                  <span className="block text-xs text-ink-3">{formatBytes(file.bytes)}</span>
+                </span>
+              </button>
+            ))}
           </div>
+          {entries.files.length > 0 && (
+            <p className="mt-3 text-xs text-ink-3">
+              点击文件直接在工作台打开；需要检索正文、提取 PDF
+              或引用提问时，请把所在文件夹「设为课程」。
+            </p>
+          )}
         </section>
       )}
     </div>

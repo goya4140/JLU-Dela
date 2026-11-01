@@ -7,10 +7,11 @@ import { linkProjectFolder } from '../workspace/api';
 import { availablePath } from '../storage';
 import { newSession } from '../agent/session';
 import type {
-  KnowledgeRoot,
   KnowledgeCourse,
+  KnowledgeEntries,
   KnowledgeFile,
   KnowledgeHit,
+  KnowledgeRoot,
 } from '../../shared/knowledge';
 
 const excluded = new Set([
@@ -63,12 +64,66 @@ export async function courseDirectory(id: string) {
   const course = courseById(id);
   return inside(rootById(course.rootId).path, course.relativePath);
 }
+const collator = (a: string, b: string) => a.localeCompare(b, 'zh-CN');
+/** 除隐藏项与被排除的依赖目录外，不跟随符号链接（与 knowledgeFiles 的遍历口径一致）。 */
+function visible(row: { name: string; isSymbolicLink(): boolean }) {
+  return !row.name.startsWith('.') && !excluded.has(row.name) && !row.isSymbolicLink();
+}
 export async function knowledgeFolders(rootId: string, path: string) {
   const directory = await inside(rootById(rootId).path, path);
   return (await readdir(directory, { withFileTypes: true }))
-    .filter((row) => row.isDirectory() && !row.name.startsWith('.') && !excluded.has(row.name))
+    .filter((row) => row.isDirectory() && visible(row))
     .map((row) => row.name)
-    .sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    .sort(collator);
+}
+/**
+ * 浏览已连接文件夹时的目录内容：子文件夹与文件都返回，文件带相对路径与体积。
+ * 文件按名称排序，调用方据此决定直接打开还是在设为课程后再阅读。
+ */
+export async function knowledgeEntries(rootId: string, path: string): Promise<KnowledgeEntries> {
+  const root = rootById(rootId),
+    directory = await inside(root.path, path);
+  const rows = await readdir(directory, { withFileTypes: true });
+  const folders = rows
+    .filter((row) => row.isDirectory() && visible(row))
+    .map((row) => row.name)
+    .sort(collator);
+  const files: KnowledgeEntries['files'] = [];
+  for (const row of rows) {
+    if (!row.isFile() || !visible(row)) continue;
+    const target = join(directory, row.name);
+    let bytes = 0;
+    try {
+      bytes = (await stat(target)).size;
+    } catch {
+      // 读取失败（权限不足或被占用）仍列出条目，体积留空，交给打开时再报错。
+    }
+    files.push({ name: row.name, path: relative(root.path, target), bytes });
+  }
+  files.sort((a, b) => collator(a.name, b.name));
+  return { folders, files };
+}
+/** 取消课程：删除本机登记与 PDF 正文索引，磁盘上的课程文件保持原位。 */
+export function removeCourse(id: string) {
+  const db = getDatabase();
+  courseById(id);
+  db.prepare('DELETE FROM knowledge_documents WHERE course_id=?').run(id);
+  db.prepare('DELETE FROM knowledge_courses WHERE id=?').run(id);
+}
+/**
+ * 断开知识库：删除该文件夹下的课程登记与索引，并移除连接记录。
+ * 磁盘文件与工作台项目都保留，重新连接同一目录即恢复浏览。
+ */
+export function detachKnowledge(id: string) {
+  const db = getDatabase();
+  rootById(id);
+  const courses = knowledgeState().courses.filter((row) => row.rootId === id);
+  for (const course of courses) {
+    db.prepare('DELETE FROM knowledge_documents WHERE course_id=?').run(course.id);
+    db.prepare('DELETE FROM knowledge_courses WHERE id=?').run(course.id);
+  }
+  db.prepare('DELETE FROM knowledge_roots WHERE id=?').run(id);
+  return courses.length;
 }
 export async function enrollCourse(rootId: string, path: string) {
   const root = rootById(rootId),
