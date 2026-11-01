@@ -12,6 +12,9 @@ export function sanitizeHtml(
   baseUrl: string,
   rootSize: number,
   htmlScrollY: 'hidden' | 'auto' = 'hidden',
+  /** 相对引用的自定义解析：返回字符串即采用，返回 null 表示无法解析并移除该属性，
+   *  返回 undefined 时回落到 baseUrl 解析。本地 HTML 用它接受限资源协议。 */
+  resolveRelative?: (ref: string) => string | null | undefined,
 ): string {
   const clean = DOMPurify.sanitize(text || '<p>此内容没有正文。</p>', {
     WHOLE_DOCUMENT: true,
@@ -20,8 +23,18 @@ export function sanitizeHtml(
   const doc = new DOMParser().parseFromString(clean, 'text/html');
   doc.querySelectorAll('a[href],img[src]').forEach((el) => {
     const attr = el.localName === 'a' ? 'href' : 'src';
+    const raw = el.getAttribute(attr)!;
+    const resolved = resolveRelative?.(raw);
+    if (resolved === null) {
+      el.removeAttribute(attr);
+      return;
+    }
+    if (resolved !== undefined) {
+      el.setAttribute(attr, resolved);
+      return;
+    }
     try {
-      const url = new URL(el.getAttribute(attr)!, baseUrl);
+      const url = new URL(raw, baseUrl);
       if (['https:', 'http:'].includes(url.protocol)) el.setAttribute(attr, url.href);
       else el.removeAttribute(attr);
     } catch {

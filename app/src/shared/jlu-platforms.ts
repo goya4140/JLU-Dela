@@ -63,6 +63,13 @@ export interface JluRecordings {
   items: JluRecording[];
   syncedAt: string;
 }
+
+/** 观课时手动导入的课堂课件：entryId 指向工作区里的副本文档。 */
+export interface JluStudyMaterial {
+  entryId: string;
+  name: string;
+  addedAt: string;
+}
 export type JluPlatformResult<T> =
   { ok: true; data: T } | { ok: false; error: string; reason?: 'auth' };
 export interface JluPlatformsApi {
@@ -79,6 +86,14 @@ export interface JluPlatformsApi {
     courseId: string,
     recordingId: string,
   ): Promise<{ noteId: string; sessionId: string }>;
+  /** 本次观课手动导入的课件（副本文档在工作区「课堂课件」目录）。 */
+  studyMaterials(courseId: string, recordingId: string): Promise<JluStudyMaterial[]>;
+  importStudyMaterials(courseId: string, recordingId: string): Promise<JluStudyMaterial[]>;
+  removeStudyMaterial(
+    courseId: string,
+    recordingId: string,
+    entryId: string,
+  ): Promise<JluStudyMaterial[]>;
   openLearning(target?: 'recordings'): Promise<void>;
   openNotice(id: string, channel: string): Promise<void>;
   openAttachment(id: string, channel: string, index: number): Promise<void>;

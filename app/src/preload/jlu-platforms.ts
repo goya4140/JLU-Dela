@@ -13,6 +13,12 @@ export const jluPlatforms = {
     invoke('jlu:study:media', courseId, recordingId),
   studyWorkspace: (courseId: string, recordingId: string) =>
     invoke('jlu:study:workspace', courseId, recordingId),
+  studyMaterials: (courseId: string, recordingId: string) =>
+    invoke('jlu:study:materials', courseId, recordingId),
+  importStudyMaterials: (courseId: string, recordingId: string) =>
+    invoke('jlu:study:materials:import', courseId, recordingId),
+  removeStudyMaterial: (courseId: string, recordingId: string, entryId: string) =>
+    invoke('jlu:study:materials:remove', courseId, recordingId, entryId),
   openLearning: (target?: 'recordings') => invoke('jlu:learning:open', target),
   openNotice: (id: string, channel: string) => invoke('jlu:notice:open', id, channel),
   openAttachment: (id: string, channel: string, index: number) =>

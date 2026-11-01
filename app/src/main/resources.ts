@@ -50,11 +50,11 @@ export async function readResourceContent(
   if (item.kind !== 'file') throw new Error('请选择要读取的文件');
   // 名字已能判定的 PDF/Office 直接交给文档 skill，不碰文件；其余才读内容判定。
   const named = formatByName(item.path ?? item.name);
-  if (named && named !== 'markdown' && named !== 'image')
+  if (named && named !== 'markdown' && named !== 'image' && named !== 'html')
     return { title: item.name, format: 'file' };
   const path = await workspaceFilePath(ref.id);
   const format = localFileFormat(path);
-  if (format !== 'text' && format !== 'markdown' && format !== 'image')
+  if (format !== 'text' && format !== 'markdown' && format !== 'image' && format !== 'html')
     return { title: item.name, format: 'file' };
   const stats = await stat(path);
   // Agent 按 offset 分页读文本，不受编辑上限约束；只挡住整篇进内存会出问题的体量。

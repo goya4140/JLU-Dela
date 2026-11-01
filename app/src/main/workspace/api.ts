@@ -716,7 +716,7 @@ export async function readWorkspaceEntry(id: string): Promise<DocumentContent> {
   const format = localFileFormat(path);
   const stats = statSync(path);
   const version = `${stats.mtimeMs}-${stats.size}`;
-  if (format === 'markdown' || format === 'text') {
+  if (format === 'markdown' || format === 'text' || format === 'html') {
     const read = readLocalText(path, format);
     if (read.kind === 'binary') return { title: item.name, format: 'binary', revision: version };
     return {

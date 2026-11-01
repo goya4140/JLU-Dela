@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { SNIFF_BYTES, extensionOf, fileFormatOf, isTextContent } from './files';
+import { SNIFF_BYTES, extensionOf, fileFormatOf, isTextContent, opensInEditor } from './files';
+import { chatFileKind } from './chat-input';
 
 const utf8 = (text: string) => new TextEncoder().encode(text);
 
@@ -12,6 +13,14 @@ describe('fileFormatOf', () => {
       expect(fileFormatOf(name, utf8('content\n'))).toBe('text');
     expect(fileFormatOf('core', Uint8Array.of(0x7f, 0x45, 0x4c, 0x46, 0, 0))).toBe('binary');
     expect(fileFormatOf('empty', new Uint8Array())).toBe('text');
+  });
+
+  it('HTML 按渲染预览打开，附件仍按文本发送', () => {
+    expect(fileFormatOf('课件/第3讲.html', utf8('<!doctype html>'))).toBe('html');
+    expect(fileFormatOf('index.HTM', utf8('<p>'))).toBe('html');
+    expect(opensInEditor('第3讲.html')).toBe(false);
+    expect(opensInEditor('笔记.md')).toBe(true);
+    expect(chatFileKind('第3讲.html', utf8('<!doctype html>'))).toBe('text');
   });
 
   it('点开头的文件名没有扩展名', () => {

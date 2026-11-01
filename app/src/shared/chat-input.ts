@@ -59,7 +59,8 @@ export function chatFileKind(
 ): 'image' | 'text' | 'document' {
   const format = formatByName(name);
   if (format === 'image' && chatImageMimes.has(imageMimeOf(name) ?? '')) return 'image';
-  if (format === 'markdown') return 'text';
+  // HTML 是可读文本：按文本附件发送，交给模型直接读源码，不走文档解析。
+  if (format === 'markdown' || format === 'html') return 'text';
   if (format && format !== 'image') return 'document';
   return isTextContent(head, truncated) ? 'text' : 'document';
 }

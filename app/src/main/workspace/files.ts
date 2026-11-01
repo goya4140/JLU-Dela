@@ -37,7 +37,7 @@ export function localFileFormat(path: string): FileFormat {
 export type LocalText =
   | {
       kind: 'text';
-      format: 'markdown' | 'text';
+      format: 'markdown' | 'text' | 'html';
       text: string;
       readOnly: boolean;
       truncated: boolean;
@@ -46,7 +46,7 @@ export type LocalText =
 
 /** 读文本文件：编辑上限内整篇可编辑；超出只读头部；超过预览上限不读内容。
  *  Markdown 也要过同一遍嗅探——扩展名对，内容不一定是 UTF-8。 */
-export function readLocalText(path: string, format: 'markdown' | 'text'): LocalText {
+export function readLocalText(path: string, format: 'markdown' | 'text' | 'html'): LocalText {
   const size = statSync(path).size;
   if (size > TEXT_PREVIEW_MAX_BYTES) return { kind: 'binary' };
   const truncated = size > TEXT_EDIT_MAX_BYTES;

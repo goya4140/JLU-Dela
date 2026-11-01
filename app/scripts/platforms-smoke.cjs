@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session } = require('electron');
+const { app, BrowserWindow, dialog, session } = require('electron');
 const { mkdtempSync, mkdirSync, writeFileSync, readFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { dirname, join, resolve } = require('node:path');
@@ -12,6 +12,10 @@ if (root.endsWith('.asar')) {
 const profile = mkdtempSync(join(tmpdir(), 'jlu-platforms-'));
 for (const name of ['userData', 'home', 'documents']) app.setPath(name, profile);
 process.argv.push('--terminal-smoke-test');
+// 课堂课件导入走系统文件对话框：固定返回一份临时课件，键盘外不触碰真实文件。
+const materialPath = join(profile, '示例课件.pptx');
+writeFileSync(materialPath, 'pptx-fixture');
+dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [materialPath] });
 let offline = false;
 app.whenReady().then(() => {
   session.fromPartition('persist:jlu-campus').fetch = async (url, options = {}) => {
@@ -217,6 +221,30 @@ async function run(window) {
     (await js(`window.dela.session.open(${JSON.stringify(tools.sessionId)})`)).messages.length,
     0,
   );
+  // 课堂课件：导入副本文档、交给 AI 讲解、取消登记，工作区文件保留。
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('导入课件')).click()`,
+  );
+  await wait(`document.body.textContent.includes('示例课件.pptx')`);
+  const imported = await js('window.dela.jluPlatforms.studyMaterials("c1","r1")');
+  assert.equal(imported.length, 1);
+  assert.equal(imported[0].name, '示例课件.pptx');
+  assert.equal(
+    await js(`window.dela.workspace.getState().then(s=>s.entries.some(e=>e.name==='课堂课件'))`),
+    true,
+  );
+  await js(`document.querySelector('button[aria-label="让 AI 讲解 示例课件.pptx"]').click()`);
+  await wait(
+    `document.querySelector('[aria-label="发送给助手"]')?.textContent.includes(${JSON.stringify(imported[0].entryId)})`,
+  );
+  await js(`document.querySelector('button[aria-label="移除 示例课件.pptx"]').click()`);
+  await wait(`!document.querySelector('button[aria-label="移除 示例课件.pptx"]')`);
+  assert.deepEqual(await js('window.dela.jluPlatforms.studyMaterials("c1","r1")'), []);
+  assert.equal(
+    await js(`window.dela.workspace.read(${JSON.stringify(imported[0].entryId)}).then(()=>true)`),
+    true,
+  );
+
   for (const width of [600, 900, 1280, 1800]) {
     window.setSize(width, 850);
     await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
@@ -259,6 +287,6 @@ async function run(window) {
   await wait('document.body.textContent.includes("第 2")');
   assert.ok(preferences.every((p) => p.sandbox && p.contextIsolation && !p.preload));
   console.log(
-    'Platforms smoke passed with synthetic data: notices, courses, embedded video, subtitles, AI drafts, saved study notes, cache preservation, isolated sessions and four viewport widths. No live school or model requests.',
+    'Platforms smoke passed with synthetic data: notices, courses, embedded video, subtitles, AI drafts, saved study notes, imported classroom slides, cache preservation, isolated sessions and four viewport widths. No live school or model requests.',
   );
 }

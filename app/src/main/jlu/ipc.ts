@@ -1,8 +1,15 @@
-import { ipcMain } from 'electron';
+import { BrowserWindow, dialog, ipcMain } from 'electron';
 import { z } from 'zod';
 import { checkWorkspaceSender } from '../ipc';
 import { studyMedia } from './study';
+import {
+  importStudyMaterials,
+  removeStudyMaterial,
+  studyMaterialExtensions,
+  studyMaterials,
+} from './study-materials';
 import { studyWorkspace } from './study-workspace';
+import { workspaceEntryIdSchema } from '../../shared/workspace';
 import {
   getLearning,
   getNotice,
@@ -24,6 +31,46 @@ export function registerJluPlatformsIpc(): void {
     checkWorkspaceSender(event);
     return studyWorkspace(courseId, recordingId);
   });
+  ipcMain.handle('jlu:study:materials', (event, courseId: string, recordingId: string) => {
+    checkWorkspaceSender(event);
+    return studyMaterials(
+      z.string().min(1).max(200).parse(courseId),
+      z.string().min(1).max(200).parse(recordingId),
+    );
+  });
+  ipcMain.handle('jlu:study:materials:import', async (event, courseId, recordingId) => {
+    checkWorkspaceSender(event);
+    const parent = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      title: '导入课堂课件',
+      properties: ['openFile', 'multiSelections'] as ['openFile', 'multiSelections'],
+      filters: [{ name: '课件', extensions: studyMaterialExtensions.map((ext) => ext.slice(1)) }],
+    };
+    const picked = await (parent
+      ? dialog.showOpenDialog(parent, options)
+      : dialog.showOpenDialog(options));
+    if (picked.canceled || !picked.filePaths.length)
+      return studyMaterials(
+        z.string().min(1).max(200).parse(courseId),
+        z.string().min(1).max(200).parse(recordingId),
+      );
+    return importStudyMaterials(
+      z.string().min(1).max(200).parse(courseId),
+      z.string().min(1).max(200).parse(recordingId),
+      picked.filePaths,
+    );
+  });
+  ipcMain.handle(
+    'jlu:study:materials:remove',
+    (event, courseId: string, recordingId: string, entryId: string) => {
+      checkWorkspaceSender(event);
+      return removeStudyMaterial(
+        z.string().min(1).max(200).parse(courseId),
+        z.string().min(1).max(200).parse(recordingId),
+        workspaceEntryIdSchema.parse(entryId),
+      );
+    },
+  );
   ipcMain.handle('jlu:study:media', (event, courseId: string, recordingId: string) => {
     checkWorkspaceSender(event);
     return platformResult(() => studyMedia(courseId, recordingId, event.sender));

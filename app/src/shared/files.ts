@@ -4,7 +4,7 @@
 // 纯字符串/字节实现：renderer 也要用，不能引 node:path / Buffer。
 
 export type FileFormat =
-  'markdown' | 'text' | 'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'binary';
+  'markdown' | 'text' | 'html' | 'pdf' | 'image' | 'docx' | 'xlsx' | 'pptx' | 'binary';
 
 /** 编辑上限（与 GitHub 网页端不再渲染的阈值同量级）：再大的文本交给外部编辑器更合适。 */
 export const TEXT_EDIT_MAX_BYTES = 1024 * 1024;
@@ -26,6 +26,9 @@ const imageMime: Record<string, string> = {
 const byExtension: Record<string, FileFormat> = {
   '.md': 'markdown',
   '.markdown': 'markdown',
+  // 静态网页资料按渲染预览打开，源码视图在预览标签内切换。
+  '.html': 'html',
+  '.htm': 'html',
   '.pdf': 'pdf',
   '.docx': 'docx',
   '.xlsx': 'xlsx',

@@ -63,6 +63,10 @@ pdf += `xref\n0 8\n0000000000 65535 f \n${offsets
   .map((offset) => String(offset).padStart(10, '0') + ' 00000 n ')
   .join('\n')}\ntrailer\n<< /Size 8 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
 writeFileSync(join(coursePath, '网络课件.pdf'), pdf);
+writeFileSync(
+  join(coursePath, '课程网页.html'),
+  '<!doctype html><html><head><meta charset="utf-8"><title>课程网页</title></head><body><h1>网页渲染成功</h1><p>章节小结</p></body></html>',
+);
 dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [library] });
 app.once('browser-window-created', (_event, window) => {
   window.webContents.setBackgroundThrottling(false);
@@ -169,6 +173,25 @@ async function run(window) {
     `Array.from(document.querySelectorAll('button')).find(b=>b.querySelector('p')?.textContent==='网络课件.pdf').click()`,
   );
   await wait(`!!document.querySelector('canvas')`);
+  // HTML 资料默认渲染，可切换到源码再切回。
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.querySelector('p')?.textContent==='课程网页.html').click()`,
+  );
+  await wait(`!!document.querySelector('iframe')`);
+  await wait(
+    `document.querySelector('iframe')?.contentDocument?.body?.textContent?.includes('网页渲染成功')`,
+  );
+  await click('源码');
+  await wait(`!document.querySelector('iframe') && !!document.querySelector('.cm-content')`);
+  await wait(`document.body.textContent.includes('网页渲染成功')`);
+  await click('渲染预览');
+  await wait(
+    `document.querySelector('iframe')?.contentDocument?.body?.textContent?.includes('网页渲染成功')`,
+  );
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.querySelector('p')?.textContent==='网络课件.pdf').click()`,
+  );
+  await wait(`!!document.querySelector('canvas')`);
   await click('提取 PDF 正文');
   await wait(`document.body.textContent.includes('已提取 2 页正文')`);
   const indexed = await js(
@@ -249,6 +272,6 @@ async function run(window) {
   assert.equal(readFileSync(note, 'utf8'), noteContent);
   assert.equal(BrowserWindow.getAllWindows().length, 1);
   console.log(
-    'Knowledge smoke passed: in-place folders, folder browsing with files, course scope, Markdown search, real PDF text extraction and page jump, unsent AI drafts, new notes, course removal and folder detaching without touching source files, and four viewport widths. Synthetic data only; no school or model requests.',
+    'Knowledge smoke passed: in-place folders, folder browsing with files, HTML render/source toggle, course scope, Markdown search, real PDF text extraction and page jump, unsent AI drafts, new notes, course removal and folder detaching without touching source files, and four viewport widths. Synthetic data only; no school or model requests.',
   );
 }
