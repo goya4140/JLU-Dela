@@ -302,18 +302,20 @@ export function WorkbenchShell({ home = false }: { home?: boolean }) {
         content.format === 'pptx' && entry?.kind === 'file'
           ? { type: 'workspace', id: entry.id }
           : undefined;
-      const local = entry?.kind === 'file';
+      // 按绝对路径打开的本地文件（知识库浏览、搜索结果）没有条目对象，但条目 id 就是路径，
+      // 相对资源仍能按同一套目录约束解析，HTML 与 Markdown 的图片才不会静默缺失。
+      const pathId = !entry && /^(?:[a-z]:[\\/]|\/)/i.test(entryId ?? '') ? entryId : null;
+      const localId = entry?.kind === 'file' ? entry.id : pathId;
       return {
         content,
         shuiyuanTopicId: sourceId?.startsWith('shuiyuan-topic:')
           ? Number(sourceId.slice('shuiyuan-topic:'.length))
           : undefined,
         officeRef,
-        watchesDisk: local,
-        resolveImage:
-          entry && local
-            ? (src) => (isRelativeAssetPath(src) ? noteAssetUrl(entry.id, src) : src)
-            : undefined,
+        watchesDisk: localId !== null,
+        resolveImage: localId
+          ? (src) => (isRelativeAssetPath(src) ? noteAssetUrl(localId, src) : src)
+          : undefined,
       };
     };
     return {

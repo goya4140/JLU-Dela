@@ -65,8 +65,9 @@ pdf += `xref\n0 8\n0000000000 65535 f \n${offsets
 writeFileSync(join(coursePath, '网络课件.pdf'), pdf);
 writeFileSync(
   join(coursePath, '课程网页.html'),
-  '<!doctype html><html><head><meta charset="utf-8"><title>课程网页</title></head><body><h1>网页渲染成功</h1><p>章节小结</p></body></html>',
+  '<!doctype html><html><head><meta charset="utf-8"><title>课程网页</title></head><body><h1>网页渲染成功</h1><p>章节小结</p><img src="示意图.png"></body></html>',
 );
+writeFileSync(join(coursePath, '示意图.png'), Buffer.from('89504e470d0a1a0a', 'hex'));
 dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [library] });
 app.once('browser-window-created', (_event, window) => {
   window.webContents.setBackgroundThrottling(false);
@@ -127,6 +128,29 @@ async function run(window) {
       `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.includes('设为课程'))`,
     ),
     true,
+  );
+  // 浏览模式点击文件应直接在工作台打开；HTML 按渲染视图，相对图片走本机资源协议。
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('课程网页.html')).click()`,
+  );
+  await wait(
+    `document.querySelector('iframe')?.contentDocument?.body?.textContent?.includes('网页渲染成功')`,
+  );
+  await wait(
+    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='渲染预览')`,
+  );
+  assert.equal(
+    await js(
+      `document.querySelector('iframe')?.contentDocument?.querySelector('img')?.getAttribute('src')?.startsWith('dela-resource://note-asset/')`,
+    ),
+    true,
+  );
+  await js(
+    `Array.from(document.querySelectorAll('#main-nav button')).find(b=>b.textContent.trim()==='知识库').click()`,
+  );
+  await wait('document.body.textContent.includes("我的课程")');
+  await wait(
+    `Array.from(document.querySelectorAll('button')).some(b=>b.querySelector('h3')?.textContent==='计算机网络')`,
   );
   if (!root.endsWith('.asar')) {
     // 窗口未重绘时 capturePage 会拿到空白画面，先触发一次尺寸变化再截图。
