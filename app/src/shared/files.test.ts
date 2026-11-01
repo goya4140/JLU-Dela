@@ -7,6 +7,8 @@ describe('fileFormatOf', () => {
   it('专用查看器只看扩展名；其余按内容判定，不依赖扩展名白名单', () => {
     expect(fileFormatOf('a/README.MD', Uint8Array.of(0))).toBe('markdown');
     expect(fileFormatOf('课件.pdf', utf8('x'))).toBe('pdf');
+    expect(fileFormatOf('课程.HTML', utf8('<h1>课程</h1>'))).toBe('html');
+    expect(fileFormatOf('旧课件.PPT', Uint8Array.of(0xd0, 0xcf, 0x11, 0xe0))).toBe('pptx');
     expect(fileFormatOf('logo.svg', utf8('<svg/>'))).toBe('image');
     for (const name of ['.env', '.gitignore', 'Makefile', 'run.log', 'main.zig', 'x.unknown'])
       expect(fileFormatOf(name, utf8('content\n'))).toBe('text');

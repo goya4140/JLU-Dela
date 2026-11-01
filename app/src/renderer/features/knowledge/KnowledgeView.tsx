@@ -14,6 +14,7 @@ import type {
   KnowledgeCourse,
   KnowledgeFile,
   KnowledgeHit,
+  KnowledgeDirectoryEntry,
 } from '../../../shared/knowledge';
 import { isRelativeAssetPath, noteAssetUrl } from '../../../shared/note-files';
 import { Button } from '../../components/ui/button';
@@ -40,7 +41,7 @@ function KnowledgeLibrary() {
   const [state, setState] = useState<KnowledgeState>({ roots: [], courses: [] });
   const [rootId, setRootId] = useState('');
   const [folder, setFolder] = useState('');
-  const [folders, setFolders] = useState<string[]>([]);
+  const [entries, setEntries] = useState<KnowledgeDirectoryEntry[]>([]);
   const [course, setCourse] = useState<KnowledgeCourse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -65,13 +66,13 @@ function KnowledgeLibrary() {
   useEffect(() => {
     if (!rootId) return;
     let active = true;
-    setFolders([]);
+    setEntries([]);
     setError(null);
     setBusy(true);
     void api
-      .folders(rootId, folder)
+      .browse(rootId, folder)
       .then((rows) => {
-        if (active) setFolders(rows);
+        if (active) setEntries(rows);
       })
       .catch((cause) => {
         if (active) setError(errorText(cause));
@@ -211,15 +212,30 @@ function KnowledgeLibrary() {
               正在读取…
             </p>
           )}
+          <p className="mb-3 text-xs text-ink-3">
+            当前目录 {entries.length} 项 · 文件可直接打开，无需先设为课程
+          </p>
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {folders.map((name) => (
+            {entries.map((entry) => (
               <button
-                key={name}
-                onClick={() => setFolder([folder, name].filter(Boolean).join('/'))}
+                key={entry.path}
+                disabled={entry.kind === 'link'}
+                onClick={() =>
+                  entry.kind === 'folder'
+                    ? setFolder(entry.path)
+                    : useNavigationStore.getState().openDocument([root.path, entry.path].join('/'))
+                }
                 className="flex min-w-0 items-center gap-3 rounded-control p-3 text-left text-13 text-ink hover:bg-hover"
               >
-                <Folder className="size-4 shrink-0 text-ink-3" />
-                <span className="break-words">{name}</span>
+                {entry.kind === 'folder' ? (
+                  <Folder className="size-4 shrink-0 text-ink-3" />
+                ) : (
+                  <FileText className="size-4 shrink-0 text-ink-3" />
+                )}
+                <span className="break-words">
+                  {entry.name}
+                  {entry.kind === 'link' ? '（符号链接，暂不展开）' : ''}
+                </span>
               </button>
             ))}
           </div>
@@ -243,6 +259,9 @@ function CourseLibrary({
     null,
   );
   const [query, setQuery] = useState('');
+  const [directory, setDirectory] = useState('');
+  const [entries, setEntries] = useState<KnowledgeDirectoryEntry[]>([]);
+  const [directoryVersion, setDirectoryVersion] = useState(0);
   const [hits, setHits] = useState<KnowledgeHit[] | null>(null);
   const [searched, setSearched] = useState('');
   const [busy, setBusy] = useState(false);
@@ -250,6 +269,25 @@ function CourseLibrary({
   const [notice, setNotice] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const searchVersion = useRef(0);
+  useEffect(() => {
+    let active = true;
+    setError(null);
+    setEntries([]);
+    void api
+      .browse(
+        root.id,
+        [course.relativePath.replaceAll('\\', '/'), directory].filter(Boolean).join('/'),
+      )
+      .then((rows) => {
+        if (active) setEntries(rows);
+      })
+      .catch((cause) => {
+        if (active) setError(errorText(cause));
+      });
+    return () => {
+      active = false;
+    };
+  }, [api, root.id, course.relativePath, directory, directoryVersion]);
   const absolute = (path: string) =>
     [root.path, course.relativePath, path].filter(Boolean).join('/');
   useEffect(() => {
@@ -295,6 +333,7 @@ function CourseLibrary({
     try {
       const rows = await api.files(course.id);
       setFiles(rows);
+      setDirectoryVersion((version) => version + 1);
       setHits(null);
       setSearched('');
       setSelected((previous) => {
@@ -401,8 +440,21 @@ function CourseLibrary({
   }
   const pdfCount = files.filter((file) => /\.pdf$/i.test(file.path)).length;
   const indexed = files.filter((file) => file.indexed).length;
+  const prefix = directory ? directory + '/' : '';
+  const visibleFiles: KnowledgeFile[] = entries
+    .filter((entry) => entry.kind === 'file')
+    .map((entry) => {
+      const path = prefix + entry.name;
+      return {
+        path,
+        name: entry.name,
+        bytes: entry.bytes,
+        revision: entry.revision,
+        indexed: files.find((file) => file.path.replaceAll('\\', '/') === path)?.indexed ?? false,
+      };
+    });
   const displayed: KnowledgeHit[] =
-    hits ?? files.map((file) => ({ path: file.path, title: file.name, excerpt: '' }));
+    hits ?? visibleFiles.map((file) => ({ path: file.path, title: file.name, excerpt: '' }));
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface">
       <header className="flex shrink-0 flex-wrap items-center gap-3 px-4 py-3">
@@ -460,10 +512,12 @@ function CourseLibrary({
             </Button>
           </form>
           <p className="py-2 text-xs text-ink-3">
-            {files.length} 份资料 · {indexed}/{pdfCount} 份 PDF 已检查正文
+            当前目录 {entries.length} 项 · {files.length} 份资料可搜索 · {indexed}/{pdfCount} 份 PDF
+            已检查正文
           </p>
           <p className="pb-3 text-xs text-ink-3">
-            Markdown / TXT 正文（≤ 2 MB）实时检索；PDF 需先提取，Office 文件暂按名称搜索。
+            目录按原文件夹展示，含空目录；搜索跳过隐藏项和依赖目录。Markdown / TXT（≤ 2
+            MB）实时检索；PDF 需先提取正文。
           </p>
           {searched && (
             <div className="mb-2 flex items-center justify-between gap-2 text-xs text-ink-3">
@@ -488,13 +542,53 @@ function CourseLibrary({
               正在读取…
             </p>
           )}
+          {!hits && (
+            <nav
+              aria-label="本地课程资料目录"
+              className="mb-2 flex flex-wrap items-center gap-1 text-xs text-ink-3"
+            >
+              <Button size="sm" variant="ghost" onClick={() => setDirectory('')}>
+                课程根目录
+              </Button>
+              {directory
+                .split('/')
+                .filter(Boolean)
+                .map((part, index, parts) => (
+                  <Button
+                    key={index}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setDirectory(parts.slice(0, index + 1).join('/'))}
+                  >
+                    {part}
+                  </Button>
+                ))}
+            </nav>
+          )}
           <div className="max-h-64 overflow-y-auto lg:max-h-none lg:flex-1">
+            {!hits &&
+              entries
+                .filter((entry) => entry.kind !== 'file')
+                .map((entry) => (
+                  <button
+                    key={entry.path}
+                    disabled={entry.kind === 'link'}
+                    className="mb-1 flex w-full min-w-0 items-center gap-2 rounded-control p-3 text-left text-13 hover:bg-hover"
+                    onClick={() => setDirectory(prefix + entry.name)}
+                  >
+                    <Folder className="size-4 shrink-0" />
+                    <span className="break-words">
+                      {entry.name}
+                      {entry.kind === 'link' ? '（符号链接，暂不展开）' : ''}
+                    </span>
+                  </button>
+                ))}
             {displayed.map((hit, index) => (
               <button
                 disabled={busy}
                 key={hit.path + ':' + index}
                 onClick={() => {
-                  const file = files.find((row) => row.path === hit.path);
+                  const file = (hits ? files : visibleFiles).find((row) => row.path === hit.path);
                   if (file) {
                     setSelected({ file, hit: hits ? hit : undefined });
                     setNotice('');

@@ -10,6 +10,7 @@ import { sanitizeHtml } from '../../lib/sanitize-html';
 import { showToast } from '../../app/toasts';
 import { errorText } from '../../workspace/store';
 import type { TabId } from '../../../shared/layout';
+import { LocalHtmlPreview } from './LocalHtmlPreview';
 import { CodeViewer } from './CodeViewer';
 import { useContentLoader, type LoadedDocument } from './loader';
 import { OfficeExportBanner, OfficePromptCard } from './OfficePrompt';
@@ -23,6 +24,9 @@ const DocxPreview = lazy(() =>
 );
 const SheetPreview = lazy(() =>
   import('./SheetPreview').then((module) => ({ default: module.SheetPreview })),
+);
+const PptPreview = lazy(() =>
+  import('./PptPreview').then((module) => ({ default: module.PptPreview })),
 );
 
 /** 分流决策（纯函数）：水源来源优先于格式。预览里的文本都是只读的（远端、资料）：
@@ -174,7 +178,16 @@ export function PreviewTab({
         />
       )}
       {/* 白底文档以圆角卡片呈现：暗色模式下避免白色大块与深色界面生硬相接。 */}
-      {branch === 'html' && (
+      {branch === 'html' && content.localHtml && (
+        <LocalHtmlPreview
+          key={content.localHtml.entryId}
+          title={content.title}
+          text={content.text ?? ''}
+          entryId={content.localHtml.entryId}
+          truncated={content.truncated}
+        />
+      )}
+      {branch === 'html' && !content.localHtml && (
         <div className="min-h-0 flex-1 overflow-hidden rounded-card border border-line">
           <iframe
             title={content.title}
@@ -247,6 +260,15 @@ export function PreviewTab({
                 url={exported.previewUrl}
                 scroll={scroll}
                 onScroll={onScroll}
+              />
+            </Suspense>
+          ) : content.previewUrl && window.dela?.platform !== 'win32' ? (
+            <Suspense fallback={<p className="p-4 text-13 text-ink-3">正在加载 PPT 阅读器…</p>}>
+              <PptPreview
+                key={content.previewUrl}
+                url={content.previewUrl}
+                title={content.title}
+                officeRef={doc.officeRef}
               />
             </Suspense>
           ) : (

@@ -6,6 +6,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   writeFileSync,
   renameSync,
@@ -150,6 +151,31 @@ export function resolveWorkspaceAsset(id: string, ref: string): { path: string; 
   const mime = imageMimeOf(path);
   if (!mime) throw new Error('不支持的图片格式');
   if (!statSync(path).isFile()) throw new Error('图片文件不存在');
+  return { path, mime };
+}
+
+export function resolveWorkspaceHtmlAsset(id: string, ref: string): { path: string; mime: string } {
+  const item = entry(workspaceEntryIdSchema.parse(id));
+  if (item.kind !== 'file' || localFileFormat(entryLocalPath(item)) !== 'html')
+    throw new Error('请选择 HTML 文档');
+  const base = realpathSync(dirname(entryLocalPath(item))),
+    path = realpathSync(resolve(base, ref));
+  const suffix = relative(base, path);
+  if (!suffix || isAbsolute(suffix) || suffix === '..' || suffix.startsWith('..' + sep))
+    throw new Error('资源路径超出 HTML 文档目录');
+  const extension = path.slice(path.lastIndexOf('.')).toLowerCase();
+  const mime =
+    imageMimeOf(path) ??
+    (
+      {
+        '.css': 'text/css; charset=utf-8',
+        '.woff': 'font/woff',
+        '.woff2': 'font/woff2',
+        '.ttf': 'font/ttf',
+        '.otf': 'font/otf',
+      } as Record<string, string>
+    )[extension];
+  if (!mime || !statSync(path).isFile()) throw new Error('不支持的 HTML 资源');
   return { path, mime };
 }
 
@@ -716,6 +742,19 @@ export async function readWorkspaceEntry(id: string): Promise<DocumentContent> {
   const format = localFileFormat(path);
   const stats = statSync(path);
   const version = `${stats.mtimeMs}-${stats.size}`;
+  if (format === 'html') {
+    const read = readLocalText(path, 'text');
+    if (read.kind === 'binary') return { title: item.name, format: 'binary', revision: version };
+    return {
+      title: item.name,
+      format: 'html',
+      text: read.text,
+      readOnly: true,
+      truncated: read.truncated || undefined,
+      localHtml: { entryId: id },
+      revision: version,
+    };
+  }
   if (format === 'markdown' || format === 'text') {
     const read = readLocalText(path, format);
     if (read.kind === 'binary') return { title: item.name, format: 'binary', revision: version };
@@ -741,7 +780,9 @@ export async function readWorkspaceEntry(id: string): Promise<DocumentContent> {
       title: item.name,
       format,
       previewUrl,
-      mime: officeZipMime[office],
+      mime: path.toLowerCase().endsWith('.ppt')
+        ? 'application/vnd.ms-powerpoint'
+        : officeZipMime[office],
       revision: version,
       office: exported ? { export: exported } : undefined,
     };

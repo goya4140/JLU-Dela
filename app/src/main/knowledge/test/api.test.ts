@@ -24,6 +24,7 @@ import {
   attachKnowledge,
   enrollCourse,
   knowledgeFolders,
+  browseKnowledge,
   knowledgeFiles,
   searchKnowledge,
   indexKnowledgePdf,
@@ -95,4 +96,30 @@ it('writes a new Markdown note in its course and never overwrites an existing no
   expect(path).toBe(join(root, '学期', '课程', '笔记', '学习笔记.md'));
   expect(await knowledgeNote(row.id, '另一份笔记')).not.toBe(path);
   expect(readFileSync(path, 'utf8')).toContain('引用');
+});
+
+it('browses root files, empty folders, hidden study notes and dependency folders without flattening', async () => {
+  await course();
+  writeFileSync(join(root, '培养方案.xmind'), 'map');
+  writeFileSync(join(root, '.学习记录.md'), 'note');
+  writeFileSync(join(root, '.DS_Store'), 'hidden');
+  mkdirSync(join(root, '空目录'));
+  mkdirSync(join(root, 'node_modules'));
+  const entries = await browseKnowledge(projectId, '');
+  expect(entries).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        name: '培养方案.xmind',
+        path: '培养方案.xmind',
+        kind: 'file',
+        bytes: 3,
+      }),
+      expect.objectContaining({ name: '.学习记录.md', kind: 'file' }),
+      expect.objectContaining({ name: '空目录', kind: 'folder' }),
+      expect.objectContaining({ name: 'node_modules', kind: 'folder' }),
+    ]),
+  );
+  expect(entries.some((entry) => entry.name === '.DS_Store')).toBe(false);
+  expect(await browseKnowledge(projectId, '空目录')).toEqual([]);
+  await expect(browseKnowledge(projectId, '..')).rejects.toThrow('范围');
 });

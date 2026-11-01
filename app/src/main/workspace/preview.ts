@@ -10,7 +10,12 @@ import { handleJluMediaRequest } from '../jlu/study';
 import { remoteById, targetOf, withinRemoteRoot } from '../remotes/api';
 import { readRemoteRange, statRemoteFile } from '../remotes/operations';
 import { remoteDocumentMime } from '../remotes/documents';
-import { projectLocation, resolveWorkspaceAsset, workspacePreviewPath } from './api';
+import {
+  projectLocation,
+  resolveWorkspaceAsset,
+  resolveWorkspaceHtmlAsset,
+  workspacePreviewPath,
+} from './api';
 
 const previewScheme = 'dela-resource';
 
@@ -34,6 +39,7 @@ const previewContentType: Record<string, string> = {
   '.docx': officeZipMime.docx,
   '.xlsx': officeZipMime.xlsx,
   '.pptx': officeZipMime.pptx,
+  '.ppt': 'application/vnd.ms-powerpoint',
 };
 
 /** Range 请求的响应头与区间：本地文件与远端文件共用一份，416 直接返回 Response。 */
@@ -168,6 +174,15 @@ export function registerPreviewProtocol(): void {
         const path = url.searchParams.get('path');
         if (!projectId || !path) throw new Error('无效的远端文档地址');
         return await remoteFileResponse(projectId, path, request);
+      }
+      if (url.hostname === 'html-asset') {
+        const [encodedId, ...parts] = url.pathname.slice(1).split('/');
+        const id = decodeURIComponent(encodedId ?? ''),
+          ref = parts.map(decodeURIComponent).join('/');
+        const { path, mime } = resolveWorkspaceHtmlAsset(id, ref);
+        const response = await fileResponse(path, request);
+        response.headers.set('content-type', mime);
+        return response;
       }
       // 笔记/导入文档的相对图片：dela-resource://note-asset/<ref>?id=<条目ID>。
       // 协议只是显示通道；解析按条目目录约束，不向 renderer 开放任意磁盘读取。

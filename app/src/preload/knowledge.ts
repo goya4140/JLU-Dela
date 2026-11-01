@@ -3,6 +3,7 @@ import type { KnowledgeApi } from '../shared/knowledge';
 export const knowledge = {
   state: () => invoke('knowledge:state'),
   attach: () => invoke('knowledge:attach'),
+  browse: (rootId, path) => invoke('knowledge:browse', rootId, path),
   folders: (rootId, path) => invoke('knowledge:folders', rootId, path),
   enroll: (rootId, path) => invoke('knowledge:enroll', rootId, path),
   files: (courseId) => invoke('knowledge:files', courseId),

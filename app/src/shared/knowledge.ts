@@ -13,6 +13,9 @@ export interface KnowledgeState {
   roots: KnowledgeRoot[];
   courses: KnowledgeCourse[];
 }
+export type KnowledgeDirectoryEntry = { name: string; path: string } & (
+  { kind: 'folder' | 'link' } | { kind: 'file'; bytes: number; revision: string }
+);
 export interface KnowledgeFile {
   path: string;
   name: string;
@@ -30,6 +33,7 @@ export interface KnowledgeHit {
 export interface KnowledgeApi {
   state(): Promise<KnowledgeState>;
   attach(): Promise<KnowledgeRoot | null>;
+  browse(rootId: string, path: string): Promise<KnowledgeDirectoryEntry[]>;
   folders(rootId: string, path: string): Promise<string[]>;
   enroll(rootId: string, path: string): Promise<KnowledgeCourse>;
   files(courseId: string): Promise<KnowledgeFile[]>;

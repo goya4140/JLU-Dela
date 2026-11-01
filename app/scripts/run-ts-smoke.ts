@@ -11,6 +11,7 @@ interface SmokeConfig {
 }
 
 const smokes: Record<string, SmokeConfig> = {
+  'material-readers-smoke': { external: [], timeout: 120000, minify: false },
   'capture-showcase': { external: [], timeout: 60000, minify: false },
   'document-runtime-smoke': { external: [], timeout: 600000, minify: false },
   'runtime-smoke': {

@@ -7,6 +7,7 @@ import type {
   ChaoxingWorks,
   ChaoxingApi,
 } from '../../../shared/chaoxing';
+import type { KnowledgeState } from '../../../shared/knowledge';
 import { chaoxingWorkTime } from '../../../shared/chaoxing-calendar';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -15,8 +16,11 @@ import { DesktopOnlyNotice } from '../../components/ui/desktop-only-notice';
 import { useNavigationStore } from '../../navigation/view';
 import { errorText } from '../../workspace/store';
 
-export type ChaoxingPageApi = Omit<ChaoxingApi, 'importFile' | 'calendar' | 'syncCalendar'> &
-  Partial<Pick<ChaoxingApi, 'importFile'>>;
+export type ChaoxingPageApi = Omit<
+  ChaoxingApi,
+  'importFile' | 'calendar' | 'syncCalendar' | 'bindCourse' | 'linkFile' | 'openFilesPage'
+> &
+  Partial<Pick<ChaoxingApi, 'importFile' | 'bindCourse' | 'linkFile' | 'openFilesPage'>>;
 export function ChaoxingView({ api = window.dela?.chaoxing }: { api?: ChaoxingPageApi } = {}) {
   return api ? (
     <ChaoxingPage api={api} />
@@ -39,6 +43,22 @@ function ChaoxingPage({ api }: { api: ChaoxingPageApi }) {
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [knowledge, setKnowledge] = useState<KnowledgeState>({ roots: [], courses: [] });
+  useEffect(() => {
+    let active = true;
+    if (course && api.bindCourse && window.dela?.knowledge)
+      void window.dela.knowledge
+        .state()
+        .then((value) => {
+          if (active) setKnowledge(value);
+        })
+        .catch(() => {
+          if (active) setError('无法读取本地课程，请稍后重试');
+        });
+    return () => {
+      active = false;
+    };
+  }, [course?.id, api]);
   useEffect(() => {
     let active = true;
     void api
@@ -102,11 +122,46 @@ function ChaoxingPage({ api }: { api: ChaoxingPageApi }) {
     setError(null);
     try {
       const file = await api.importFile(course.id, path.at(-1)?.id ?? '', fileId);
+      setFiles(await api.files(course.id, path.at(-1)?.id));
       useNavigationStore.getState().openDocument(file.id);
     } catch (cause) {
       setError(errorText(cause));
     } finally {
       setBusy(false);
+    }
+  }
+  async function bindCourse(value: string) {
+    if (!course || !api.bindCourse) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.bindCourse(course.id, value || null);
+      setFiles(await api.files(course.id, path.at(-1)?.id));
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function linkFile(fileId: string) {
+    if (!course || !api.linkFile) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.linkFile(course.id, path.at(-1)?.id ?? '', fileId);
+      setFiles(await api.files(course.id, path.at(-1)?.id));
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function openFilesPage() {
+    if (!course || !api.openFilesPage) return;
+    try {
+      await api.openFilesPage(course.id, path.at(-1)?.id);
+    } catch (cause) {
+      setError(errorText(cause));
     }
   }
   const filtered =
@@ -234,6 +289,52 @@ function ChaoxingPage({ api }: { api: ChaoxingPageApi }) {
             </div>
             {tab === '资料' ? (
               <>
+                {api.bindCourse && (
+                  <section
+                    aria-label="学习通关联本地课程"
+                    className="grid gap-2 rounded-control bg-field p-3"
+                  >
+                    <label className="grid gap-2 text-13 text-ink-2">
+                      关联本地课程
+                      <select
+                        aria-label="关联本地课程"
+                        className="min-w-0 max-w-full rounded-control bg-surface px-3 py-2 text-13 text-ink"
+                        disabled={busy}
+                        value={files?.localCourse?.knowledgeCourseId ?? ''}
+                        onChange={(event) => void bindCourse(event.target.value)}
+                      >
+                        <option value="">未关联 · 导入到学习通资料</option>
+                        {knowledge.courses.map((row) => (
+                          <option key={row.id} value={row.id}>
+                            {row.name} · {row.relativePath || '根目录'}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="break-all text-xs text-ink-3">
+                      {files?.localCourse
+                        ? `导入位置：${files.localCourse.path}，保留线上子目录。已有文件不会自动移动或覆盖。`
+                        : '在知识库把本地文件夹设为课程后，可在这里关联；已下载的资料可以逐项选择本地文件建立对应。'}
+                    </p>
+                  </section>
+                )}
+                <div className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
+                  <span>
+                    当前目录{' '}
+                    {files?.items.filter((row) => row.type !== 'tch-courseware').length ?? 0} 项 ·
+                    按需读取子目录
+                  </span>
+                  {api.openFilesPage && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => void openFilesPage()}
+                    >
+                      打开平台资料页
+                    </Button>
+                  )}
+                </div>
                 <nav
                   aria-label="学习通资料目录"
                   className="flex flex-wrap items-center gap-1 text-xs text-ink-3"
@@ -288,20 +389,75 @@ function ChaoxingPage({ api }: { api: ChaoxingPageApi }) {
                           : [row.size, row.creator, row.date].filter(Boolean).join(' · ')}
                       </p>
                     </div>
-                    {row.type !== 'afolder' && row.type !== 'tch-courseware' && (
+                    {row.type === 'tch-courseware' && api.openFilesPage && (
                       <Button
                         size="sm"
                         variant="ghost"
-                        disabled={busy || !row.downloadable || !api.importFile}
-                        onClick={() => void importFile(row.id)}
+                        disabled={busy}
+                        onClick={() => void openFilesPage()}
                       >
-                        <Download className="size-3.5" />
-                        {!api.importFile
-                          ? '在桌面端导入'
-                          : row.downloadable
-                            ? '导入并打开'
-                            : '未开放下载'}
+                        在平台查看
                       </Button>
+                    )}
+                    {row.type !== 'afolder' && row.type !== 'tch-courseware' && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {row.local && (
+                          <div className="grid gap-1 text-xs text-ink-3">
+                            <span>
+                              {row.local.status === 'missing'
+                                ? '本地文件已移动或删除'
+                                : row.local.status === 'remote-changed'
+                                  ? '线上资料信息已更新'
+                                  : row.local.status === 'local-changed'
+                                    ? '本地文件已修改'
+                                    : row.local.origin === 'linked'
+                                      ? '已关联本地文件（未比对正文）'
+                                      : '已导入本机'}
+                            </span>
+                            <span className="max-w-xs break-all">{row.local.path}</span>
+                          </div>
+                        )}
+                        {row.local && row.local.status !== 'missing' && api.importFile && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() =>
+                              useNavigationStore.getState().openDocument(row.local!.path)
+                            }
+                          >
+                            打开本地文件
+                          </Button>
+                        )}
+                        {api.linkFile && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy || !files?.localCourse}
+                            onClick={() => void linkFile(row.id)}
+                          >
+                            关联本地文件
+                          </Button>
+                        )}
+                        {(!row.local || row.local.status !== 'ready' || !api.importFile) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy || !row.downloadable || !api.importFile}
+                            onClick={() => void importFile(row.id)}
+                          >
+                            <Download className="size-3.5" />
+                            {!api.importFile
+                              ? '在桌面端导入'
+                              : row.downloadable
+                                ? row.local?.status === 'remote-changed' ||
+                                  row.local?.status === 'local-changed'
+                                  ? '导入新版'
+                                  : '导入并打开'
+                                : '未开放下载'}
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -310,7 +466,7 @@ function ChaoxingPage({ api }: { api: ChaoxingPageApi }) {
                 )}
                 <p className="text-xs leading-relaxed text-ink-3">
                   {api.importFile
-                    ? '按需读取当前目录。导入的文件保存在本机「学习通资料」，可在资料工作台阅读和引用。'
+                    ? '目录来自本次读取的页面；资料不全时可打开平台资料页核对。导入位置以课程关联设置为准，重复导入会打开已关联文件。'
                     : '资料下载与导入请使用本机 Dela。'}
                 </p>
               </>

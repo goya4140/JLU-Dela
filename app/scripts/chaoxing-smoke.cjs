@@ -146,12 +146,14 @@ async function run(window) {
   assert.ok(importedFolder);
   const courseFolder = (
     await js(`window.dela.workspace.listLocalDirectory(${JSON.stringify(importedFolder.id)})`)
-  ).find((entry) => entry.name === '示例课程');
+  ).find((entry) => entry.name === '示例课程 (1_2)');
   assert.ok(courseFolder);
   assert.ok(
-    (await js(`window.dela.workspace.listLocalDirectory(${JSON.stringify(courseFolder.id)})`)).some(
-      (entry) => entry.id === imported.id,
-    ),
+    (
+      await js(
+        `window.dela.workspace.listLocalDirectory(${JSON.stringify(join(courseFolder.path, '示例资料夹'))})`,
+      )
+    ).some((entry) => entry.id === imported.id),
   );
   await js(
     `Array.from(document.querySelectorAll('#main-nav button')).find(b=>b.textContent.trim()==='学习通').click()`,
@@ -209,10 +211,10 @@ async function run(window) {
     `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='示例资料夹').click()`,
   );
   await wait(
-    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.includes('导入并打开')&&!b.disabled)`,
+    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.includes('打开本地文件')&&!b.disabled)`,
   );
   await js(
-    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('导入并打开')).click()`,
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('打开本地文件')).click()`,
   );
   await wait(
     `!!document.querySelector('canvas') && document.body.textContent.includes('示例课件')`,
@@ -382,6 +384,51 @@ async function run(window) {
   console.log('Native beforeunload confirmation passed');
   dialog.showMessageBoxSync = originalDialog;
   assert.equal(remote.isDestroyed(), true);
+  const localLibrary = join(profile, '本地知识库');
+  const localCourse = join(localLibrary, '本学期课程');
+  mkdirSync(localCourse, { recursive: true });
+  const existing = join(localCourse, '已下载的课件.pdf');
+  writeFileSync(existing, pdf);
+  dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [localLibrary] });
+  const knowledge = await js('window.dela.knowledge.attach()');
+  const linkedCourse = await js(
+    `window.dela.knowledge.enroll(${JSON.stringify(knowledge.id)},'本学期课程')`,
+  );
+  await js(
+    `Array.from(document.querySelectorAll('#main-nav button')).find(b=>b.textContent.trim()==='学习通').click()`,
+  );
+  await wait(
+    `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.includes('示例课程'))`,
+  );
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('示例课程')).click()`,
+  );
+  await wait(
+    `document.querySelector('select[aria-label="关联本地课程"]')?.options.length===2 && !document.querySelector('fieldset').disabled`,
+  );
+  await js(
+    `(()=>{const select=document.querySelector('select[aria-label="关联本地课程"]');select.value=${JSON.stringify(linkedCourse.id)};select.dispatchEvent(new Event('change',{bubbles:true}));})()`,
+  );
+  await wait(
+    `document.body.textContent.includes(${JSON.stringify(localCourse)}) && !document.querySelector('fieldset').disabled`,
+  );
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='示例资料夹').click()`,
+  );
+  await wait(
+    `document.body.textContent.includes('示例课件.pdf') && !document.querySelector('fieldset').disabled`,
+  );
+  dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [existing] });
+  await js(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='关联本地文件').click()`,
+  );
+  await wait(`document.body.textContent.includes('已关联本地文件')`);
+  const linked = await js('window.dela.chaoxing.files("1:2","f1")');
+  assert.equal(linked.items[0].local.origin, 'linked');
+  assert.equal(linked.items[0].local.status, 'ready');
+  const reopened = await js('window.dela.chaoxing.importFile("1:2","f1","d1")');
+  assert.equal(readFileSync(reopened.id, 'utf8'), pdf);
+  assert.equal(downloadRedirects, 1);
   const latestWorks = await js('window.dela.chaoxing.works("1:2")');
   offline = true;
   const failed = await js('window.dela.chaoxing.syncWorks("1:2")');
@@ -394,8 +441,8 @@ async function run(window) {
     ),
   );
   assert.equal(BrowserWindow.getAllWindows().length, 1);
-  assert.ok(downloadRedirects >= 2);
+  assert.equal(downloadRedirects, 1);
   console.log(
-    'Chaoxing smoke passed: isolated session, course redirects, nested folders, assignment metadata, native download redirects, local PDF import, failure cache retention, native workbench tabs, in-tab login recovery, exact deadlines, retained forms, overlay hiding, split AI drafts, beforeunload cancellation and four viewport widths. Synthetic data only; no school or model requests.',
+    'Chaoxing smoke passed: isolated session, course redirects, nested folders, assignment metadata, native download redirects, local PDF import, course and file associations without duplicate downloads, failure cache retention, native workbench tabs, in-tab login recovery, exact deadlines, retained forms, overlay hiding, split AI drafts, beforeunload cancellation and four viewport widths. Synthetic data only; no school or model requests.',
   );
 }

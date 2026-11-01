@@ -11,7 +11,10 @@ import type {
   KnowledgeCourse,
   KnowledgeFile,
   KnowledgeHit,
+  KnowledgeDirectoryEntry,
 } from '../../shared/knowledge';
+
+import { hiddenWorkspaceNames } from '../../shared/workspace';
 
 const excluded = new Set([
   'node_modules',
@@ -62,6 +65,36 @@ function courseById(id: string) {
 export async function courseDirectory(id: string) {
   const course = courseById(id);
   return inside(rootById(course.rootId).path, course.relativePath);
+}
+export async function browseKnowledge(
+  rootId: string,
+  path: string,
+): Promise<KnowledgeDirectoryEntry[]> {
+  const root = rootById(rootId);
+  const directory = await inside(root.path, path);
+  return (
+    await Promise.all(
+      (await readdir(directory, { withFileTypes: true }))
+        .filter((row) => !hiddenWorkspaceNames.has(row.name))
+        .map(async (row): Promise<KnowledgeDirectoryEntry> => {
+          const path = join(directory, row.name);
+          const entry = { name: row.name, path: relative(root.path, path).split(sep).join('/') };
+          if (row.isSymbolicLink()) return { ...entry, kind: 'link' };
+          if (row.isDirectory()) return { ...entry, kind: 'folder' };
+          const info = await stat(path);
+          return {
+            ...entry,
+            kind: 'file',
+            bytes: info.size,
+            revision: `${info.mtimeMs}-${info.size}`,
+          };
+        }),
+    )
+  ).sort(
+    (a, b) =>
+      Number(b.kind === 'folder') - Number(a.kind === 'folder') ||
+      a.name.localeCompare(b.name, 'zh-CN'),
+  );
 }
 export async function knowledgeFolders(rootId: string, path: string) {
   const directory = await inside(rootById(rootId).path, path);
