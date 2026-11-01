@@ -224,10 +224,7 @@ async function run(window) {
   const importedFile = searchResults.find((row) => row.kind === 'course-file');
   assert.ok(importedFile?.target.entryId.includes('学习通资料'));
   assert.ok(!importedFile.target.entryId.startsWith('source:'));
-  const importedDirectory = importedFile.target.entryId.slice(
-    0,
-    importedFile.target.entryId.lastIndexOf('/'),
-  );
+  const importedDirectory = importedFile.target.entryId.replace(/[\\/][^\\/]*$/, '');
   const references = await js(
     `window.dela.workspace.localReferenceFiles(${JSON.stringify(importedDirectory)})`,
   );
