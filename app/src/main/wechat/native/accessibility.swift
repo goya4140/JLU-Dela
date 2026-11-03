@@ -74,11 +74,44 @@ else {
 }
 let app = AXUIElementCreateApplication(wechat.processIdentifier)
 AXUIElementSetMessagingTimeout(app, 2)
+if command == "authorize" {
+  let enhanced: Bool? = attribute(app, "AXEnhancedUserInterface")
+  var settable = DarwinBoolean(false)
+  if enhanced == false,
+    AXUIElementIsAttributeSettable(app, "AXEnhancedUserInterface" as CFString, &settable)
+      == .success,
+    settable.boolValue
+  {
+    _ = AXUIElementSetAttributeValue(app, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
+  }
+}
 let windows: [AXUIElement] = attribute(app, kAXWindowsAttribute) ?? []
 guard let window = windows.first(where: { find($0, "session_list") != nil }),
   let sessions = find(window, "session_list")
 else {
-  respond(["phase": "unavailable", "chats": [], "current": NSNull()])
+  let collapsed =
+    !windows.isEmpty
+    && windows.contains { window in
+      let nodes = children(window)
+      return !nodes.isEmpty
+        && nodes.allSatisfy { node in
+          let subrole: String = attribute(node, kAXSubroleAttribute) ?? ""
+          return [
+            kAXCloseButtonSubrole, kAXFullScreenButtonSubrole, kAXZoomButtonSubrole,
+            kAXMinimizeButtonSubrole,
+          ]
+          .contains(subrole)
+        }
+    }
+  let detail =
+    collapsed
+    ? "系统目前只提供微信的窗口按钮，没有提供会话列表、消息或输入框，Dela 暂时无法读取和回复。"
+    : "未识别到微信的会话列表和输入框，请打开聊天窗口后刷新；若已打开，当前窗口布局尚未适配。"
+  if command == "send" || command == "select" { fail(detail) }
+  respond([
+    "phase": windows.isEmpty ? "unavailable" : "inaccessible", "detail": detail, "chats": [],
+    "current": NSNull(),
+  ])
 }
 let loadedItems = children(sessions).filter { identifier($0).hasPrefix("session_item_") }
 let identifierCounts = Dictionary(grouping: loadedItems, by: identifier)
@@ -96,65 +129,7 @@ if command == "select" {
     fail("此会话当前不在微信列表中，请在原微信中打开后刷新。")
   }
   if target == currentId { respond(["ok": true]) }
-  previousApplication = NSWorkspace.shared.frontmostApplication
-  wechat.activate(options: [])
-  _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-  RunLoop.current.run(until: Date().addingTimeInterval(0.2))
-  guard NSWorkspace.shared.frontmostApplication?.processIdentifier == wechat.processIdentifier,
-    let focused: AXUIElement = attribute(app, kAXFocusedWindowAttribute),
-    CFEqual(focused, window),
-    let position: AXValue = attribute(item, kAXPositionAttribute),
-    let size: AXValue = attribute(item, kAXSizeAttribute),
-    let listPosition: AXValue = attribute(sessions, kAXPositionAttribute),
-    let listSize: AXValue = attribute(sessions, kAXSizeAttribute)
-  else {
-    fail("无法定位原微信会话，请先关闭微信弹窗后重试。")
-  }
-  var origin = CGPoint.zero
-  var dimensions = CGSize.zero
-  var listOrigin = CGPoint.zero
-  var listDimensions = CGSize.zero
-  guard AXValueGetValue(position, .cgPoint, &origin),
-    AXValueGetValue(size, .cgSize, &dimensions),
-    AXValueGetValue(listPosition, .cgPoint, &listOrigin),
-    AXValueGetValue(listSize, .cgSize, &listDimensions)
-  else {
-    fail("无法读取原微信会话的位置。")
-  }
-  let point = CGPoint(x: origin.x + dimensions.width / 2, y: origin.y + dimensions.height / 2)
-  guard CGRect(origin: listOrigin, size: listDimensions).contains(point),
-    let down = CGEvent(
-      mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point,
-      mouseButton: .left),
-    let up = CGEvent(
-      mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: point,
-      mouseButton: .left)
-  else {
-    fail("此会话不在原微信的可见列表中，请滚动原微信后重试。")
-  }
-  let originalPointer = CGEvent(source: nil)?.location
-  down.flags = []
-  up.flags = []
-  down.post(tap: .cghidEventTap)
-  up.post(tap: .cghidEventTap)
-  if let originalPointer,
-    let restorePointer = CGEvent(
-      mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: originalPointer,
-      mouseButton: .left)
-  {
-    restorePointer.post(tap: .cghidEventTap)
-  }
-
-  let deadline = Date().addingTimeInterval(1)
-  let targetName = String(target.dropFirst("session_item_".count))
-  while find(window, "current_chat_name_label").map(text) != targetName && Date() < deadline {
-    RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-  }
-  guard find(window, "current_chat_name_label").map(text) == targetName else {
-    fail("原微信尚未切换到此会话，请在原微信中打开后重试。")
-  }
-
-  respond(["ok": true])
+  fail("请先在原微信中打开此会话，再回到 Dela 刷新。")
 }
 
 if command == "send" {

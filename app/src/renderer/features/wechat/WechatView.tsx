@@ -24,6 +24,7 @@ const phaseLabels = {
   permission: '等待辅助功能授权',
   closed: '微信未运行',
   unavailable: '未找到可读取的微信聊天窗口',
+  inaccessible: '微信未提供可识别的聊天控件',
   online: '已连接原微信',
 };
 
@@ -79,7 +80,7 @@ export function WechatView() {
 
   useEffect(() => {
     const currentLifetime = ++lifetime.current;
-    if (!connected || !api) return;
+    if (!connected || !api || snapshot?.phase === 'inaccessible') return;
     const timer = setInterval(() => {
       if (pending.current || polling.current) return;
       polling.current = true;
@@ -101,7 +102,7 @@ export function WechatView() {
       clearInterval(timer);
       lifetime.current++;
     };
-  }, [api, connected, selectedIds]);
+  }, [api, connected, selectedIds, snapshot?.phase]);
 
   async function perform(task: () => Promise<void>) {
     if (pending.current) return;
@@ -294,7 +295,7 @@ export function WechatView() {
             )}
           </div>
           <p className="px-2 text-xs leading-relaxed text-ink-3">
-            仅列出原微信已加载的会话。切换会话会同步切换原微信。
+            仅列出原微信已加载的会话。请先在原微信打开要回复的会话。
           </p>
           {managing && (
             <Button
@@ -331,16 +332,20 @@ export function WechatView() {
                     ? '微信接入已暂停'
                     : snapshot?.phase === 'permission'
                       ? '允许 Dela 访问微信窗口控件'
-                      : snapshot?.phase === 'unavailable'
-                        ? '请在原微信中打开聊天窗口'
-                        : '把微信聊天带进工作台'}
+                      : snapshot?.phase === 'inaccessible'
+                        ? '暂时无法在 Dela 读取和回复'
+                        : snapshot?.phase === 'unavailable'
+                          ? '请在原微信中打开聊天窗口'
+                          : '把微信聊天带进工作台'}
                 </h2>
                 <p className="text-13 leading-relaxed text-ink-3">
                   {availability && !availability.available
                     ? availability.reason
-                    : snapshot?.phase === 'permission'
-                      ? '在系统设置 → 隐私与安全性 → 辅助功能中允许当前预览程序，然后返回这里。'
-                      : '使用已登录的原微信。连接后选择会话，在这里查看消息和回复。'}
+                    : snapshot?.phase === 'inaccessible'
+                      ? snapshot.detail
+                      : snapshot?.phase === 'permission'
+                        ? '在系统设置 → 隐私与安全性 → 辅助功能中允许当前预览程序，然后返回这里。'
+                        : '使用已登录的原微信。连接后选择会话，在这里查看消息和回复。'}
                 </p>
                 <p className="text-xs leading-relaxed text-ink-3">
                   通过系统辅助功能接入，不修改微信客户端。离开此页面会停止读取；断开不会退出微信。

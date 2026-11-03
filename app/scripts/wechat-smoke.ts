@@ -56,7 +56,7 @@ async function run(window: BrowserWindow) {
   }
 
   await wait('!!window.dela?.wechat && !!document.querySelector("#main-nav")');
-  let phase: 'permission' | 'online' = 'permission';
+  let phase: 'permission' | 'online' | 'inaccessible' = 'permission';
   const chats = [
     { id: 'session_item_课程群', name: '课程群', preview: '课程群\n作业周五提交' },
     { id: 'session_item_项目群', name: '项目群', preview: '项目群\n讨论' },
@@ -71,6 +71,7 @@ async function run(window: BrowserWindow) {
   let snapshotRequests = 0;
   const snapshot = (ids: string[] = []) => ({
     phase,
+    detail: phase === 'inaccessible' ? '微信未提供聊天输入框' : '',
     capturedAt: '2026-11-03T08:00:00Z',
     chats: phase === 'online' ? chats : [],
     current:
@@ -118,6 +119,18 @@ async function run(window: BrowserWindow) {
   await click('打开辅助功能设置');
   assert.equal(settingsOpened, 1);
   await wait('document.body.textContent.includes("已连接原微信")');
+  phase = 'inaccessible';
+  await wait('document.body.textContent.includes("微信未提供聊天输入框")');
+  const requestsWithoutControls = snapshotRequests;
+  await new Promise((resolve) => setTimeout(resolve, 2300));
+  assert.equal(
+    snapshotRequests,
+    requestsWithoutControls,
+    'missing controls must stop native polling',
+  );
+  phase = 'online';
+  await js(`document.querySelector('button[aria-label="刷新微信会话"]').click()`);
+  await wait('document.body.textContent.includes("已连接原微信")');
   await js(`document.querySelector('input[aria-label="接入 课程群"]').click()`);
   await click('完成并进入聊天');
   await wait(
@@ -160,6 +173,6 @@ async function run(window: BrowserWindow) {
   await new Promise((resolve) => setTimeout(resolve, 2300));
   assert.equal(snapshotRequests, requestsOnLeaving, 'leaving the page must stop native reads');
   console.log(
-    'WeChat chat smoke passed: standalone QQ-style view, permission setup, chat selection, synthetic send, real local todo, AI draft, navigation cleanup, four viewport sizes. No real WeChat messages were sent.',
+    'WeChat chat smoke passed: standalone QQ-style view, permission setup, unavailable controls and polling stop, chat selection, synthetic send, real local todo, AI draft, navigation cleanup, four viewport sizes. No real WeChat messages were sent.',
   );
 }

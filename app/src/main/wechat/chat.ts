@@ -7,14 +7,14 @@ import { checkWorkspaceSender } from '../ipc';
 import type { WechatSnapshot } from '../../shared/wechat';
 
 export const wechatAccessStatus = {
-  available: false,
-  reason:
-    '实机验证期间，原微信出现账号安全重新登录提示。原因尚未查明，自动读取与操作已停用，请先在原微信中处理登录。',
+  available: process.platform === 'darwin',
+  reason: process.platform === 'darwin' ? '' : '微信原窗口接入目前仅支持 macOS。',
 };
 
 const id = z.string().min(1).max(1024);
 const nativeSnapshot = z.object({
-  phase: z.enum(['permission', 'closed', 'unavailable', 'online']),
+  phase: z.enum(['permission', 'closed', 'unavailable', 'inaccessible', 'online']),
+  detail: z.string().default(''),
   chats: z.array(z.object({ id, name: z.string(), preview: z.string() })),
   current: z
     .object({
@@ -28,7 +28,6 @@ const nativeSnapshot = z.object({
 
 async function native(command: string, input: object = {}): Promise<unknown> {
   if (!wechatAccessStatus.available) throw new Error(wechatAccessStatus.reason);
-  if (process.platform !== 'darwin') throw new Error('微信原窗口接入目前仅支持 macOS。');
   const executable = join(
     app.getAppPath().replace(/app\.asar$/, 'app.asar.unpacked'),
     'out/main/native/wechat-accessibility',

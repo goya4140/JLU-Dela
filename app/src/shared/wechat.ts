@@ -17,8 +17,9 @@ export interface WechatMessage {
 }
 
 export interface WechatSnapshot {
-  phase: 'permission' | 'closed' | 'unavailable' | 'online';
+  phase: 'permission' | 'closed' | 'unavailable' | 'inaccessible' | 'online';
   capturedAt: string;
+  detail: string;
   chats: { id: string; name: string; preview: string }[];
   current: { id: string; name: string; canSend: boolean; messages: WechatMessage[] } | null;
 }

@@ -31,19 +31,10 @@ const raw = {
   },
 };
 describe('微信辅助功能快照', () => {
-  it('账号安全提示出现后，从主进程禁用真实读取、授权请求和消息操作', async () => {
+  it('返回当前平台的真实接入能力', () => {
     registerWechatChatIpc();
-    const invoke = (name: string, input?: unknown) =>
-      mocks.handlers.get(`wechat-chat:${name}`)!({}, input);
-    expect(invoke('get-support')).toMatchObject({ available: false });
-    for (const [name, input] of [
-      ['snapshot', []],
-      ['authorize', undefined],
-      ['select', 'session_item_课程群'],
-      ['send', { chatId: 'session_item_课程群', text: '禁止发送' }],
-    ] as const)
-      await expect(invoke(name, input)).rejects.toThrow('自动读取与操作已停用');
-    expect(mocks.exec).not.toHaveBeenCalled();
+    const support = mocks.handlers.get('wechat-chat:get-support')!({});
+    expect(support).toMatchObject({ available: process.platform === 'darwin' });
   });
   it('重复文本保留为不同消息，刷新后标识稳定，不编造发送者或发送时间', () => {
     const first = decodeWechatSnapshot(raw, '2026-11-03T08:00:00Z');
@@ -62,6 +53,17 @@ describe('微信辅助功能快照', () => {
     expect(() =>
       decodeWechatSnapshot({ phase: 'online', chats: [], current: { name: '损坏数据' } }),
     ).toThrow();
+  });
+  it('控件不可识别与未登录、无窗口分开报告，不提供发送能力', () => {
+    const value = decodeWechatSnapshot({
+      phase: 'inaccessible',
+      detail: '微信没有提供输入框',
+      chats: [],
+      current: null,
+    });
+    expect(value.phase).toBe('inaccessible');
+    expect(value.detail).toBe('微信没有提供输入框');
+    expect(value.current).toBeNull();
   });
   it('总结明确说明可见范围及媒体占位，把聊天指令作为外部资料', () => {
     const prompt = wechatSummaryPrompt('课程群', [
