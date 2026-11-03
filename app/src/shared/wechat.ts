@@ -25,6 +25,10 @@ export interface WechatSnapshot {
 }
 
 export interface WechatApi {
+  prepareManualReply(input: { chatId: string; text: string }): Promise<{ token: string }>;
+  submitManualReply(input: { chatId: string; token: string }): Promise<void>;
+  cancelManualReply(): Promise<void>;
+  capturePreview(): Promise<{ image: string; info: string }>;
   getSupport(): Promise<{ available: boolean; reason: string }>;
   snapshot(chatIds: string[]): Promise<WechatSnapshot>;
   authorize(): Promise<WechatSnapshot>;

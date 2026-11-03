@@ -10,6 +10,10 @@ export const wechatMirror = {
 } satisfies WechatMirrorApi;
 
 export const wechat = {
+  prepareManualReply: (input) => invoke('wechat-chat:prepare-manual-reply', input),
+  submitManualReply: (input) => invoke('wechat-chat:submit-manual-reply', input),
+  cancelManualReply: () => invoke('wechat-chat:cancel-manual-reply'),
+  capturePreview: () => invoke('wechat-chat:capture-preview'),
   getSupport: () => invoke('wechat-chat:get-support'),
   snapshot: (chatIds) => invoke('wechat-chat:snapshot', chatIds),
   authorize: () => invoke('wechat-chat:authorize'),

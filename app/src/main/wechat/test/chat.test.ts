@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, (event: unknown, input?: unknown) => unknown>(),
   exec: vi.fn(),
+  stdin: vi.fn(),
 }));
 vi.mock('electron', () => ({
-  app: {},
+  app: { getAppPath: () => '/synthetic/dela' },
   ipcMain: {
     handle: (name: string, handler: (event: unknown, input?: unknown) => unknown) =>
       mocks.handlers.set(name, handler),
@@ -15,6 +16,16 @@ vi.mock('node:child_process', () => ({ execFile: mocks.exec }));
 vi.mock('../../ipc', () => ({ checkWorkspaceSender: vi.fn() }));
 import { decodeWechatSnapshot, registerWechatChatIpc } from '../chat';
 import { wechatSummaryPrompt } from '../../../shared/wechat';
+
+beforeEach(() => {
+  mocks.handlers.clear();
+  mocks.stdin.mockClear();
+  mocks.exec.mockReset();
+  mocks.exec.mockImplementation((_path, _args, _options, callback) => {
+    callback(null, JSON.stringify({ ok: true }));
+    return { stdin: { end: mocks.stdin } };
+  });
+});
 
 const raw = {
   phase: 'online',
@@ -33,8 +44,75 @@ const raw = {
 describe('微信辅助功能快照', () => {
   it('返回当前平台的真实接入能力', () => {
     registerWechatChatIpc();
-    const support = mocks.handlers.get('wechat-chat:get-support')!({});
+    const support = mocks.handlers.get('wechat-chat:get-support')!({ sender: { id: 1 } });
     expect(support).toMatchObject({ available: process.platform === 'darwin' });
+  });
+  it.skipIf(process.platform !== 'darwin')(
+    '兼容草稿准备不提交发送，发送确认绑定窗口且只能消费一次',
+    async () => {
+      registerWechatChatIpc();
+      const invoke = (name: string, input?: unknown, senderId = 1) =>
+        mocks.handlers.get(`wechat-chat:${name}`)!({ sender: { id: senderId } }, input);
+      const { token } = (await invoke('prepare-manual-reply', {
+        chatId: 'group-a',
+        text: ' Dela 合成草稿 ',
+      })) as {
+        token: string;
+      };
+      expect(mocks.exec.mock.calls.map((call) => call[1])).toEqual([['prepare-manual-reply']]);
+      expect(mocks.stdin).toHaveBeenLastCalledWith(JSON.stringify({ text: ' Dela 合成草稿 ' }));
+      await expect(invoke('submit-manual-reply', { chatId: 'group-a', token }, 2)).rejects.toThrow(
+        '未准备或已提交',
+      );
+      await expect(invoke('submit-manual-reply', { chatId: 'group-b', token })).rejects.toThrow();
+      await invoke('submit-manual-reply', { chatId: 'group-a', token });
+      expect(mocks.exec.mock.calls.map((call) => call[1])).toEqual([
+        ['prepare-manual-reply'],
+        ['submit-manual-reply'],
+      ]);
+      await expect(invoke('submit-manual-reply', { chatId: 'group-a', token })).rejects.toThrow(
+        '未准备或已提交',
+      );
+      expect(mocks.exec).toHaveBeenCalledTimes(2);
+    },
+  );
+  it.skipIf(process.platform !== 'darwin')('取消草稿确认或输入换行时不发出发送操作', async () => {
+    registerWechatChatIpc();
+    const invoke = (name: string, input?: unknown) =>
+      mocks.handlers.get(`wechat-chat:${name}`)!({ sender: { id: 1 } }, input);
+    await expect(
+      invoke('prepare-manual-reply', { chatId: 'group-a', text: '禁止\n换行' }),
+    ).rejects.toThrow();
+    expect(mocks.exec).not.toHaveBeenCalled();
+    const { token } = (await invoke('prepare-manual-reply', {
+      chatId: 'group-a',
+      text: '合成文字',
+    })) as { token: string };
+    await invoke('cancel-manual-reply');
+    await expect(invoke('submit-manual-reply', { chatId: 'group-a', token })).rejects.toThrow(
+      '未准备或已提交',
+    );
+    expect(mocks.exec).toHaveBeenCalledTimes(1);
+  });
+  it.skipIf(process.platform !== 'darwin')('发送组件失败后也不允许重放同一确认', async () => {
+    registerWechatChatIpc();
+    const invoke = (name: string, input?: unknown) =>
+      mocks.handlers.get(`wechat-chat:${name}`)!({ sender: { id: 1 } }, input);
+    const { token } = (await invoke('prepare-manual-reply', {
+      chatId: 'group-a',
+      text: '合成文字',
+    })) as { token: string };
+    mocks.exec.mockImplementationOnce((_path, _args, _options, callback) => {
+      callback(new Error('模拟组件失败'), '');
+      return { stdin: { end: mocks.stdin } };
+    });
+    await expect(invoke('submit-manual-reply', { chatId: 'group-a', token })).rejects.toThrow(
+      '组件',
+    );
+    await expect(invoke('submit-manual-reply', { chatId: 'group-a', token })).rejects.toThrow(
+      '未准备或已提交',
+    );
+    expect(mocks.exec).toHaveBeenCalledTimes(2);
   });
   it('重复文本保留为不同消息，刷新后标识稳定，不编造发送者或发送时间', () => {
     const first = decodeWechatSnapshot(raw, '2026-11-03T08:00:00Z');

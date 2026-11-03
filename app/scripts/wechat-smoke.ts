@@ -67,6 +67,10 @@ async function run(window: BrowserWindow) {
     { id: 'message-2', text: '[图片]' },
   ];
   const sent: unknown[] = [];
+  const preparedTexts: string[] = [];
+  const preparedChats: string[] = [];
+  const submittedTokens: string[] = [];
+  const transferToken = '04c5c208-e897-4e29-9134-c22cc10594ec';
   let settingsOpened = 0;
   let snapshotRequests = 0;
   const snapshot = (ids: string[] = []) => ({
@@ -86,6 +90,16 @@ async function run(window: BrowserWindow) {
   });
   const handlers: Record<string, (_event: unknown, input: never) => unknown> = {
     'get-support': () => ({ available: true, reason: '' }),
+    'prepare-manual-reply': (_event, input: { chatId: string; text: string }) => {
+      preparedTexts.push(input.text);
+      preparedChats.push(input.chatId);
+      return { token: transferToken };
+    },
+    'submit-manual-reply': (_event, input: { chatId: string; token: string }) => {
+      assert.equal(input.chatId, preparedChats.at(-1));
+      submittedTokens.push(input.token);
+    },
+    'cancel-manual-reply': () => {},
     authorize: () => snapshot(),
     snapshot: (_event, ids: string[]) => {
       snapshotRequests++;
@@ -120,7 +134,7 @@ async function run(window: BrowserWindow) {
   assert.equal(settingsOpened, 1);
   await wait('document.body.textContent.includes("已连接原微信")');
   phase = 'inaccessible';
-  await wait('document.body.textContent.includes("微信未提供聊天输入框")');
+  await wait('!!document.querySelector("[aria-label=微信手动群聊工作台]")');
   const requestsWithoutControls = snapshotRequests;
   await new Promise((resolve) => setTimeout(resolve, 2300));
   assert.equal(
@@ -128,6 +142,95 @@ async function run(window: BrowserWindow) {
     requestsWithoutControls,
     'missing controls must stop native polling',
   );
+  await js(`(()=>{
+    const input=document.querySelector('textarea[aria-label="文件传输助手消息内容"]');
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'合成兼容发送文字');
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+  })()`);
+  assert.equal(
+    await js(
+      'Array.from(document.querySelectorAll("button")).find(button=>button.textContent.trim()==="填入微信草稿").disabled',
+    ),
+    true,
+  );
+  await js(
+    `document.querySelector('[aria-label="文件传输助手兼容发送"] input[type=checkbox]').click()`,
+  );
+  await click('填入微信草稿');
+  await wait('document.body.textContent.includes("已提交文字输入操作")');
+  assert.deepEqual(preparedTexts, ['合成兼容发送文字']);
+  assert.deepEqual(submittedTokens, []);
+  assert.equal(
+    await js(
+      'Array.from(document.querySelectorAll("button")).find(button=>button.textContent.trim()==="确认并发送到文件传输助手").disabled',
+    ),
+    true,
+  );
+  await js(
+    `document.querySelector('[aria-label="文件传输助手兼容发送"] input[type=checkbox]').click()`,
+  );
+  await click('确认并发送到文件传输助手');
+  await wait('document.body.textContent.includes("结果尚未确认")');
+  assert.deepEqual(submittedTokens, [transferToken]);
+  await click('已在微信确认收到');
+  assert.equal(preparedTexts.length, 1, 'receipt acknowledgment must not submit the form again');
+  await click('添加群聊');
+  await js(`(()=>{
+    const input=document.querySelector('textarea[aria-label="要添加的微信群名"]');
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'JLU-Dela\\n合成课程群\\nJLU-Dela');
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+  })()`);
+  await click('保存并进入');
+  await wait('!!document.querySelector("textarea[aria-label=JLU-Dela消息内容]")');
+  assert.equal(
+    await js(
+      'document.querySelectorAll("button[aria-label=\\"选择本地微信会话 JLU-Dela\\"]").length',
+    ),
+    1,
+  );
+  await js(`(()=>{
+    const input=document.querySelector('textarea[aria-label="JLU-Dela消息内容"]');
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'合成群聊草稿');
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+  })()`);
+  await js(`document.querySelector('button[aria-label="选择本地微信会话 合成课程群"]').click()`);
+  await wait('!!document.querySelector("textarea[aria-label=合成课程群消息内容]")');
+  assert.equal(
+    await js('document.querySelector("textarea[aria-label=合成课程群消息内容]").value'),
+    '',
+  );
+  await js(`document.querySelector('button[aria-label="选择本地微信会话 JLU-Dela"]').click()`);
+  await wait(
+    'document.querySelector("textarea[aria-label=JLU-Dela消息内容]")?.value === "合成群聊草稿"',
+  );
+  await js(
+    `document.querySelector('[aria-label="JLU-Dela兼容发送"] input[type=checkbox]').click()`,
+  );
+  await click('填入微信草稿');
+  await wait('document.body.textContent.includes("已提交文字输入操作")');
+  assert.equal(
+    await js(
+      'document.querySelector("button[aria-label=\\"选择本地微信会话 合成课程群\\"]").disabled',
+    ),
+    true,
+  );
+  assert.notEqual(preparedChats[0], preparedChats[1]);
+  await click('取消确认');
+  assert.equal(submittedTokens.length, 1, 'canceling a group draft must not send it');
+  window.setMinimumSize(360, 500);
+  for (const width of [600, 900, 1280, 1800]) {
+    window.setSize(width, 850);
+    await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+    assert.equal(
+      await js('document.documentElement.scrollWidth<=document.documentElement.clientWidth'),
+      true,
+      `Manual WeChat overflow at ${width}`,
+    );
+    writeFileSync(
+      `.build/wechat-manual-${width}.png`,
+      (await window.webContents.capturePage()).toPNG(),
+    );
+  }
   phase = 'online';
   await js(`document.querySelector('button[aria-label="刷新微信会话"]').click()`);
   await wait('document.body.textContent.includes("已连接原微信")');
@@ -173,6 +276,6 @@ async function run(window: BrowserWindow) {
   await new Promise((resolve) => setTimeout(resolve, 2300));
   assert.equal(snapshotRequests, requestsOnLeaving, 'leaving the page must stop native reads');
   console.log(
-    'WeChat chat smoke passed: standalone QQ-style view, permission setup, unavailable controls and polling stop, chat selection, synthetic send, real local todo, AI draft, navigation cleanup, four viewport sizes. No real WeChat messages were sent.',
+    'WeChat chat smoke passed: standalone QQ-style view, permission setup, unavailable controls and polling stop, staged manual reply, chat selection, synthetic send, real local todo, AI draft, navigation cleanup, four viewport sizes. No real WeChat messages were sent.',
   );
 }

@@ -1,6 +1,6 @@
 import { app, ipcMain, shell } from 'electron';
 import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { checkWorkspaceSender } from '../ipc';
@@ -36,7 +36,7 @@ async function native(command: string, input: object = {}): Promise<unknown> {
     const child = execFile(
       executable,
       [command],
-      { timeout: 10000, maxBuffer: 2 * 1024 * 1024 },
+      { timeout: 10000, maxBuffer: 12 * 1024 * 1024 },
       (error, stdout) => {
         if (error) reject(new Error('微信辅助功能组件未能运行，请重新构建预览版后重试。'));
         else resolve(stdout);
@@ -77,8 +77,46 @@ export function decodeWechatSnapshot(
 }
 
 export function registerWechatChatIpc(): void {
-  const handlers: Record<string, (input: unknown) => unknown> = {
+  const preparedTransfers = new Map<number, { token: string; chatId: string }>();
+  const handlers: Record<string, (input: unknown, senderId: number) => unknown> = {
     'get-support': () => wechatAccessStatus,
+    'prepare-manual-reply': async (input, senderId) => {
+      if (preparedTransfers.has(senderId)) throw new Error('已有待核对草稿，请先完成或取消。');
+      const { chatId, text } = z
+        .object({
+          chatId: id,
+          text: z
+            .string()
+            .min(1)
+            .max(1000)
+            .refine((text) => text.trim().length > 0, '请输入消息。')
+            .regex(
+              /^[^\p{Control}\p{Line_Separator}\p{Paragraph_Separator}]+$/u,
+              '兼容发送仅支持单行文字。',
+            ),
+        })
+        .strict()
+        .parse(input);
+      z.object({ ok: z.literal(true) }).parse(await native('prepare-manual-reply', { text }));
+      const token = randomUUID();
+      preparedTransfers.set(senderId, { token, chatId });
+      return { token };
+    },
+    'submit-manual-reply': async (input, senderId) => {
+      const { token, chatId } = z.object({ token: z.uuid(), chatId: id }).strict().parse(input);
+      const prepared = preparedTransfers.get(senderId);
+      if (prepared?.token !== token || prepared.chatId !== chatId)
+        throw new Error('这份草稿未准备或已提交，请在原微信确认结果。');
+      preparedTransfers.delete(senderId);
+      z.object({ ok: z.literal(true) }).parse(await native('submit-manual-reply'));
+    },
+    'cancel-manual-reply': (_input, senderId) => {
+      preparedTransfers.delete(senderId);
+    },
+    'capture-preview': async () =>
+      z
+        .object({ image: z.string().startsWith('data:image/png;base64,'), info: z.string() })
+        .parse(await native('capture-preview')),
     snapshot: async (input) =>
       decodeWechatSnapshot(
         await native('snapshot', { chatIds: z.array(id).max(100).parse(input) }),
@@ -103,6 +141,6 @@ export function registerWechatChatIpc(): void {
   for (const [name, handler] of Object.entries(handlers))
     ipcMain.handle(`wechat-chat:${name}`, (event, input: unknown) => {
       checkWorkspaceSender(event);
-      return handler(input);
+      return handler(input, event.sender.id);
     });
 }
