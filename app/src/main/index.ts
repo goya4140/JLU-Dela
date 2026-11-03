@@ -16,6 +16,7 @@ import {
   configureWechatMirror,
   registerWechatMirrorIpc,
 } from './wechat/mirror';
+import { registerWechatChatIpc } from './wechat/chat';
 import { registerTodoIpc } from './todo';
 import { registerQqIpc, closeQq } from './qq/ipc';
 import { registerBackupIpc } from './backup';
@@ -244,6 +245,7 @@ app
     registerTodoIpc();
     registerQqIpc();
     registerWechatMirrorIpc();
+    registerWechatChatIpc();
     registerUpdateIpc();
     initializeNotifications();
     // 回收未被任何会话引用的内联图片（上次运行遗留的草稿图片等）。

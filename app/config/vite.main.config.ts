@@ -28,12 +28,28 @@ export default defineConfig({
     {
       name: 'macos-icons',
       buildStart() {
+        this.addWatchFile(resolve('src/main/wechat/native/accessibility.swift'));
         if (process.platform === 'darwin')
           for (const name of ['white', 'black'])
             this.addWatchFile(resolve('assets', `JLU-Dela-${name}.png`));
       },
       writeBundle(output) {
         prepareMacosIcons(resolve(output.dir!, 'icons'));
+        if (process.platform === 'darwin') {
+          const directory = resolve(output.dir!, 'native');
+          mkdirSync(directory, { recursive: true });
+          execFileSync(
+            '/usr/bin/xcrun',
+            [
+              'swiftc',
+              '-O',
+              'src/main/wechat/native/accessibility.swift',
+              '-o',
+              resolve(directory, 'wechat-accessibility'),
+            ],
+            { stdio: 'pipe' },
+          );
+        }
       },
     },
   ],

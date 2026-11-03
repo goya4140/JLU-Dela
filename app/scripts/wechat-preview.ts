@@ -13,6 +13,6 @@ for (const name of ['home', 'documents'] as const) {
   mkdirSync(directory, { recursive: true });
   app.setPath(name, directory);
 }
-console.log(`WeChat mirror preview uses an isolated profile: ${preview}`);
+console.log(`WeChat chat preview uses an isolated profile: ${preview}`);
 const require = createRequire(join(root, 'package.json'));
 require(join(root, 'out/main/index.cjs'));

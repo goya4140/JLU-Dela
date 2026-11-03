@@ -30,6 +30,7 @@ electronLanguages:
   - zh-CN
   - zh-TW
 asarUnpack:
+  - out/main/native/**/*
   - node_modules/better-sqlite3/**/*
   - node_modules/node-pty/**/*
   # 引导开场的可选视频；文件不存在时该行无副作用

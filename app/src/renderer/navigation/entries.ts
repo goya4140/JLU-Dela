@@ -42,7 +42,7 @@ export const navEntries: Array<{
   { id: 'notifications', label: '学校通知', icon: Bell },
   { id: 'mail', label: '吉大邮箱', icon: Mail },
   { id: 'qq', label: 'QQ 群聊', icon: MessageCircle },
-  { id: 'wechat', label: '微信窗口', icon: MonitorPlay },
+  { id: 'wechat', label: '微信聊天', icon: MessageCircle },
 ];
 
 export const useNavEntryPrefs = create<{

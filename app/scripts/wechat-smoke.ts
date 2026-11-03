@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -54,53 +54,91 @@ async function run(window: BrowserWindow) {
     await wait(`!!(${lookup}) && !(${lookup}).disabled`);
     await js(`${lookup}.click()`);
   }
-  await wait('!!window.dela?.wechatMirror && !!document.querySelector("#main-nav")');
-  assert.equal((await js('window.dela.wechatMirror.getSupport()')).supported, true);
-  await js(`(()=>{
-    window.wechatTestMode='window';
-    window.wechatTestStreams=[];
-    navigator.mediaDevices.getDisplayMedia=async()=>{
-      if(window.wechatTestMode==='cancel') throw new DOMException('cancelled','NotAllowedError');
-      const canvas=document.createElement('canvas');
-      canvas.width=960; canvas.height=540;
-      const ctx=canvas.getContext('2d');
-      ctx.fillStyle='#f4f4f4'; ctx.fillRect(0,0,960,540);
-      ctx.fillStyle='#dedede'; ctx.fillRect(0,0,260,540);
-      ctx.fillStyle='#262626'; ctx.font='24px sans-serif';
-      ctx.fillText('Synthetic WeChat window',300,80);
-      ctx.font='18px sans-serif';
-      ctx.fillText('Local display only',300,140);
-      const stream=canvas.captureStream(15);
-      const track=stream.getVideoTracks()[0];
-      const settings=track.getSettings.bind(track);
-      const mode=window.wechatTestMode;
-      track.getSettings=()=>({...settings(), displaySurface: mode});
-      window.wechatTestStreams.push(stream);
-      return stream;
-    };
-  })()`);
-  await click('微信窗口');
-  await wait('document.querySelector("[role=tab]")?.textContent.includes("微信窗口")');
-  await wait('!!document.querySelector("video")');
-  assert.equal(await js('document.querySelectorAll("video")[0].srcObject'), null);
-  await js('window.wechatTestMode="monitor"');
-  await click('选择微信窗口');
-  await wait('document.body.textContent.includes("不要选择整个屏幕")');
-  assert.equal(
-    await js(
-      'window.wechatTestStreams.at(-1).getTracks().every(track=>track.readyState==="ended")',
-    ),
-    true,
-  );
-  await js('window.wechatTestMode="cancel"');
-  await click('选择微信窗口');
-  await wait('document.body.textContent.includes("未开始共享")');
-  await js('window.wechatTestMode="window"');
-  await click('选择微信窗口');
+
+  await wait('!!window.dela?.wechat && !!document.querySelector("#main-nav")');
+  let phase: 'permission' | 'online' = 'permission';
+  const chats = [
+    { id: 'session_item_课程群', name: '课程群', preview: '课程群\n作业周五提交' },
+    { id: 'session_item_项目群', name: '项目群', preview: '项目群\n讨论' },
+  ];
+  let currentId = chats[0]!.id;
+  let messages = [
+    { id: 'message-1', text: '作业周五提交' },
+    { id: 'message-2', text: '[图片]' },
+  ];
+  const sent: unknown[] = [];
+  let settingsOpened = 0;
+  let snapshotRequests = 0;
+  const snapshot = (ids: string[] = []) => ({
+    phase,
+    capturedAt: '2026-11-03T08:00:00Z',
+    chats: phase === 'online' ? chats : [],
+    current:
+      phase === 'online' && ids.includes(currentId)
+        ? {
+            id: currentId,
+            name: chats.find((chat) => chat.id === currentId)!.name,
+            canSend: true,
+            messages,
+          }
+        : null,
+  });
+  const handlers: Record<string, (_event: unknown, input: never) => unknown> = {
+    'get-support': () => ({ available: true, reason: '' }),
+    authorize: () => snapshot(),
+    snapshot: (_event, ids: string[]) => {
+      snapshotRequests++;
+      return snapshot(ids);
+    },
+    select: (_event, id: string) => {
+      currentId = id;
+    },
+    send: (_event, input: { chatId: string; text: string }) => {
+      assert.equal(input.chatId, currentId);
+      sent.push(input);
+      messages = [...messages, { id: 'message-sent', text: input.text }];
+    },
+    'open-settings': () => {
+      settingsOpened++;
+      phase = 'online';
+    },
+  };
+  for (const [name, handler] of Object.entries(handlers)) {
+    ipcMain.removeHandler(`wechat-chat:${name}`);
+    ipcMain.handle(`wechat-chat:${name}`, (event, input: unknown) =>
+      handler(event, input as never),
+    );
+  }
+  await click('微信聊天');
+  await wait('!!document.querySelector("section[aria-label=微信聊天]")');
+  assert.equal(await js('document.querySelectorAll("[role=tab]").length'), 0);
+  assert.equal(snapshotRequests, 0, 'opening the view must not access WeChat before connecting');
+  await click('连接微信');
+  await wait('document.body.textContent.includes("等待辅助功能授权")');
+  await click('打开辅助功能设置');
+  assert.equal(settingsOpened, 1);
+  await wait('document.body.textContent.includes("已连接原微信")');
+  await js(`document.querySelector('input[aria-label="接入 课程群"]').click()`);
+  await click('完成并进入聊天');
   await wait(
-    'document.querySelector("video")?.videoWidth===960 && document.body.textContent.includes("正在镜像")',
+    'document.querySelector("[aria-label=微信消息记录]")?.textContent.includes("作业周五提交")',
   );
-  assert.equal(await js('document.querySelector("video").muted'), true);
+  await js(`(()=>{
+    const input=document.querySelector('textarea[aria-label="微信消息内容"]');
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'合成测试回复');
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+  })()`);
+  await click('发送');
+  await wait(
+    'document.querySelector("[aria-label=微信消息记录]")?.textContent.includes("合成测试回复")',
+  );
+  assert.deepEqual(sent, [{ chatId: chats[0]!.id, text: '合成测试回复' }]);
+  await click('设为待办');
+  await click('保存待办');
+  await wait('document.body.textContent.includes("已创建个人待办")');
+  const todos = await js('window.dela.todo.getState()');
+  assert.equal(todos.items.length, 1);
+  assert.match(todos.items[0].notes, /微信会话：课程群/);
   mkdirSync('.build', { recursive: true });
   window.setMinimumSize(360, 500);
   for (const width of [600, 900, 1280, 1800]) {
@@ -113,46 +151,15 @@ async function run(window: BrowserWindow) {
     );
     writeFileSync(`.build/wechat-${width}.png`, (await window.webContents.capturePage()).toPNG());
   }
-  await click('停止镜像');
-  assert.equal(
-    await js(
-      'window.wechatTestStreams.at(-1).getTracks().every(track=>track.readyState==="ended")',
-    ),
-    true,
-  );
-  await click('选择微信窗口');
-  await wait('document.body.textContent.includes("正在镜像")');
-  await js(
-    '(()=>{window.wechatStopSignals=0; window.dela.wechatMirror.onStop(()=>window.wechatStopSignals++);})()',
-  );
-  app.show();
-  window.show();
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  assert.equal(window.isVisible(), true);
-  window.hide();
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  assert.equal(window.isVisible(), false);
-  assert.equal(await js('window.wechatStopSignals'), 1);
+  await click('AI 总结');
   await wait(
-    'window.wechatTestStreams.at(-1).getTracks().every(track=>track.readyState==="ended")',
+    '!!document.querySelector("textarea[aria-label=发送给助手], [aria-label=发送给助手]")',
   );
-  window.show();
-  await click('选择微信窗口');
-  await wait('document.body.textContent.includes("正在镜像")');
-  await click('首页');
-  await wait(
-    'window.wechatTestStreams.at(-1).getTracks().every(track=>track.readyState==="ended")',
-  );
-  await click('微信窗口');
-  await wait('document.body.textContent.includes("窗口镜像实验")');
-  assert.equal(await js('document.querySelectorAll("[role=tab]").length'), 1);
-  assert.equal(
-    await js(
-      'window.wechatTestStreams.every(stream=>stream.getTracks().every(track=>track.readyState==="ended"))',
-    ),
-    true,
-  );
+  await wait('document.body.textContent.includes("不代表完整聊天记录")');
+  const requestsOnLeaving = snapshotRequests;
+  await new Promise((resolve) => setTimeout(resolve, 2300));
+  assert.equal(snapshotRequests, requestsOnLeaving, 'leaving the page must stop native reads');
   console.log(
-    'WeChat mirror smoke passed: workbench tab, local video, screen rejection, picker cancellation, stop, hide, navigation cleanup, and four viewport sizes. No native WeChat capture or login was performed.',
+    'WeChat chat smoke passed: standalone QQ-style view, permission setup, chat selection, synthetic send, real local todo, AI draft, navigation cleanup, four viewport sizes. No real WeChat messages were sent.',
   );
 }

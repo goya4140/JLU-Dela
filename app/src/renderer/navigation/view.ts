@@ -156,7 +156,6 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
     lastHomeSessionId: null,
 
     navigate: (next) => {
-      if (next === 'wechat') return revealInProject('wechat:window', get().projectId, true);
       const state = get();
       if (next === state.view) return true;
       if (!leaveComposer(() => get().navigate(next))) return false;

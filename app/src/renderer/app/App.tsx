@@ -6,6 +6,7 @@ import { AppShell } from '../components/AppShell';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { MailView } from '../features/mail';
 import { QqView } from '../features/qq/QqView';
+import { WechatView } from '../features/wechat/WechatView';
 import { CampusView } from '../features/campus/CampusView';
 import { SchoolNoticesView } from '../features/campus/SchoolNoticesView';
 import { LearningView } from '../features/campus/LearningView';
@@ -340,6 +341,7 @@ export default function App() {
                   )}
                   {view === 'campus' && <CampusView />}
                   {view === 'qq' && <QqView />}
+                  {view === 'wechat' && <WechatView />}
                   {view === 'timetable' && (
                     <TimetableView
                       onOpenTodo={(todoId) => void useNavigationStore.getState().openTodo(todoId)}
