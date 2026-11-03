@@ -56,7 +56,9 @@
     "web": "pnpm build:web && node scripts/web.ts",
     "smoke:web": "electron scripts/web-smoke.cjs",
     "smoke:setup": "electron scripts/setup-guide-smoke.cjs",
-    "smoke:study-calendar": "electron scripts/study-calendar-smoke.cjs"
+    "smoke:study-calendar": "electron scripts/study-calendar-smoke.cjs",
+    "smoke:wechat": "node scripts/run-ts-smoke.ts wechat-smoke",
+    "preview:wechat": "node scripts/run-ts-smoke.ts wechat-preview"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.1.0",

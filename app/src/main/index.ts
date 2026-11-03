@@ -9,7 +9,13 @@ import {
   safeStorage,
   shell,
   Tray,
+  type WebContents,
 } from 'electron';
+import {
+  canCaptureWechatWindow,
+  configureWechatMirror,
+  registerWechatMirrorIpc,
+} from './wechat/mirror';
 import { registerTodoIpc } from './todo';
 import { registerQqIpc, closeQq } from './qq/ipc';
 import { registerBackupIpc } from './backup';
@@ -237,6 +243,7 @@ app
     registerNotificationsIpc();
     registerTodoIpc();
     registerQqIpc();
+    registerWechatMirrorIpc();
     registerUpdateIpc();
     initializeNotifications();
     // 回收未被任何会话引用的内联图片（上次运行遗留的草稿图片等）。
@@ -317,6 +324,7 @@ async function createWindow(): Promise<void> {
     },
   });
   mainWindow = window;
+  configureWechatMirror(window);
   attachContextMenu(window.webContents);
   window.on('closed', () => {
     mainWindow = undefined;
@@ -358,15 +366,23 @@ async function createWindow(): Promise<void> {
   const session = window.webContents.session;
   // 渲染进程的 navigator.clipboard.writeText 走 clipboard-sanitized-write 权限；
   // 终端粘贴的 navigator.clipboard.readText 走 clipboard-read 权限；
-  // 课堂视频 <video> 的原生全屏按钮走 fullscreen 权限；其余（通知、定位等）一律拒绝。
-  const allowClipboardAndFullscreen = (_contents: unknown, permission: string) =>
+  // 课堂视频 <video> 的原生全屏按钮走 fullscreen 权限；窗口共享只在用户选择镜像时允许。
+  const allowWindowPermission = (contents: WebContents | null, permission: string) =>
     permission === 'clipboard-sanitized-write' ||
     permission === 'clipboard-read' ||
-    permission === 'fullscreen';
-  session.setPermissionRequestHandler((contents, permission, callback) =>
-    callback(allowClipboardAndFullscreen(contents, permission)),
+    permission === 'fullscreen' ||
+    (permission === 'display-capture' && canCaptureWechatWindow(contents));
+  session.setPermissionRequestHandler((contents, permission, callback, details) =>
+    callback(
+      (permission !== 'display-capture' || details.isMainFrame) &&
+        allowWindowPermission(contents, permission),
+    ),
   );
-  session.setPermissionCheckHandler(allowClipboardAndFullscreen);
+  session.setPermissionCheckHandler(
+    (contents, permission, _origin, details) =>
+      (permission !== 'display-capture' || details.isMainFrame) &&
+      allowWindowPermission(contents, permission),
+  );
 
   const sendWindowState = () => {
     window.webContents.send('window:state', { maximized: window.isMaximized() });

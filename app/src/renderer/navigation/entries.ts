@@ -19,6 +19,7 @@ export type NavEntryId =
   | 'sources'
   | 'mail'
   | 'qq'
+  | 'wechat'
   | 'timetable'
   | 'classroom'
   | 'chaoxing'
@@ -41,6 +42,7 @@ export const navEntries: Array<{
   { id: 'notifications', label: '学校通知', icon: Bell },
   { id: 'mail', label: '吉大邮箱', icon: Mail },
   { id: 'qq', label: 'QQ 群聊', icon: MessageCircle },
+  { id: 'wechat', label: '微信窗口', icon: MonitorPlay },
 ];
 
 export const useNavEntryPrefs = create<{

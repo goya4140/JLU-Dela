@@ -1,5 +1,6 @@
 import { webTabs } from './web-tabs';
 import { qq } from './qq';
+import { wechatMirror } from './wechat';
 import { contextBridge } from 'electron';
 import { version } from '../../package.json';
 import type { DelaApi } from '../shared/api';
@@ -30,6 +31,7 @@ import { knowledge } from './knowledge';
 import { chaoxing } from './chaoxing';
 
 contextBridge.exposeInMainWorld('dela', {
+  wechatMirror,
   qq,
   webTabs,
   knowledge,

@@ -2,6 +2,8 @@
   "extends": "../tsconfig.json",
   "compilerOptions": { "lib": ["ES2023"], "types": ["node"] },
   "include": [
+    "../scripts/wechat-smoke.ts",
+    "../scripts/wechat-preview.ts",
     "../scripts/qq-smoke.ts",
     "../scripts/qq-runtime-probe.ts",
     "../scripts/build-helper.ts",

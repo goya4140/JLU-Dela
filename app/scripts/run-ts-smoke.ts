@@ -11,6 +11,8 @@ interface SmokeConfig {
 }
 
 const smokes: Record<string, SmokeConfig> = {
+  'wechat-preview': { external: [], timeout: 0, minify: false },
+  'wechat-smoke': { external: [], timeout: 65000, minify: false },
   'qq-smoke': { external: [], timeout: 100000, minify: false },
   'qq-runtime-probe': { external: [], timeout: 240000, minify: false },
   'material-readers-smoke': { external: [], timeout: 120000, minify: false },

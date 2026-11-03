@@ -7,7 +7,7 @@ vi.mock('../layout-store', () => ({
       root: {
         type: 'group',
         id: 'g1',
-        tabs: ['qq:7/100', 'note:removed-file'],
+        tabs: ['qq:7/100', 'wechat:window', 'note:removed-file'],
         active: 'qq:7/100',
       },
       closeTab: mocks.closeTab,
@@ -19,7 +19,7 @@ vi.mock('../../navigation/view', () => ({
 }));
 import { purgeRemovedEntries } from '../removed-cleanup';
 
-it('删除资料条目时保留独立的 QQ 群聊标签', () => {
+it('删除资料条目时保留独立的 QQ 与微信窗口标签', () => {
   purgeRemovedEntries(new Set());
   expect(mocks.closeTab.mock.calls).toEqual([['note:removed-file', 'g1']]);
 });

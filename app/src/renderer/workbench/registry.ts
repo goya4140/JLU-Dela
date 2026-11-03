@@ -28,6 +28,9 @@ const TerminalTab: ComponentType<TabComponentProps> = lazy(() =>
 
 const WebTab = lazy(() => import('../content/web/WebTab').then((m) => ({ default: m.WebTab })));
 const QqTab = lazy(() => import('../features/qq/QqTab').then((m) => ({ default: m.QqTab })));
+const WechatTab = lazy(() =>
+  import('../features/wechat/WechatTab').then((m) => ({ default: m.WechatTab })),
+);
 
 /** 内容组件契约：tabId 定位数据，groupId 用于按组隔离的编辑器会话键（TabId+groupId）。 */
 export interface TabComponentProps {
@@ -55,6 +58,7 @@ function chatTitleOf(sessionId: string): string {
 const payloadOf = (tabId: TabId) => tabId.slice(tabId.indexOf(':') + 1);
 
 export const registry: Record<TabKind, TabDescriptor> = {
+  wechat: { component: WechatTab, icon: Eye, title: () => '微信窗口' },
   qq: {
     component: QqTab,
     icon: MessageSquare,
