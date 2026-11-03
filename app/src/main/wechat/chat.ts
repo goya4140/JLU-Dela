@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { checkWorkspaceSender } from '../ipc';
 import type { WechatSnapshot } from '../../shared/wechat';
+import { syncWechatDatabase } from './database';
 
 export const wechatAccessStatus = {
   available: process.platform === 'darwin',
@@ -80,6 +81,7 @@ export function registerWechatChatIpc(): void {
   const preparedTransfers = new Map<number, { token: string; chatId: string }>();
   const handlers: Record<string, (input: unknown, senderId: number) => unknown> = {
     'get-support': () => wechatAccessStatus,
+    'sync-database': () => syncWechatDatabase(),
     'prepare-manual-reply': async (input, senderId) => {
       if (preparedTransfers.has(senderId)) throw new Error('已有待核对草稿，请先完成或取消。');
       const { chatId, text } = z

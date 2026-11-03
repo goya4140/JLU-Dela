@@ -7,6 +7,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
 import { ManualWechatReply } from './ManualWechatReply';
 import { fileTransferChat, useManualWechat } from './manual-store';
+import { WechatDatabaseMessages } from './WechatDatabaseMessages';
 
 export function ManualWechatWorkspace({
   api,
@@ -118,7 +119,7 @@ export function ManualWechatWorkspace({
           {!filtered.length && <p className="p-2 text-13 text-ink-3">没有匹配的会话</p>}
         </div>
         <p className="px-2 text-xs leading-relaxed text-ink-3">
-          群名和各群草稿保存在本机。当前不自动读取群列表或聊天记录。
+          群名和草稿保存在本机。JLU-Dela 群的数据库同步需在右侧单独启动。
         </p>
       </aside>
       <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col', showList && 'max-md:hidden')}>
@@ -139,6 +140,7 @@ export function ManualWechatWorkspace({
           </div>
         </header>
         <div className="flex min-h-0 flex-1 flex-col items-center gap-5 overflow-y-auto p-5">
+          {current.name === 'JLU-Dela' && <WechatDatabaseMessages api={api} />}
           <div className="flex w-full max-w-2xl gap-3 py-3 text-13 leading-relaxed text-ink-3">
             <Users className="mt-1 size-5 shrink-0" />
             <p>

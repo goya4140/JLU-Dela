@@ -30,6 +30,18 @@ AI 总结先创建用户可检查的草稿，不自动调用模型。消息可�
 
 旧工作台布局中的窗口镜像标签保留兼容，新侧栏入口直接打开微信聊天页。
 
+## 只读数据库预览
+
+数据库模式以「JLU-Dela」为白名单，只有精确匹配到唯一的真实 `@chatroom` 标识才读取消息。同名群或未找到群时停止。每 5 秒读取本机最新最多 200 条，工作台保留最多 500 条去重缓存；消息标识包含账号、群、数据库分片和本地消息 ID。它不是全量历史备份，繁忙群在两次轮询之间超过读取窗口的消息可能遗漏。离开群页后停止轮询，已开始的单次读取可以完成。
+
+本地预览通过独立 Python 进程调用 [Rion Reader](https://github.com/Rion-Wu-tech/wechat-intelligence-hub/tree/fb6a42c34160d2ffa66ed5f114f8d8cdabe7f5f9/projects/rion-wechat-reader)，保留其许可证；未将第三方 Reader 源码入库或捆绑到已安装 QQ 版。运行 `node scripts/prepare-wechat-reader.ts` 在本项目 `.build` 中准备固定源码、SQLCipher 和 Zstandard。该步骤不获取密钥、不安装 Skill、不修改或重启微信。此运行环境尚未制作成发行包。
+
+读取使用本人 `~/.config/rion-wechat-reader/config.json` 中已有的授权数据库与访问材料。Reader 将数据库及 WAL/SHM 复制到私有临时目录，再以只读连接查询；不写原微信目录。缓存只保存目标群消息，在当前 Dela 数据目录中以本人权限写入。密钥不经过 renderer、命令行参数或日志。媒体暂时只显示类型提示，不代表已下载附件。
+
+2026-11-03，本机两个账号目录内检查到的 36 个数据库均为加密格式，约定位置没有已有访问材料；普通权限的进程访问检查被系统拒绝，未读取进程内存。Rion 的实验性首次取钥候选涉及退出微信、重签名临时副本及调试访问，不属于本次保持微信客户端不动的实现范围，未执行。**真实 JLU-Dela 群消息仍未同步。** 加密虚构数据测试已覆盖群白名单、schema-2 密钥、WCDB 压缩、WAL 新消息、分片标识、重复读取及源文件不变；不能据此宣称本机真实数据库已解密。
+
+数据库回归：`.build/wechat-reader/venv/bin/python src/main/wechat/test/database_smoke.py`；缓存单元测试在 `src/main/wechat/test/database.test.ts`，界面冒烟使用合成桥接数据。
+
 依据：[Apple Accessibility](https://developer.apple.com/documentation/applicationservices/axuielement)。
 
 同类控件缺失问题见[上游复现记录](https://github.com/BiboyQG/WeChat-MCP/issues/8)，该记录涉及的系统版本与本机不完全相同，不能据此断言具体原因。

@@ -69,6 +69,8 @@ async function run(window: BrowserWindow) {
   const sent: unknown[] = [];
   const preparedTexts: string[] = [];
   const preparedChats: string[] = [];
+  let databaseRequests = 0;
+  let databaseReady = false;
   const submittedTokens: string[] = [];
   const transferToken = '04c5c208-e897-4e29-9134-c22cc10594ec';
   let settingsOpened = 0;
@@ -89,6 +91,25 @@ async function run(window: BrowserWindow) {
         : null,
   });
   const handlers: Record<string, (_event: unknown, input: never) => unknown> = {
+    'sync-database': () => {
+      databaseRequests++;
+      return {
+        phase: databaseReady ? 'ready' : 'needs-access',
+        chatId: databaseReady ? 'synthetic@chatroom' : null,
+        lastSyncAt: databaseReady ? '2026-11-03T08:00:00Z' : null,
+        messages: databaseReady
+          ? [
+              {
+                id: 'database-message',
+                text: '合成数据库群消息',
+                sender: '虚构同学',
+                sentAt: '2026-11-03T07:59:00Z',
+                kind: 'text',
+              },
+            ]
+          : [],
+      };
+    },
     'get-support': () => ({ available: true, reason: '' }),
     'prepare-manual-reply': (_event, input: { chatId: string; text: string }) => {
       preparedTexts.push(input.text);
@@ -217,6 +238,17 @@ async function run(window: BrowserWindow) {
   assert.notEqual(preparedChats[0], preparedChats[1]);
   await click('取消确认');
   assert.equal(submittedTokens.length, 1, 'canceling a group draft must not send it');
+  await click('检查并同步群消息');
+  await wait('document.body.textContent.includes("当前缺少数据库访问材料")');
+  assert.equal(
+    await js('document.querySelector("[aria-label=数据库微信消息记录]").textContent'),
+    '',
+  );
+  databaseReady = true;
+  await click('检查并同步群消息');
+  await wait(
+    'document.querySelector("[aria-label=数据库微信消息记录]")?.textContent.includes("合成数据库群消息")',
+  );
   window.setMinimumSize(360, 500);
   for (const width of [600, 900, 1280, 1800]) {
     window.setSize(width, 850);
@@ -234,6 +266,13 @@ async function run(window: BrowserWindow) {
   phase = 'online';
   await js(`document.querySelector('button[aria-label="刷新微信会话"]').click()`);
   await wait('document.body.textContent.includes("已连接原微信")');
+  const readsBeforeLeavingDatabase = databaseRequests;
+  await new Promise((resolve) => setTimeout(resolve, 5100));
+  assert.equal(
+    databaseRequests,
+    readsBeforeLeavingDatabase,
+    'leaving the group page must stop database polling',
+  );
   await js(`document.querySelector('input[aria-label="接入 课程群"]').click()`);
   await click('完成并进入聊天');
   await wait(

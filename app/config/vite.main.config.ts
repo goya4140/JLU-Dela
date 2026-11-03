@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync } from 'node:fs';
 import { builtinModules } from 'node:module';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
@@ -28,6 +28,7 @@ export default defineConfig({
     {
       name: 'macos-icons',
       buildStart() {
+        this.addWatchFile(resolve('src/main/wechat/native/database.py'));
         this.addWatchFile(resolve('src/main/wechat/native/accessibility.swift'));
         if (process.platform === 'darwin')
           for (const name of ['white', 'black'])
@@ -38,6 +39,10 @@ export default defineConfig({
         if (process.platform === 'darwin') {
           const directory = resolve(output.dir!, 'native');
           mkdirSync(directory, { recursive: true });
+          copyFileSync(
+            'src/main/wechat/native/database.py',
+            resolve(directory, 'wechat-database.py'),
+          );
           execFileSync(
             '/usr/bin/xcrun',
             [

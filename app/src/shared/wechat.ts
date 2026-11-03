@@ -25,6 +25,7 @@ export interface WechatSnapshot {
 }
 
 export interface WechatApi {
+  syncDatabase(): Promise<WechatDatabaseState>;
   prepareManualReply(input: { chatId: string; text: string }): Promise<{ token: string }>;
   submitManualReply(input: { chatId: string; token: string }): Promise<void>;
   cancelManualReply(): Promise<void>;
@@ -35,6 +36,13 @@ export interface WechatApi {
   select(chatId: string): Promise<void>;
   send(input: { chatId: string; text: string }): Promise<void>;
   openSettings(): Promise<void>;
+}
+
+export interface WechatDatabaseState {
+  phase: 'ready' | 'needs-access' | 'group-not-found' | 'ambiguous' | 'error' | 'missing-runtime';
+  chatId: string | null;
+  lastSyncAt: string | null;
+  messages: { id: string; text: string; sender: string; sentAt: string; kind: string }[];
 }
 
 export function wechatSummaryPrompt(name: string, messages: WechatMessage[]): string {
