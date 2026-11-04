@@ -22,6 +22,14 @@ const shared = join(profile, 'Library/Containers/com.tencent.qq/Data/Documents/D
 const bridge = join(shared, 'framework-4.18.42');
 mkdirSync(bridge, { recursive: true });
 writeFileSync(join(bridge, 'napcat.cjs'), Buffer.alloc(0));
+writeFileSync(
+  join(shared, 'bootstrap.json'),
+  JSON.stringify({
+    originalMain: './application.asar/app_launcher/index.js',
+    bridge,
+    workdir: join(shared, 'data'),
+  }),
+);
 const executable = join(profile, 'Applications/QQ.app');
 const packagePath = join(executable, 'Contents/Resources/app/package.json');
 mkdirSync(dirname(packagePath), { recursive: true });

@@ -103,6 +103,21 @@ describe.skipIf(process.platform !== 'darwin')('QQ 共享会话', () => {
     ).toBe(3);
     expect(await launchQqRuntime(reconnected)).toEqual(prepared.connection);
     expect(vi.mocked(execFile).mock.calls.at(-1)![1]).toEqual(['-a', source]);
+
+    writeFileSync(join(state.root, 'out/main/qq-shared-loader.cjs'), 'fixed loader');
+    await prepareQqRuntime(new AbortController().signal, () => {});
+    expect(readFileSync(join(shared, 'loader.cjs'), 'utf8')).toBe('fixed loader');
+    const bootstrap = readFileSync(join(shared, 'bootstrap.json'), 'utf8');
+    writeFileSync(
+      join(resources, 'package.json'),
+      JSON.stringify({ version: 'fixture-1', main: '../../another-profile/loader.cjs' }),
+    );
+    vi.clearAllMocks();
+    await expect(prepareQqRuntime(new AbortController().signal, () => {})).rejects.toThrow(
+      '请先恢复腾讯原版 QQ',
+    );
+    expect(readFileSync(join(shared, 'bootstrap.json'), 'utf8')).toBe(bootstrap);
+    expect(execFile).not.toHaveBeenCalled();
   });
 });
 

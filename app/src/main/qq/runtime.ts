@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { copyFile, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import extract from 'extract-zip';
 import { z } from 'zod';
@@ -74,6 +74,16 @@ export async function prepareQqRuntime(
     'Library/Containers/com.tencent.qq/Data/Documents/Dela-QQ',
   );
   const loader = join(shared, 'loader.cjs');
+  const main = relative(dirname(packagePath), loader);
+  const installed = info.main === main;
+  const bootstrap = join(shared, 'bootstrap.json');
+  const originalMain = installed
+    ? z.object({ originalMain: z.string() }).parse(JSON.parse(await readFile(bootstrap, 'utf8')))
+        .originalMain
+    : info.main;
+  const archive = join(dirname(packagePath), 'application.asar');
+  if (!resolve(dirname(packagePath), originalMain).startsWith(`${archive}${sep}`))
+    throw new Error('QQ 启动入口已被其他共享组件修改，请先恢复腾讯原版 QQ，再准备安装');
   const bridge = join(shared, `framework-${qqRuntimeVersion}`);
   const workdir = join(shared, 'data');
   const connectionPath = join(root, 'connection.json');
@@ -171,19 +181,15 @@ export async function prepareQqRuntime(
       await rm(staging, { recursive: true, force: true });
     }
   }
-  const main = relative(dirname(packagePath), loader);
-  const installed = info.main === main;
+  const nextLoader = join(shared, `loader-${randomBytes(4).toString('hex')}.cjs`);
+  await copyFile(join(app.getAppPath(), 'out/main/qq-shared-loader.cjs'), nextLoader);
+  await rename(nextLoader, loader);
   if (!installed) {
     progress('正在准备共享会话安装包…');
     const staged = join(root, 'QQ.app');
     await nativeFs.promises.rm(staged, { recursive: true, force: true });
     await exec('/bin/cp', ['-cR', source, staged], { signal });
-    await copyFile(join(app.getAppPath(), 'out/main/qq-shared-loader.cjs'), loader);
-    await writeFile(
-      join(shared, 'bootstrap.json'),
-      JSON.stringify({ originalMain: info.main, bridge, workdir }),
-      { mode: 0o600 },
-    );
+    await writeFile(bootstrap, JSON.stringify({ originalMain, bridge, workdir }), { mode: 0o600 });
     await writeFile(join(root, 'original-package.json'), original);
     await writeFile(
       join(staged, 'Contents/Resources/app/package.json'),
@@ -200,10 +206,10 @@ export async function prepareQqRuntime(
     await exec('/usr/bin/codesign', ['--force', '--sign', '-', staged], { signal });
     const backup = join(
       root,
-      `original-${createHash('sha256').update(original).digest('hex').slice(0, 12)}.app`,
+      `original-${createHash('sha256').update(original).digest('hex').slice(0, 12)}-${randomBytes(4).toString('hex')}.app`,
     );
     const install = `/bin/mv ${quote(source)} ${quote(backup)}\nif ! /bin/mv ${quote(staged)} ${quote(source)}; then\n/bin/mv ${quote(backup)} ${quote(source)}\nexit 1\nfi`;
-    const restore = `/bin/mv ${quote(source)} ${quote(staged)}\n/bin/mv ${quote(backup)} ${quote(source)}`;
+    const restore = `/bin/mv ${quote(source)} ${quote(staged)}\nif ! /bin/mv ${quote(backup)} ${quote(source)}; then\n/bin/mv ${quote(staged)} ${quote(source)}\nexit 1\nfi`;
     const header =
       '#!/bin/zsh\nset -eu\nif /usr/bin/pgrep -x QQ >/dev/null; then\necho "请先完全退出 QQ，然后重新运行。"\nread -k 1\nexit 1\nfi\n';
     await writeFile(
