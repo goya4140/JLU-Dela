@@ -38,9 +38,31 @@ AI 总结先创建用户可检查的草稿，不自动调用模型。消息可�
 
 读取使用本人 `~/.config/rion-wechat-reader/config.json` 中已有的授权数据库与访问材料。Reader 将数据库及 WAL/SHM 复制到私有临时目录，再以只读连接查询；不写原微信目录。缓存只保存目标群消息，在当前 Dela 数据目录中以本人权限写入。密钥不经过 renderer、命令行参数或日志。媒体暂时只显示类型提示，不代表已下载附件。
 
-2026-11-03，本机两个账号目录内检查到的 36 个数据库均为加密格式，约定位置没有已有访问材料；普通权限的进程访问检查被系统拒绝，未读取进程内存。Rion 的实验性首次取钥候选涉及退出微信、重签名临时副本及调试访问，不属于本次保持微信客户端不动的实现范围，未执行。**真实 JLU-Dela 群消息仍未同步。** 加密虚构数据测试已覆盖群白名单、schema-2 密钥、WCDB 压缩、WAL 新消息、分片标识、重复读取及源文件不变；不能据此宣称本机真实数据库已解密。
+2026-11-03，本机两个账号目录内检查到的 36 个数据库均为加密格式，约定位置没有已有访问材料；普通权限的进程访问检查被系统拒绝，未读取进程内存。用户随后授权验证退出原微信、重签名临时副本及本地调试的首次取钥方案，仍要求保留已安装微信和 SIP。接入检查停在工具预检，取钥程序尚未启动。**真实 JLU-Dela 群消息仍未同步。** 加密虚构数据测试已覆盖群白名单、schema-2 密钥、WCDB 压缩、WAL 新消息、分片标识、重复读取及源文件不变；不能据此宣称本机真实数据库已解密。
 
 数据库回归：`.build/wechat-reader/venv/bin/python src/main/wechat/test/database_smoke.py`；缓存单元测试在 `src/main/wechat/test/database.test.ts`，界面冒烟使用合成桥接数据。
+
+## 接入方案对照（2026-11-03）
+
+| 路径                                                                                                                                                  | 能力与当前结论                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [辅助功能与 OCR](https://github.com/jsf9789/wechat-bridge-mac)                                                                                        | 不取数据库密钥，依赖可访问的当前窗口。其他版本的成功记录不能替代本机验证；本机主窗口和独立群窗口均未提供消息控件，捕获为空白。                            |
+| [通知预览](https://github.com/Rion-Wu-tech/wechat-intelligence-hub/tree/fb6a42c34160d2ffa66ed5f114f8d8cdabe7f5f9/projects/rion-wechat-reader)         | 只有系统实际保留的入站预览，不能覆盖静音群、完整历史、附件和本人发言。本机约定的通知数据库位置均未找到可用库。                                            |
+| [官方微信 Bot](https://github.com/Tencent/openclaw-weixin/blob/main/src/channel.ts)                                                                   | 当前插件声明的 chatTypes 只有 direct，不能据协议类型中的 group_id 字段认定可读取现有微信群。                                                              |
+| [Wechaty Web](https://github.com/wechaty/puppet-wechat) / [PadLocal](https://github.com/wechaty/puppet-padlocal)                                      | 可提供协议客户端形式的群消息接入，但需要另开登录会话，取决于账号、协议及服务条件；PadLocal 还需要服务 Token。尚未在本账号验证，不是复用原窗口的本地读取。 |
+| [本地数据库与 wxkey](https://github.com/Rion-Wu-tech/wechat-intelligence-hub/blob/fb6a42c34160d2ffa66ed5f114f8d8cdabe7f5f9/providers/wxkey/README.md) | 日常查询可只读。首次取钥候选需要退出原微信、重签名临时副本及调试进程；已安装原版可保留，不需要关闭 SIP。                                                  |
+
+wxkey 固定提交 `01e96fa58ce3ff061dce83e4c36f62104ebc6b16`，应用 Rion 固定生命周期补丁后，已用项目内 Go 1.26.5 编译并通过针对性回归。本机静态检查能解析 `CCKeyDerivationPBKDF` 符号，没有启动微信。普通用户 LLDB 临时程序首次预检超时，独立诊断后一次复查通过，原因未完全确认。管理员预检先遇到受保护目录访问限制；将工具移出 Documents、使用本人创建的私有数据库快照后，数据库头检查通过，LLDB 导入仍返回路径访问拒绝。中立工作目录调整后，管理员 LLDB 导入和数据库预检均已通过；验证使用 `/usr/bin/true` 空工具，没有运行 wxkey。管理员到普通用户的启动、本机真实取钥和实时同步仍未通过。
+
+构建收据放在 `.build/wechat-key-review-20261103/candidate/`。本次检查没有启动取钥程序、创建微信副本或取得密钥；原微信关键文件哈希与签名复核通过，SIP 开启，用户确认原微信可正常聊天。私有快照仅用于预检；即使后续成功取钥，也须重新核对原数据库并连接原路径，才能验证新消息同步。
+
+补充桥接项目核对：
+
+- [wechat-use](https://github.com/leeguooooo/wechat-use) 提供群消息监听、历史查询及本地 HTTP/SSE 发送接口，但当前限定独立登录的微信 4.1.9 副本，副本会重签名并开启调试能力；需要激活审核。同账号与原微信并行、互不挤下线尚未在本机验证。作者许可禁止未经书面许可向第三方分发，不直接捆绑到 Dela。
+- [FastBridge](https://github.com/huj28-creator/wechat-fastbridge) 与 [wechat-bridge-mac](https://github.com/jsf9789/wechat-bridge-mac) 不注入客户端，通过辅助功能读取和发送，受窗口可见内容限制。[FastBridge Issue #1](https://github.com/huj28-creator/wechat-fastbridge/issues/1) 报告相似控件缺失，不能认为更换桥接库即可恢复本机读取。
+- [PadLocal](https://github.com/wechaty/puppet-padlocal) 有群收发接口，需要 Token 和另行登录；当前服务获取入口与账号兼容性未验证。[WeChatFerry](https://github.com/lich0821/WeChatFerry) 是 Windows Hook 路线，仓库已归档；[Gewechat](https://github.com/Devo919/Gewechat) 明确停止服务和维护，均不作为当前 Mac 原窗口接入方案。
+
+本次仅核对公开文档和源码，没有安装桥接工具、另开登录或发送消息。
 
 依据：[Apple Accessibility](https://developer.apple.com/documentation/applicationservices/axuielement)。
 
